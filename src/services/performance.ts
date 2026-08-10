@@ -1,85 +1,87 @@
 import api from './axios';
 import type { Performance } from '../types';
 import type { PaginatedResponse } from './engineers';
-import excelData from '../data/excelData.json';
+import { getEngineers, getEngineerById } from './engineers';
 
-const MOCK_PERFORMANCE: Performance[] = (excelData as any).performance || [];
-
-export const getPerformanceRecords = async (params?: any): Promise<PaginatedResponse<Performance>> => {
-  try {
-    const res = await api.get('/performance', { params });
-    if (res.data && Array.isArray(res.data.data)) {
-      return res.data;
-    }
-  } catch (_err) {
-    // API fallback
-  }
-
-  let list = [...MOCK_PERFORMANCE];
-  if (params?.engineerId) {
-    const q = params.engineerId.toLowerCase().replace('eng-', '');
-    list = list.filter(
-      (p) =>
-        (p.engineerOrbitId && p.engineerOrbitId.toLowerCase() === q) ||
-        p.engineerName.toLowerCase().includes(q)
-    );
-  }
-  if (params?.search) {
-    const q = params.search.toLowerCase();
-    list = list.filter(
-      (p) => p.engineerName.toLowerCase().includes(q) || (p.reviewer && p.reviewer.toLowerCase().includes(q))
-    );
-  }
+const mapApiPerformanceToFrontend = (apiPerf: any, engineerName?: string, orbitId?: string, engineerId?: string): Performance => {
   return {
-    data: list,
-    total: list.length,
-    page: params?.page || 1,
-    totalPages: 1,
+    id: apiPerf.performance_id,
+    engineerId: engineerId || apiPerf.engineer_id || 'eng-e150',
+    engineerName: engineerName || 'Field Engineer',
+    engineerOrbitId: orbitId || 'ORB001',
+    rating: Number(apiPerf.score) || 5.0,
+    projectsCompleted: 1,
+    customerFeedbackScore: 95,
+    onTimeArrivalRate: 98,
+    reviewDate: apiPerf.actual_end_date || new Date().toISOString().split('T')[0],
+    reviewer: 'Operations Manager',
+    notes: apiPerf.feedback || apiPerf.escalation_reason || 'No comments',
   };
 };
 
-export const getPerformanceRecordById = async (id: string): Promise<Performance | null> => {
+export const getEngineerPerformance = async (engineerId: string): Promise<Performance[]> => {
   try {
-    const res = await api.get(`/performance/${id}`);
-    if (res.data && typeof res.data === 'object') {
-      return res.data;
+    const engineer = await getEngineerById(engineerId);
+    const res = await api.get(`/engineers/${engineerId}/performance`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(p => mapApiPerformanceToFrontend(p, engineer?.name, engineer?.orbitId, engineerId));
     }
-  } catch (_err) {
-    // Fallback
+    return [];
+  } catch (err) {
+    console.error(`Error fetching performance for engineer ${engineerId}:`, err);
+    throw err;
   }
-  return MOCK_PERFORMANCE.find((p) => p.id === id) || null;
+};
+
+export const getPerformanceRecords = async (params?: any): Promise<PaginatedResponse<Performance>> => {
+  try {
+    let list: Performance[] = [];
+    if (params?.engineerId) {
+      list = await getEngineerPerformance(params.engineerId);
+    } else {
+      const engs = await getEngineers();
+      const perfPromises = engs.data.map(e => getEngineerPerformance(e.id));
+      const nestedPerf = await Promise.all(perfPromises);
+      list = nestedPerf.flat();
+    }
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.engineerName.toLowerCase().includes(q) ||
+          p.reviewer.toLowerCase().includes(q)
+      );
+    }
+
+    return {
+      data: list,
+      total: list.length,
+      page: params?.page || 1,
+      totalPages: 1,
+    };
+  } catch (err) {
+    console.error('Error fetching global performance:', err);
+    throw err;
+  }
+};
+
+export const getPerformanceRecordById = async (id: string): Promise<Performance | null> => {
+  const res = await api.get(`/performance/${id}`);
+  return res.data ? mapApiPerformanceToFrontend(res.data) : null;
 };
 
 export const createPerformanceRecord = async (data: Partial<Performance>): Promise<Performance> => {
-  try {
-    const res = await api.post('/performance', data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  return {
-    ...MOCK_PERFORMANCE[0],
-    ...data,
-    id: `perf-${Date.now()}`,
-  } as Performance;
+  const res = await api.post('/performance', data);
+  return res.data;
 };
 
 export const updatePerformanceRecord = async (id: string, data: Partial<Performance>): Promise<Performance> => {
-  try {
-    const res = await api.put(`/performance/${id}`, data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  const found = MOCK_PERFORMANCE.find((p) => p.id === id) || MOCK_PERFORMANCE[0];
-  return { ...found, ...data, id } as Performance;
+  const res = await api.put(`/performance/${id}`, data);
+  return res.data;
 };
 
 export const deletePerformanceRecord = async (id: string): Promise<{ success: boolean }> => {
-  try {
-    await api.delete(`/performance/${id}`);
-  } catch (_err) {
-    // Fallback
-  }
+  await api.delete(`/performance/${id}`);
   return { success: true };
 };

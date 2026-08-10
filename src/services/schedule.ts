@@ -1,91 +1,93 @@
 import api from './axios';
 import type { Schedule } from '../types';
 import type { PaginatedResponse } from './engineers';
-import excelData from '../data/excelData.json';
+import { getEngineers, getEngineerById } from './engineers';
 
-const MOCK_SCHEDULES: Schedule[] = (excelData as any).schedules || [];
-
-export const getSchedules = async (params?: any): Promise<PaginatedResponse<Schedule>> => {
-  try {
-    const res = await api.get('/schedules', { params });
-    if (res.data && Array.isArray(res.data.data)) {
-      return res.data;
-    }
-  } catch (_err) {
-    // API fallback
-  }
-
-  let list = [...MOCK_SCHEDULES];
-  if (params?.engineerId) {
-    const q = params.engineerId.toLowerCase().replace('eng-', '');
-    list = list.filter(
-      (s) =>
-        (s.engineerOrbitId && s.engineerOrbitId.toLowerCase() === q) ||
-        s.engineerName.toLowerCase().includes(q)
-    );
-  }
-  if (params?.search) {
-    const q = params.search.toLowerCase();
-    list = list.filter(
-      (s) =>
-        s.engineerName.toLowerCase().includes(q) ||
-        (s.customerName && s.customerName.toLowerCase().includes(q)) ||
-        s.projectCode.toLowerCase().includes(q)
-    );
-  }
-  if (params?.status && params.status !== 'All') {
-    list = list.filter((s) => s.status.toLowerCase().includes(params.status.toLowerCase()));
-  }
+const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: string): Schedule => {
   return {
-    data: list,
-    total: list.length,
-    page: params?.page || 1,
-    totalPages: 1,
+    id: apiSch.schedule_id,
+    engineerId: apiSch.engineer_id,
+    engineerName: engineerName || 'Field Engineer',
+    engineerOrbitId: orbitId || 'ORB001',
+    customerName: 'TSMC',
+    siteLocation: 'Fab 18',
+    country: 'Taiwan',
+    projectCode: apiSch.project_code || 'PRJ-001',
+    startDate: apiSch.start_date || '',
+    endDate: apiSch.end_date || '',
+    status: apiSch.status || 'Active Assignment',
+    shiftType: apiSch.shift_type || 'Day Shift',
+    supportType: apiSch.support_type || 'Deployment',
   };
 };
 
-export const getScheduleById = async (id: string): Promise<Schedule | null> => {
+export const getEngineerSchedules = async (engineerId: string): Promise<Schedule[]> => {
   try {
-    const res = await api.get(`/schedules/${id}`);
-    if (res.data && typeof res.data === 'object') {
-      return res.data;
+    const engineer = await getEngineerById(engineerId);
+    const res = await api.get(`/engineers/${engineerId}/schedules`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(s => mapApiScheduleToFrontend(s, engineer?.name, engineer?.orbitId));
     }
-  } catch (_err) {
-    // API fallback
+    return [];
+  } catch (err) {
+    console.error(`Error fetching schedules for engineer ${engineerId}:`, err);
+    throw err;
   }
-  return MOCK_SCHEDULES.find((s) => s.id === id) || null;
+};
+
+export const getSchedules = async (params?: any): Promise<PaginatedResponse<Schedule>> => {
+  try {
+    let list: Schedule[] = [];
+    if (params?.engineerId) {
+      list = await getEngineerSchedules(params.engineerId);
+    } else {
+      const engs = await getEngineers();
+      const schedulesPromises = engs.data.map(e => getEngineerSchedules(e.id));
+      const nestedSchedules = await Promise.all(schedulesPromises);
+      list = nestedSchedules.flat();
+    }
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.engineerName.toLowerCase().includes(q) ||
+          s.customerName.toLowerCase().includes(q) ||
+          s.projectCode.toLowerCase().includes(q)
+      );
+    }
+    if (params?.status && params.status !== 'All') {
+      list = list.filter((s) => s.status.toLowerCase().includes(params.status.toLowerCase()));
+    }
+
+    return {
+      data: list,
+      total: list.length,
+      page: params?.page || 1,
+      totalPages: 1,
+    };
+  } catch (err) {
+    console.error('Error fetching global schedules:', err);
+    throw err;
+  }
+};
+
+export const getScheduleById = async (id: string): Promise<Schedule | null> => {
+  const res = await api.get(`/schedules/${id}`);
+  return res.data ? mapApiScheduleToFrontend(res.data) : null;
 };
 
 export const createSchedule = async (data: Partial<Schedule>): Promise<Schedule> => {
-  try {
-    const res = await api.post('/schedules', data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  return {
-    ...MOCK_SCHEDULES[0],
-    ...data,
-    id: `sch-${Date.now()}`,
-  } as Schedule;
+  const res = await api.post('/schedules', data);
+  return res.data;
 };
 
 export const updateSchedule = async (id: string, data: Partial<Schedule>): Promise<Schedule> => {
-  try {
-    const res = await api.put(`/schedules/${id}`, data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  const found = MOCK_SCHEDULES.find((s) => s.id === id) || MOCK_SCHEDULES[0];
-  return { ...found, ...data, id } as Schedule;
+  const res = await api.put(`/schedules/${id}`, data);
+  return res.data;
 };
 
 export const deleteSchedule = async (id: string): Promise<{ success: boolean }> => {
-  try {
-    await api.delete(`/schedules/${id}`);
-  } catch (_err) {
-    // Fallback
-  }
+  await api.delete(`/schedules/${id}`);
   return { success: true };
 };

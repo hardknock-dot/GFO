@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Company } from '../types';
+import { getCompanies } from '../services/company';
 
 export const PRESET_COMPANIES: Company[] = [
   {
@@ -76,7 +77,29 @@ interface CompanyContextType {
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [companies, setCompanies] = useState<Company[]>(PRESET_COMPANIES);
   const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
+
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const list = await getCompanies();
+        if (list && list.length > 0) {
+          setCompanies(list);
+          const activeId = localStorage.getItem('ormp_active_company');
+          const found = list.find((c) => c.id === activeId);
+          if (found) {
+            setCurrentCompany(found);
+          } else {
+            setCurrentCompany(list[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load companies in provider:', err);
+      }
+    };
+    loadCompanies();
+  }, []);
 
   const applyCompanyTheme = (company: Company) => {
     const root = document.documentElement;
@@ -100,7 +123,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentCompany]);
 
   const setCompany = (companyId: string) => {
-    const target = PRESET_COMPANIES.find((c) => c.id === companyId);
+    const target = companies.find((c) => c.id === companyId);
     if (target) {
       setCurrentCompany(target);
       applyCompanyTheme(target);
@@ -108,7 +131,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <CompanyContext.Provider value={{ currentCompany, companies: PRESET_COMPANIES, setCompany }}>
+    <CompanyContext.Provider value={{ currentCompany, companies, setCompany }}>
       {children}
     </CompanyContext.Provider>
   );

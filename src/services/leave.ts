@@ -1,120 +1,88 @@
 import api from './axios';
 import type { Leave } from '../types';
 import type { PaginatedResponse } from './engineers';
+import { getEngineers, getEngineerById } from './engineers';
 
-const MOCK_LEAVES: Leave[] = [
-  {
-    id: 'lv-001',
-    engineerId: 'eng-e150',
-    engineerName: 'Selvaganesh Nagarathinam Rajagopalchettiar',
-    startDate: '2026-08-10',
-    endDate: '2026-08-15',
-    type: 'Annual Leave',
-    status: 'Approved',
-    reason: 'Family vacation in Tokyo',
-  },
-  {
-    id: 'lv-002',
-    engineerId: 'eng-e151',
-    engineerName: 'Prakash Govindaraj',
-    startDate: '2026-08-20',
-    endDate: '2026-08-22',
-    type: 'Training',
-    status: 'Pending',
-    reason: 'Advanced chamber maintenance course',
-  },
-  {
-    id: 'lv-003',
-    engineerId: 'eng-e152',
-    engineerName: 'Devanand Gunasekaran',
-    startDate: '2026-08-01',
-    endDate: '2026-08-03',
-    type: 'Sick Leave',
-    status: 'Approved',
-    reason: 'Dental surgery recovery',
-  },
-];
+const mapApiLeaveToFrontend = (apiLeave: any, engineerName?: string, engineerId?: string): Leave => {
+  return {
+    id: apiLeave.leave_id,
+    engineerId: engineerId || apiLeave.engineer_id || 'eng-e150',
+    engineerName: engineerName || 'Field Engineer',
+    startDate: apiLeave.requested_date || '',
+    endDate: apiLeave.requested_date || '',
+    type: (apiLeave.leave_type as any) || 'Annual Leave',
+    status: (apiLeave.approval_status as any) || 'Pending',
+    reason: 'No reason provided',
+  };
+};
+
+export const getEngineerLeaves = async (engineerId: string): Promise<Leave[]> => {
+  try {
+    const engineer = await getEngineerById(engineerId);
+    const res = await api.get(`/engineers/${engineerId}/leaves`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(l => mapApiLeaveToFrontend(l, engineer?.name, engineerId));
+    }
+    return [];
+  } catch (err) {
+    console.error(`Error fetching leaves for engineer ${engineerId}:`, err);
+    throw err;
+  }
+};
 
 export const getLeaves = async (params?: any): Promise<PaginatedResponse<Leave>> => {
   try {
-    const res = await api.get('/leaves', { params });
-    if (res.data && Array.isArray(res.data.data)) {
-      return res.data;
+    let list: Leave[] = [];
+    if (params?.engineerId) {
+      list = await getEngineerLeaves(params.engineerId);
+    } else {
+      const engs = await getEngineers();
+      const leavesPromises = engs.data.map(e => getEngineerLeaves(e.id));
+      const nestedLeaves = await Promise.all(leavesPromises);
+      list = nestedLeaves.flat();
     }
-  } catch (_err) {
-    // Fallback
-  }
 
-  let list = [...MOCK_LEAVES];
-  if (params?.engineerId) {
-    list = list.filter((l) => l.engineerId === params.engineerId);
-  }
-  if (params?.search) {
-    const q = params.search.toLowerCase();
-    list = list.filter(
-      (l) =>
-        l.engineerName.toLowerCase().includes(q) ||
-        l.type.toLowerCase().includes(q) ||
-        l.reason.toLowerCase().includes(q)
-    );
-  }
-  if (params?.status && params.status !== 'All') {
-    list = list.filter((l) => l.status === params.status);
-  }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter(
+        (l) =>
+          l.engineerName.toLowerCase().includes(q) ||
+          l.type.toLowerCase().includes(q) ||
+          l.reason.toLowerCase().includes(q)
+      );
+    }
+    if (params?.status && params.status !== 'All') {
+      list = list.filter((l) => l.status === params.status);
+    }
 
-  return {
-    data: list,
-    total: list.length,
-    page: params?.page || 1,
-    totalPages: 1,
-  };
+    return {
+      data: list,
+      total: list.length,
+      page: params?.page || 1,
+      totalPages: 1,
+    };
+  } catch (err) {
+    console.error('Error fetching global leaves:', err);
+    throw err;
+  }
 };
 
 export const getLeaveById = async (id: string): Promise<Leave | null> => {
-  try {
-    const res = await api.get(`/leaves/${id}`);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  return MOCK_LEAVES.find((l) => l.id === id) || null;
+  const res = await api.get(`/leaves/${id}`);
+  return res.data ? mapApiLeaveToFrontend(res.data) : null;
 };
 
 export const createLeave = async (data: Partial<Leave>): Promise<Leave> => {
-  try {
-    const res = await api.post('/leaves', data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  return {
-    id: `lv-${Date.now()}`,
-    engineerId: data.engineerId || 'eng-e150',
-    engineerName: data.engineerName || 'Unknown Engineer',
-    startDate: data.startDate || new Date().toISOString().split('T')[0],
-    endDate: data.endDate || new Date().toISOString().split('T')[0],
-    type: data.type || 'Annual Leave',
-    status: data.status || 'Pending',
-    reason: data.reason || 'Personal time off',
-  };
+  const res = await api.post('/leaves', data);
+  return res.data;
 };
 
 export const updateLeave = async (id: string, data: Partial<Leave>): Promise<Leave> => {
-  try {
-    const res = await api.put(`/leaves/${id}`, data);
-    return res.data;
-  } catch (_err) {
-    // Fallback
-  }
-  const found = MOCK_LEAVES.find((l) => l.id === id) || MOCK_LEAVES[0];
-  return { ...found, ...data, id };
+  const res = await api.put(`/leaves/${id}`, data);
+  return res.data;
 };
 
 export const deleteLeave = async (id: string): Promise<{ success: boolean }> => {
-  try {
-    await api.delete(`/leaves/${id}`);
-  } catch (_err) {
-    // Fallback
-  }
+  await api.delete(`/leaves/${id}`);
   return { success: true };
 };

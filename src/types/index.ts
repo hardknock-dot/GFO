@@ -162,3 +162,17 @@ export interface UploadCardItem {
   lastUploadedBy?: string;
   status: 'Idle' | 'Validating' | 'Success' | 'Error';
 }
+
+export interface MissedSchedule {
+  id: string;
+  engineerId: string;
+  engineerName: string;
+  engineerOrbitId?: string;
+  requestedStartDate: string;
+  requestedEndDate: string;
+  actualStartDate: string;
+  actualEndDate: string;
+  reasonForChange: string;
+  notesAttachEvidence: string;
+  owner: string;
+}
