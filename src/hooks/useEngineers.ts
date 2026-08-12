@@ -9,10 +9,21 @@ import {
 import type { EngineerQueryParams } from '../services/engineers';
 import type { Engineer } from '../types';
 
+import { useCompany } from '../context/CompanyContext';
+
 export const useEngineers = (params?: EngineerQueryParams) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    company_id: params?.company_id !== undefined ? params.company_id : activeCompanyId,
+  };
+
   return useQuery({
-    queryKey: ['engineers', params],
-    queryFn: () => getEngineers(params),
+    queryKey: ['engineers', queryParams],
+    queryFn: () => getEngineers(queryParams),
     staleTime: 1000 * 60 * 5, // 5 mins
   });
 };

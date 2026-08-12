@@ -16,6 +16,15 @@ const mapApiPerformanceToFrontend = (apiPerf: any, engineerName?: string, orbitI
     reviewDate: apiPerf.actual_end_date || new Date().toISOString().split('T')[0],
     reviewer: 'Operations Manager',
     notes: apiPerf.feedback || apiPerf.escalation_reason || 'No comments',
+    actualStartDate: apiPerf.actual_start_date || '',
+    actualEndDate: apiPerf.actual_end_date || '',
+    escalation: !!apiPerf.escalation,
+    escalationReason: apiPerf.escalation_reason || '',
+    feedback: apiPerf.feedback || '',
+    score: apiPerf.score !== null && apiPerf.score !== undefined ? Number(apiPerf.score) : undefined,
+    attachment: apiPerf.attachment || '',
+    scheduleId: apiPerf.schedule_id,
+    ownerId: apiPerf.owner_id || undefined,
   };
 };
 
@@ -33,13 +42,26 @@ export const getEngineerPerformance = async (engineerId: string): Promise<Perfor
   }
 };
 
+export const getSchedulePerformance = async (scheduleId: string): Promise<Performance[]> => {
+  try {
+    const res = await api.get(`/schedules/${scheduleId}/performance`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(p => mapApiPerformanceToFrontend(p));
+    }
+    return [];
+  } catch (err) {
+    console.error(`Error fetching performance for schedule ${scheduleId}:`, err);
+    throw err;
+  }
+};
+
 export const getPerformanceRecords = async (params?: any): Promise<PaginatedResponse<Performance>> => {
   try {
     let list: Performance[] = [];
     if (params?.engineerId) {
       list = await getEngineerPerformance(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const perfPromises = engs.data.map(e => getEngineerPerformance(e.id));
       const nestedPerf = await Promise.all(perfPromises);
       list = nestedPerf.flat();
@@ -71,14 +93,32 @@ export const getPerformanceRecordById = async (id: string): Promise<Performance 
   return res.data ? mapApiPerformanceToFrontend(res.data) : null;
 };
 
-export const createPerformanceRecord = async (data: Partial<Performance>): Promise<Performance> => {
-  const res = await api.post('/performance', data);
-  return res.data;
+export const createPerformanceRecord = async (scheduleId: string, data: Partial<Performance>): Promise<Performance> => {
+  const payload = {
+    actual_start_date: data.actualStartDate || null,
+    actual_end_date: data.actualEndDate || null,
+    escalation: data.escalation || false,
+    escalation_reason: data.escalationReason || null,
+    feedback: data.feedback || null,
+    score: data.score !== undefined ? Number(data.score) : null,
+    attachment: data.attachment || null,
+  };
+  const res = await api.post(`/schedules/${scheduleId}/performance`, payload);
+  return mapApiPerformanceToFrontend(res.data);
 };
 
 export const updatePerformanceRecord = async (id: string, data: Partial<Performance>): Promise<Performance> => {
-  const res = await api.put(`/performance/${id}`, data);
-  return res.data;
+  const payload = {
+    actual_start_date: data.actualStartDate || null,
+    actual_end_date: data.actualEndDate || null,
+    escalation: data.escalation || false,
+    escalation_reason: data.escalationReason || null,
+    feedback: data.feedback || null,
+    score: data.score !== undefined ? Number(data.score) : null,
+    attachment: data.attachment || null,
+  };
+  const res = await api.put(`/performance/${id}`, payload);
+  return mapApiPerformanceToFrontend(res.data);
 };
 
 export const deletePerformanceRecord = async (id: string): Promise<{ success: boolean }> => {

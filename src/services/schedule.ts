@@ -9,15 +9,23 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
     engineerId: apiSch.engineer_id,
     engineerName: engineerName || 'Field Engineer',
     engineerOrbitId: orbitId || 'ORB001',
-    customerName: 'TSMC',
-    siteLocation: 'Fab 18',
-    country: 'Taiwan',
-    projectCode: apiSch.project_code || 'PRJ-001',
+    country: apiSch.country || '',
+    
+    // Core DB fields:
+    supportType: apiSch.support_type || '',
+    fabCity: apiSch.fab_city || '',
+    fabSite: apiSch.fab_site || '',
+    scheduleStatus: apiSch.schedule_status || 'Upcoming',
+    remarks: apiSch.remarks || '',
     startDate: apiSch.start_date || '',
     endDate: apiSch.end_date || '',
-    status: apiSch.status || 'Active Assignment',
-    shiftType: apiSch.shift_type || 'Day Shift',
-    supportType: apiSch.support_type || 'Deployment',
+
+    // Compatibility fields:
+    customerName: apiSch.fab_site || 'TSMC',
+    siteLocation: apiSch.fab_city ? `${apiSch.fab_city}, ${apiSch.country || ''}` : (apiSch.fab_site || 'Fab 18'),
+    projectCode: apiSch.support_type || 'PRJ-001',
+    status: (apiSch.schedule_status || 'Active Assignment') as any,
+    shiftType: 'Day Shift',
   };
 };
 
@@ -41,7 +49,7 @@ export const getSchedules = async (params?: any): Promise<PaginatedResponse<Sche
     if (params?.engineerId) {
       list = await getEngineerSchedules(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const schedulesPromises = engs.data.map(e => getEngineerSchedules(e.id));
       const nestedSchedules = await Promise.all(schedulesPromises);
       list = nestedSchedules.flat();
@@ -53,11 +61,16 @@ export const getSchedules = async (params?: any): Promise<PaginatedResponse<Sche
         (s) =>
           s.engineerName.toLowerCase().includes(q) ||
           s.customerName.toLowerCase().includes(q) ||
-          s.projectCode.toLowerCase().includes(q)
+          s.projectCode.toLowerCase().includes(q) ||
+          (s.supportType && s.supportType.toLowerCase().includes(q)) ||
+          (s.fabSite && s.fabSite.toLowerCase().includes(q))
       );
     }
     if (params?.status && params.status !== 'All') {
-      list = list.filter((s) => s.status.toLowerCase().includes(params.status.toLowerCase()));
+      list = list.filter((s) => 
+        s.status.toLowerCase().includes(params.status.toLowerCase()) ||
+        (s.scheduleStatus && s.scheduleStatus.toLowerCase().includes(params.status.toLowerCase()))
+      );
     }
 
     return {
@@ -77,14 +90,34 @@ export const getScheduleById = async (id: string): Promise<Schedule | null> => {
   return res.data ? mapApiScheduleToFrontend(res.data) : null;
 };
 
-export const createSchedule = async (data: Partial<Schedule>): Promise<Schedule> => {
-  const res = await api.post('/schedules', data);
-  return res.data;
+export const createSchedule = async (engineerId: string, data: Partial<Schedule>): Promise<Schedule> => {
+  const payload = {
+    support_type: data.supportType,
+    country: data.country,
+    fab_city: data.fabCity || null,
+    fab_site: data.fabSite || null,
+    start_date: data.startDate || null,
+    end_date: data.endDate || null,
+    schedule_status: data.scheduleStatus || 'Upcoming',
+    remarks: data.remarks || null,
+  };
+  const res = await api.post(`/engineers/${engineerId}/schedules`, payload);
+  return mapApiScheduleToFrontend(res.data);
 };
 
 export const updateSchedule = async (id: string, data: Partial<Schedule>): Promise<Schedule> => {
-  const res = await api.put(`/schedules/${id}`, data);
-  return res.data;
+  const payload = {
+    support_type: data.supportType,
+    country: data.country,
+    fab_city: data.fabCity || null,
+    fab_site: data.fabSite || null,
+    start_date: data.startDate || null,
+    end_date: data.endDate || null,
+    schedule_status: data.scheduleStatus || 'Upcoming',
+    remarks: data.remarks || null,
+  };
+  const res = await api.put(`/schedules/${id}`, payload);
+  return mapApiScheduleToFrontend(res.data);
 };
 
 export const deleteSchedule = async (id: string): Promise<{ success: boolean }> => {

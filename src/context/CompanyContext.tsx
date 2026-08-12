@@ -7,6 +7,9 @@ export const PRESET_COMPANIES: Company[] = [
     id: 'lam-research',
     name: 'LAM Research',
     code: 'LAM',
+    company_id: 'lam-research',
+    company_name: 'LAM Research',
+    short_name: 'LAM',
     logo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&auto=format&fit=crop&q=80',
     tagline: 'Semiconductor Equipment & Service Leader',
     primaryColor: '#0F172A',
@@ -29,6 +32,9 @@ export const PRESET_COMPANIES: Company[] = [
     id: 'axcelis',
     name: 'Axcelis Technologies',
     code: 'AXCL',
+    company_id: 'axcelis',
+    company_name: 'Axcelis Technologies',
+    short_name: 'AXCL',
     logo: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=120&auto=format&fit=crop&q=80',
     tagline: 'Ion Implantation Solutions for Semiconductor Fabrication',
     primaryColor: '#0F172A',
@@ -48,6 +54,9 @@ export const PRESET_COMPANIES: Company[] = [
     id: 'all-data',
     name: 'Master All Data',
     code: 'ALL',
+    company_id: 'all-data',
+    company_name: 'Master All Data',
+    short_name: 'ALL',
     logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=120&auto=format&fit=crop&q=80',
     tagline: 'Aggregated Semiconductor Field Operations & Workforce Dataset',
     primaryColor: '#0F172A',
@@ -85,13 +94,22 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const list = await getCompanies();
         if (list && list.length > 0) {
-          setCompanies(list);
+          const allDataPreset = PRESET_COMPANIES.find((c) => c.id === 'all-data');
+          const combined = allDataPreset ? [...list, allDataPreset] : list;
+          setCompanies(combined);
+          
           const activeId = localStorage.getItem('ormp_active_company');
-          const found = list.find((c) => c.id === activeId);
+          const found = combined.find(
+            (c) =>
+              c.company_id === activeId ||
+              c.id === activeId ||
+              c.code.toLowerCase() === activeId?.toLowerCase() ||
+              c.name.toLowerCase() === activeId?.toLowerCase()
+          );
           if (found) {
             setCurrentCompany(found);
           } else {
-            setCurrentCompany(list[0]);
+            setCurrentCompany(combined[0]);
           }
         }
       } catch (err) {
@@ -123,7 +141,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentCompany]);
 
   const setCompany = (companyId: string) => {
-    const target = companies.find((c) => c.id === companyId);
+    const target = companies.find((c) => c.company_id === companyId || c.id === companyId);
     if (target) {
       setCurrentCompany(target);
       applyCompanyTheme(target);

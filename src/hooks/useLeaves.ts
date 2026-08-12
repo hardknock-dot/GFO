@@ -2,9 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getLeaves,
   getLeaveById,
-  createLeave,
-  updateLeave,
-  deleteLeave,
+  createLeaveRecord,
+  updateLeaveRecord,
+  deleteLeaveRecord,
 } from '../services/leave';
 import type { Leave } from '../types';
 
@@ -27,9 +27,10 @@ export const useLeaveDetail = (id: string) => {
 export const useCreateLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Leave>) => createLeave(data),
+    mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Leave> }) => createLeaveRecord(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
     },
   });
 };
@@ -37,10 +38,11 @@ export const useCreateLeave = () => {
 export const useUpdateLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Leave> }) => updateLeave(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Leave> }) => updateLeaveRecord(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       queryClient.invalidateQueries({ queryKey: ['leave', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
     },
   });
 };
@@ -48,9 +50,10 @@ export const useUpdateLeave = () => {
 export const useDeleteLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteLeave(id),
+    mutationFn: (id: string) => deleteLeaveRecord(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
     },
   });
 };

@@ -27,9 +27,10 @@ export const usePerformanceDetail = (id: string) => {
 export const useCreatePerformance = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Performance>) => createPerformanceRecord(data),
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: Partial<Performance> }) => createPerformanceRecord(scheduleId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['performance'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };
@@ -41,6 +42,7 @@ export const useUpdatePerformance = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['performance'] });
       queryClient.invalidateQueries({ queryKey: ['performance-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };
@@ -51,6 +53,7 @@ export const useDeletePerformance = () => {
     mutationFn: (id: string) => deletePerformanceRecord(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['performance'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };

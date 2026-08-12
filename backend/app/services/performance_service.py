@@ -1,9 +1,14 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import List
+from typing import List, Optional
 from uuid import UUID
+import uuid
+from datetime import datetime
+
 from app.models.performance import Performance
 from app.models.schedule import Schedule
+from app.schemas.performance import PerformanceCreate, PerformanceUpdate
+from fastapi import HTTPException, status
 
 def get_engineer_performance(db: Session, engineer_id: UUID) -> List[Performance]:
     """
@@ -16,3 +21,118 @@ def get_engineer_performance(db: Session, engineer_id: UUID) -> List[Performance
     )
     result = db.scalars(stmt).all()
     return list(result)
+
+def get_schedule_performance(db: Session, schedule_id: UUID) -> List[Performance]:
+    """
+    Retrieve all performance records associated with a schedule.
+    """
+    # 1. Verify schedule exists
+    sch = db.get(Schedule, schedule_id)
+    if sch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Schedule not found"
+        )
+    
+    stmt = select(Performance).where(Performance.schedule_id == schedule_id)
+    result = db.scalars(stmt).all()
+    return list(result)
+
+def create_performance(db: Session, schedule_id: UUID, performance_data: PerformanceCreate) -> Performance:
+    """
+    Create a new performance record associated with a schedule.
+    """
+    # 1. Verify schedule exists
+    sch = db.get(Schedule, schedule_id)
+    if sch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Schedule not found"
+        )
+
+    # 2. Create Performance
+    db_perf = Performance(
+        performance_id=uuid.uuid4(),
+        schedule_id=schedule_id,
+        owner_id=None,  # Leave NULL since no authentication mechanism is present
+        actual_start_date=performance_data.actual_start_date,
+        actual_end_date=performance_data.actual_end_date,
+        escalation=performance_data.escalation if performance_data.escalation is not None else False,
+        escalation_reason=performance_data.escalation_reason,
+        feedback=performance_data.feedback,
+        score=performance_data.score,
+        attachment=performance_data.attachment,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db.add(db_perf)
+    db.commit()
+    db.refresh(db_perf)
+    return db_perf
+
+def update_performance(db: Session, performance_id: UUID, performance_data: PerformanceUpdate) -> Performance:
+    """
+    Update an existing performance record.
+    """
+    # 1. Find Performance
+    db_perf = db.get(Performance, performance_id)
+    if db_perf is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Performance record not found"
+        )
+
+    # 2. Validate merged dates and escalation reason
+    new_start = performance_data.actual_start_date if performance_data.actual_start_date is not None else db_perf.actual_start_date
+    new_end = performance_data.actual_end_date if performance_data.actual_end_date is not None else db_perf.actual_end_date
+    if new_start is not None and new_end is not None:
+        if new_end < new_start:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="actual_end_date should not be earlier than actual_start_date"
+            )
+
+    new_escalation = performance_data.escalation if performance_data.escalation is not None else db_perf.escalation
+    new_reason = performance_data.escalation_reason if performance_data.escalation_reason is not None else db_perf.escalation_reason
+    if new_escalation is True and not new_reason:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Escalation reason is required when escalation is enabled."
+        )
+
+    # 3. Update fields
+    if performance_data.actual_start_date is not None:
+        db_perf.actual_start_date = performance_data.actual_start_date
+    if performance_data.actual_end_date is not None:
+        db_perf.actual_end_date = performance_data.actual_end_date
+    if performance_data.escalation is not None:
+        db_perf.escalation = performance_data.escalation
+    if performance_data.escalation_reason is not None:
+        db_perf.escalation_reason = performance_data.escalation_reason
+    if performance_data.feedback is not None:
+        db_perf.feedback = performance_data.feedback
+    if performance_data.score is not None:
+        db_perf.score = performance_data.score
+    if performance_data.attachment is not None:
+        db_perf.attachment = performance_data.attachment
+
+    db_perf.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(db_perf)
+    return db_perf
+
+def delete_performance(db: Session, performance_id: UUID) -> None:
+    """
+    Delete an existing performance record.
+    """
+    # 1. Find Performance
+    db_perf = db.get(Performance, performance_id)
+    if db_perf is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Performance record not found"
+        )
+
+    # 2. Delete Performance
+    db.delete(db_perf)
+    db.commit()

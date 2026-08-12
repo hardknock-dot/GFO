@@ -13,6 +13,11 @@ const mapApiLeaveToFrontend = (apiLeave: any, engineerName?: string, engineerId?
     type: (apiLeave.leave_type as any) || 'Annual Leave',
     status: (apiLeave.approval_status as any) || 'Pending',
     reason: 'No reason provided',
+    leaveType: apiLeave.leave_type || 'Annual Leave',
+    requestedDate: apiLeave.requested_date || '',
+    requestedOn: apiLeave.requested_on || '',
+    approvalStatus: apiLeave.approval_status || 'Pending',
+    ownerId: apiLeave.owner_id || undefined,
   };
 };
 
@@ -36,7 +41,7 @@ export const getLeaves = async (params?: any): Promise<PaginatedResponse<Leave>>
     if (params?.engineerId) {
       list = await getEngineerLeaves(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const leavesPromises = engs.data.map(e => getEngineerLeaves(e.id));
       const nestedLeaves = await Promise.all(leavesPromises);
       list = nestedLeaves.flat();
@@ -52,7 +57,7 @@ export const getLeaves = async (params?: any): Promise<PaginatedResponse<Leave>>
       );
     }
     if (params?.status && params.status !== 'All') {
-      list = list.filter((l) => l.status === params.status);
+      list = list.filter((l) => l.status === params.status || l.approvalStatus === params.status);
     }
 
     return {
@@ -72,17 +77,29 @@ export const getLeaveById = async (id: string): Promise<Leave | null> => {
   return res.data ? mapApiLeaveToFrontend(res.data) : null;
 };
 
-export const createLeave = async (data: Partial<Leave>): Promise<Leave> => {
-  const res = await api.post('/leaves', data);
-  return res.data;
+export const createLeaveRecord = async (engineerId: string, data: Partial<Leave>): Promise<Leave> => {
+  const payload = {
+    leave_type: data.leaveType || data.type || 'Annual Leave',
+    requested_date: data.requestedDate || data.startDate || null,
+    requested_on: data.requestedOn || new Date().toISOString().split('T')[0],
+    approval_status: data.approvalStatus || data.status || 'Pending',
+  };
+  const res = await api.post(`/engineers/${engineerId}/leaves`, payload);
+  return mapApiLeaveToFrontend(res.data);
 };
 
-export const updateLeave = async (id: string, data: Partial<Leave>): Promise<Leave> => {
-  const res = await api.put(`/leaves/${id}`, data);
-  return res.data;
+export const updateLeaveRecord = async (id: string, data: Partial<Leave>): Promise<Leave> => {
+  const payload = {
+    leave_type: data.leaveType || data.type || undefined,
+    requested_date: data.requestedDate || data.startDate || undefined,
+    requested_on: data.requestedOn || undefined,
+    approval_status: data.approvalStatus || data.status || undefined,
+  };
+  const res = await api.put(`/leaves/${id}`, payload);
+  return mapApiLeaveToFrontend(res.data);
 };
 
-export const deleteLeave = async (id: string): Promise<{ success: boolean }> => {
+export const deleteLeaveRecord = async (id: string): Promise<{ success: boolean }> => {
   await api.delete(`/leaves/${id}`);
   return { success: true };
 };

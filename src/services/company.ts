@@ -13,6 +13,9 @@ const mapApiCompanyToFrontend = (apiComp: any): Company => {
     id: apiComp.company_id,
     name: apiComp.company_name,
     code: apiComp.short_name,
+    company_id: apiComp.company_id,
+    company_name: apiComp.company_name,
+    short_name: apiComp.short_name,
     logo: apiComp.logo ? (apiComp.logo.startsWith('http') ? apiComp.logo : preset.logo) : preset.logo,
   };
 };

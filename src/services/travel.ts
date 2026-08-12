@@ -18,6 +18,11 @@ const mapApiTravelToFrontend = (apiTrv: any, engineerName?: string, orbitId?: st
     flightNumber: 'SQ362',
     hotelBooking: apiTrv.comments || 'Hilton Fab City',
     purpose: apiTrv.purpose || 'Deployment Assignment',
+    bookingDate: apiTrv.booking_date || '',
+    travelDate: apiTrv.travel_date || '',
+    comments: apiTrv.comments || '',
+    scheduleId: apiTrv.schedule_id,
+    ownerId: apiTrv.owner_id || undefined,
   };
 };
 
@@ -35,13 +40,26 @@ export const getEngineerTravel = async (engineerId: string): Promise<Travel[]> =
   }
 };
 
+export const getScheduleTravel = async (scheduleId: string): Promise<Travel[]> => {
+  try {
+    const res = await api.get(`/schedules/${scheduleId}/travel`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(t => mapApiTravelToFrontend(t));
+    }
+    return [];
+  } catch (err) {
+    console.error(`Error fetching travel for schedule ${scheduleId}:`, err);
+    throw err;
+  }
+};
+
 export const getTravelRecords = async (params?: any): Promise<PaginatedResponse<Travel>> => {
   try {
     let list: Travel[] = [];
     if (params?.engineerId) {
       list = await getEngineerTravel(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const travelPromises = engs.data.map(e => getEngineerTravel(e.id));
       const nestedTravel = await Promise.all(travelPromises);
       list = nestedTravel.flat();
@@ -77,14 +95,26 @@ export const getTravelRecordById = async (id: string): Promise<Travel | null> =>
   return res.data ? mapApiTravelToFrontend(res.data) : null;
 };
 
-export const createTravelRecord = async (data: Partial<Travel>): Promise<Travel> => {
-  const res = await api.post('/travel', data);
-  return res.data;
+export const createTravelRecord = async (scheduleId: string, data: Partial<Travel>): Promise<Travel> => {
+  const payload = {
+    booking_date: data.bookingDate || null,
+    travel_date: data.travelDate || null,
+    purpose: data.purpose || null,
+    comments: data.comments || null,
+  };
+  const res = await api.post(`/schedules/${scheduleId}/travel`, payload);
+  return mapApiTravelToFrontend(res.data);
 };
 
 export const updateTravelRecord = async (id: string, data: Partial<Travel>): Promise<Travel> => {
-  const res = await api.put(`/travel/${id}`, data);
-  return res.data;
+  const payload = {
+    booking_date: data.bookingDate || null,
+    travel_date: data.travelDate || null,
+    purpose: data.purpose || null,
+    comments: data.comments || null,
+  };
+  const res = await api.put(`/travel/${id}`, payload);
+  return mapApiTravelToFrontend(res.data);
 };
 
 export const deleteTravelRecord = async (id: string): Promise<{ success: boolean }> => {

@@ -33,6 +33,8 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
     expiryDate: expiryStr,
     daysUntilExpiry,
     status,
+    appliedOn: apiVisa.applied_on || '',
+    ownerId: apiVisa.owner_id || undefined,
   };
 };
 
@@ -56,7 +58,7 @@ export const getVisaRecords = async (params?: any): Promise<PaginatedResponse<Vi
     if (params?.engineerId) {
       list = await getEngineerVisas(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const visasPromises = engs.data.map(e => getEngineerVisas(e.id));
       const nestedVisas = await Promise.all(visasPromises);
       list = nestedVisas.flat();
@@ -88,22 +90,36 @@ export const getVisaRecords = async (params?: any): Promise<PaginatedResponse<Vi
 };
 
 export const getVisaRecordById = async (id: string): Promise<Visa | null> => {
-  const res = await api.get(`/visas/${id}`);
+  const res = await api.get(`/visa/${id}`);
   return res.data ? mapApiVisaToFrontend(res.data) : null;
 };
 
-export const createVisaRecord = async (data: Partial<Visa>): Promise<Visa> => {
-  const res = await api.post('/visas', data);
-  return res.data;
+export const createVisaRecord = async (engineerId: string, data: Partial<Visa>): Promise<Visa> => {
+  const payload = {
+    country: data.country,
+    visa_type: data.visaType || null,
+    applied_on: data.appliedOn || null,
+    visa_start_date: data.issueDate || null,
+    visa_end_date: data.expiryDate || null,
+  };
+  const res = await api.post(`/engineers/${engineerId}/visa`, payload);
+  return mapApiVisaToFrontend(res.data);
 };
 
 export const updateVisaRecord = async (id: string, data: Partial<Visa>): Promise<Visa> => {
-  const res = await api.put(`/visas/${id}`, data);
-  return res.data;
+  const payload = {
+    country: data.country,
+    visa_type: data.visaType || null,
+    applied_on: data.appliedOn || null,
+    visa_start_date: data.issueDate || null,
+    visa_end_date: data.expiryDate || null,
+  };
+  const res = await api.put(`/visa/${id}`, payload);
+  return mapApiVisaToFrontend(res.data);
 };
 
 export const deleteVisaRecord = async (id: string): Promise<{ success: boolean }> => {
-  await api.delete(`/visas/${id}`);
+  await api.delete(`/visa/${id}`);
   return { success: true };
 };
 

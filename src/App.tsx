@@ -19,6 +19,8 @@ import { SkillsPage } from './pages/SkillsPage';
 import { TravelPage } from './pages/TravelPage';
 import { VisaPage } from './pages/VisaPage';
 import { PerformancePage } from './pages/PerformancePage';
+import { LeavesPage } from './pages/LeavesPage';
+import { MissedSchedulesPage } from './pages/MissedSchedulesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UploadPage } from './pages/UploadPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -77,6 +79,8 @@ export const App: React.FC = () => {
                           <Route path="/travel" element={<TravelPage />} />
                           <Route path="/visa" element={<VisaPage />} />
                           <Route path="/performance" element={<PerformancePage />} />
+                          <Route path="/leaves" element={<LeavesPage />} />
+                          <Route path="/missed-schedules" element={<MissedSchedulesPage />} />
                           <Route path="/reports" element={<ReportsPage />} />
                         </Route>
 

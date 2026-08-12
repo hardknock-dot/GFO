@@ -11,6 +11,7 @@ export interface EngineerQueryParams {
   maxExperience?: number;
   page?: number;
   limit?: number;
+  company_id?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -24,18 +25,19 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
   return {
     id: apiEng.engineer_id,
     orbitId: apiEng.orbit_id,
-    customerId: apiEng.lam_id || '',
+    customerId: apiEng.lam_id || apiEng.employee_id || '',
     name: apiEng.engineer_name,
     goesBy: apiEng.goes_by || '',
     email: apiEng.email || `${apiEng.goes_by?.toLowerCase() || 'engineer'}@company.com`,
     phone: apiEng.phone || '+1 (555) 019-1000',
     status: apiEng.status || 'Active',
-    primaryTool: apiEng.primary_tool_type || '',
+    primaryTool: apiEng.primary_tool_type || apiEng.primary_tool || '',
     level: apiEng.level || 'L2 Specialist',
     country: apiEng.country || 'Taiwan',
     city: apiEng.city || 'Hsinchu',
     assignedSite: apiEng.assigned_site || 'TSMC Fab 18',
     yearsExperience: Number(apiEng.industry_experience) || 0,
+    customerExperience: Number(apiEng.customer_experience) || Number(apiEng.lam_experience) || 0,
     certificationsCount: apiEng.certifications_count || 0,
     activeProjectsCount: apiEng.active_projects_count || 0,
     avatarUrl: apiEng.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
@@ -81,13 +83,38 @@ export const getEngineerById = async (id: string): Promise<Engineer | null> => {
 };
 
 export const createEngineer = async (data: Partial<Engineer>): Promise<Engineer> => {
-  const response = await api.post('/engineers', data);
-  return response.data;
+  const payload = {
+    company_id: (data as any).company_id,
+    engineer_name: data.name,
+    goes_by: data.goesBy,
+    employee_id: data.customerId,
+    orbit_id: data.orbitId,
+    level: data.level,
+    date_of_joining: data.joinDate || null,
+    primary_tool: data.primaryTool,
+    customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
+    industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
+    status: data.status,
+  };
+  const response = await api.post('/engineers', payload);
+  return mapApiEngineerToFrontend(response.data);
 };
 
 export const updateEngineer = async (id: string, data: Partial<Engineer>): Promise<Engineer> => {
-  const response = await api.put(`/engineers/${id}`, data);
-  return response.data;
+  const payload = {
+    engineer_name: data.name,
+    goes_by: data.goesBy,
+    employee_id: data.customerId,
+    orbit_id: data.orbitId,
+    level: data.level,
+    date_of_joining: data.joinDate || null,
+    primary_tool: data.primaryTool,
+    customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
+    industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
+    status: data.status,
+  };
+  const response = await api.put(`/engineers/${id}`, payload);
+  return mapApiEngineerToFrontend(response.data);
 };
 
 export const deleteEngineer = async (id: string): Promise<{ success: boolean }> => {

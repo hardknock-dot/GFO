@@ -7,12 +7,25 @@ const mapApiSkillToFrontend = (apiSkill: any): Skill => {
   return {
     id: apiSkill.skill_id,
     engineerId: apiSkill.engineer_id,
-    toolModel: apiSkill.tool_model || '',
-    category: apiSkill.category || 'Etch',
-    competencyLevel: apiSkill.competency_level || 'L2 Specialist',
-    certified: apiSkill.certified || false,
-    lastAssessedDate: apiSkill.last_assessed_date || '',
-    certificationAuthority: apiSkill.certification_authority || '',
+    country: apiSkill.country || '',
+    fab: apiSkill.fab || '',
+    waferSize: apiSkill.wafer_size || '',
+    toolType: apiSkill.tool_type || '',
+    startDate: apiSkill.start_date || '',
+    endDate: apiSkill.end_date || '',
+    numberOfTools: apiSkill.number_of_tools !== null && apiSkill.number_of_tools !== undefined ? Number(apiSkill.number_of_tools) : undefined,
+    role: apiSkill.role || '',
+    previousProcessStartup: apiSkill.previous_process_startup || false,
+    previousCmPm: apiSkill.previous_cm_pm || false,
+    readyForPrimaryRole: apiSkill.ready_for_primary_role || false,
+    comments: apiSkill.comments || '',
+
+    // Compatibility fields:
+    toolModel: apiSkill.tool_type || '',
+    category: (apiSkill.tool_type && ['Etch', 'Deposition', 'Clean', 'Metrology', 'Ion Implantation', 'Lithography'].includes(apiSkill.tool_type) ? apiSkill.tool_type : 'Etch') as any,
+    competencyLevel: (apiSkill.role || 'L2 Specialist') as any,
+    certified: apiSkill.ready_for_primary_role || false,
+    lastAssessedDate: apiSkill.end_date || '',
   };
 };
 
@@ -68,14 +81,42 @@ export const getSkillById = async (id: string): Promise<Skill | null> => {
   return res.data ? mapApiSkillToFrontend(res.data) : null;
 };
 
-export const createSkill = async (data: Partial<Skill>): Promise<Skill> => {
-  const res = await api.post('/skills', data);
-  return res.data;
+export const createSkill = async (engineerId: string, data: Partial<Skill>): Promise<Skill> => {
+  const payload = {
+    country: data.country,
+    fab: data.fab,
+    wafer_size: data.waferSize,
+    tool_type: data.toolType,
+    start_date: data.startDate || null,
+    end_date: data.endDate || null,
+    number_of_tools: data.numberOfTools !== undefined && data.numberOfTools !== null && (data.numberOfTools as any) !== '' ? Number(data.numberOfTools) : null,
+    role: data.role,
+    previous_process_startup: data.previousProcessStartup || false,
+    previous_cm_pm: data.previousCmPm || false,
+    ready_for_primary_role: data.readyForPrimaryRole || false,
+    comments: data.comments,
+  };
+  const res = await api.post(`/engineers/${engineerId}/skills`, payload);
+  return mapApiSkillToFrontend(res.data);
 };
 
 export const updateSkill = async (id: string, data: Partial<Skill>): Promise<Skill> => {
-  const res = await api.put(`/skills/${id}`, data);
-  return res.data;
+  const payload = {
+    country: data.country,
+    fab: data.fab,
+    wafer_size: data.waferSize,
+    tool_type: data.toolType,
+    start_date: data.startDate || null,
+    end_date: data.endDate || null,
+    number_of_tools: data.numberOfTools !== undefined && data.numberOfTools !== null && (data.numberOfTools as any) !== '' ? Number(data.numberOfTools) : null,
+    role: data.role,
+    previous_process_startup: data.previousProcessStartup,
+    previous_cm_pm: data.previousCmPm,
+    ready_for_primary_role: data.readyForPrimaryRole,
+    comments: data.comments,
+  };
+  const res = await api.put(`/skills/${id}`, payload);
+  return mapApiSkillToFrontend(res.data);
 };
 
 export const deleteSkill = async (id: string): Promise<{ success: boolean }> => {

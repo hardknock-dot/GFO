@@ -22,3 +22,17 @@ class Engineer(Base):
     status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    @property
+    def employee_id(self) -> Optional[str]:
+        return self.lam_id
+
+    @property
+    def primary_tool(self) -> Optional[str]:
+        return self.primary_tool_type
+
+    @property
+    def customer_experience(self) -> Optional[float]:
+        if self.lam_experience is not None:
+            return float(self.lam_experience)
+        return None

@@ -29,7 +29,7 @@ export const useVisaDetail = (id: string) => {
 export const useCreateVisa = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Visa>) => createVisaRecord(data),
+    mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Visa> }) => createVisaRecord(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
     },

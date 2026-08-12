@@ -35,7 +35,7 @@ export const useScheduleDetail = (id: string) => {
 export const useCreateSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Schedule>) => createSchedule(data),
+    mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Schedule> }) => createSchedule(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },

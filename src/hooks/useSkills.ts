@@ -28,9 +28,10 @@ export const useSkillDetail = (id: string) => {
 export const useCreateSkill = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Skill>) => createSkill(data),
+    mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Skill> }) => createSkill(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-skills'] });
     },
   });
 };
@@ -41,6 +42,7 @@ export const useUpdateSkill = () => {
     mutationFn: ({ id, data }: { id: string; data: Partial<Skill> }) => updateSkill(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-skills'] });
       queryClient.invalidateQueries({ queryKey: ['skill-detail', variables.id] });
     },
   });
@@ -52,6 +54,7 @@ export const useDeleteSkill = () => {
     mutationFn: (id: string) => deleteSkill(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-skills'] });
     },
   });
 };

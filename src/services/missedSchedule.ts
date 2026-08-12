@@ -16,6 +16,10 @@ const mapApiMissedScheduleToFrontend = (apiMs: any, engineerName?: string, orbit
     reasonForChange: apiMs.reason || 'Change request',
     notesAttachEvidence: apiMs.evidence || '',
     owner: 'Operations Manager',
+    scheduleId: apiMs.schedule_id,
+    ownerId: apiMs.owner_id || undefined,
+    reason: apiMs.reason || '',
+    evidence: apiMs.evidence || '',
   };
 };
 
@@ -33,13 +37,28 @@ export const getEngineerMissedSchedules = async (engineerId: string): Promise<Mi
   }
 };
 
+export const getScheduleMissedSchedules = async (scheduleId: string): Promise<MissedSchedule[]> => {
+  try {
+    const res = await api.get(`/schedules/${scheduleId}/missed-schedules`);
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(ms => mapApiMissedScheduleToFrontend(ms));
+    }
+    return [];
+  } catch (err) {
+    console.error(`Error fetching missed schedules for schedule ${scheduleId}:`, err);
+    throw err;
+  }
+};
+
 export const getMissedSchedules = async (params?: any): Promise<PaginatedResponse<MissedSchedule>> => {
   try {
     let list: MissedSchedule[] = [];
-    if (params?.engineerId) {
+    if (params?.scheduleId) {
+      list = await getScheduleMissedSchedules(params.scheduleId);
+    } else if (params?.engineerId) {
       list = await getEngineerMissedSchedules(params.engineerId);
     } else {
-      const engs = await getEngineers();
+      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
       const msPromises = engs.data.map(e => getEngineerMissedSchedules(e.id));
       const nestedMs = await Promise.all(msPromises);
       list = nestedMs.flat();
@@ -50,7 +69,8 @@ export const getMissedSchedules = async (params?: any): Promise<PaginatedRespons
       list = list.filter(
         (ms) =>
           ms.engineerName.toLowerCase().includes(q) ||
-          ms.reasonForChange.toLowerCase().includes(q)
+          ms.reasonForChange.toLowerCase().includes(q) ||
+          ms.notesAttachEvidence.toLowerCase().includes(q)
       );
     }
 
@@ -64,4 +84,35 @@ export const getMissedSchedules = async (params?: any): Promise<PaginatedRespons
     console.error('Error fetching global missed schedules:', err);
     throw err;
   }
+};
+
+export const createMissedScheduleRecord = async (scheduleId: string, data: Partial<MissedSchedule>): Promise<MissedSchedule> => {
+  const payload = {
+    requested_start_date: data.requestedStartDate || null,
+    requested_end_date: data.requestedEndDate || null,
+    actual_start_date: data.actualStartDate || null,
+    actual_end_date: data.actualEndDate || null,
+    reason: data.reason || data.reasonForChange || null,
+    evidence: data.evidence || data.notesAttachEvidence || null,
+  };
+  const res = await api.post(`/schedules/${scheduleId}/missed-schedules`, payload);
+  return mapApiMissedScheduleToFrontend(res.data);
+};
+
+export const updateMissedScheduleRecord = async (id: string, data: Partial<MissedSchedule>): Promise<MissedSchedule> => {
+  const payload = {
+    requested_start_date: data.requestedStartDate || undefined,
+    requested_end_date: data.requestedEndDate || undefined,
+    actual_start_date: data.actualStartDate || undefined,
+    actual_end_date: data.actualEndDate || undefined,
+    reason: data.reason !== undefined ? data.reason : data.reasonForChange,
+    evidence: data.evidence !== undefined ? data.evidence : data.notesAttachEvidence,
+  };
+  const res = await api.put(`/missed-schedules/${id}`, payload);
+  return mapApiMissedScheduleToFrontend(res.data);
+};
+
+export const deleteMissedScheduleRecord = async (id: string): Promise<{ success: boolean }> => {
+  await api.delete(`/missed-schedules/${id}`);
+  return { success: true };
 };

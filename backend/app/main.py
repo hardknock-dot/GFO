@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health, companies, engineers
+from app.routers import health, companies, engineers, skills, schedules, visa, travel, performance, leave, missed_schedule
 
 # Setup logging
 logging.basicConfig(
@@ -30,6 +30,13 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(companies.router, prefix="/api")
 app.include_router(engineers.router, prefix="/api")
+app.include_router(skills.router, prefix="/api")
+app.include_router(schedules.router, prefix="/api")
+app.include_router(visa.router, prefix="/api")
+app.include_router(travel.router, prefix="/api")
+app.include_router(performance.router, prefix="/api")
+app.include_router(leave.router, prefix="/api")
+app.include_router(missed_schedule.router, prefix="/api")
 
 @app.get("/")
 def read_root():

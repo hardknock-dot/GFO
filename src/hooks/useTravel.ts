@@ -27,9 +27,10 @@ export const useTravelDetail = (id: string) => {
 export const useCreateTravel = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Travel>) => createTravelRecord(data),
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: Partial<Travel> }) => createTravelRecord(scheduleId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };
@@ -41,6 +42,7 @@ export const useUpdateTravel = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
       queryClient.invalidateQueries({ queryKey: ['travel-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };
@@ -51,6 +53,7 @@ export const useDeleteTravel = () => {
     mutationFn: (id: string) => deleteTravelRecord(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
   });
 };

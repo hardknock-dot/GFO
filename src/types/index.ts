@@ -9,6 +9,9 @@ export interface Company {
   id: string;
   name: string;
   code: string;
+  company_id: string;
+  company_name: string;
+  short_name: string;
   logo: string;
   tagline: string;
   primaryColor: string;
@@ -53,6 +56,7 @@ export interface Engineer {
   city: string;
   assignedSite?: string;
   yearsExperience: number;
+  customerExperience?: number;
   certificationsCount: number;
   activeProjectsCount: number;
   avatarUrl?: string;
@@ -68,6 +72,18 @@ export interface Skill {
   certified: boolean;
   lastAssessedDate: string;
   certificationAuthority?: string;
+  country?: string;
+  fab?: string;
+  waferSize?: string;
+  toolType?: string;
+  startDate?: string;
+  endDate?: string;
+  numberOfTools?: number;
+  role?: string;
+  previousProcessStartup?: boolean;
+  previousCmPm?: boolean;
+  readyForPrimaryRole?: boolean;
+  comments?: string;
 }
 
 export interface Schedule {
@@ -84,6 +100,10 @@ export interface Schedule {
   status: ScheduleStatus;
   shiftType: 'Day Shift' | 'Night Shift' | 'Rotational' | 'On-Call';
   supportType?: string;
+  fabCity?: string;
+  fabSite?: string;
+  scheduleStatus?: string;
+  remarks?: string;
 }
 
 export interface Travel {
@@ -100,6 +120,11 @@ export interface Travel {
   flightNumber: string;
   hotelBooking: string;
   purpose: string;
+  bookingDate?: string;
+  travelDate?: string;
+  comments?: string;
+  scheduleId?: string;
+  ownerId?: string;
 }
 
 export interface Visa {
@@ -114,6 +139,8 @@ export interface Visa {
   expiryDate: string;
   daysUntilExpiry: number;
   status: VisaStatus;
+  appliedOn?: string;
+  ownerId?: string;
 }
 
 export interface Performance {
@@ -128,6 +155,15 @@ export interface Performance {
   reviewDate: string;
   reviewer: string;
   notes: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  escalation?: boolean;
+  escalationReason?: string;
+  feedback?: string;
+  score?: number;
+  attachment?: string;
+  scheduleId?: string;
+  ownerId?: string;
 }
 
 export interface Leave {
@@ -139,6 +175,11 @@ export interface Leave {
   type: 'Annual Leave' | 'Sick Leave' | 'Training' | 'Emergency';
   status: 'Approved' | 'Pending' | 'Rejected';
   reason: string;
+  leaveType?: string;
+  requestedDate?: string;
+  requestedOn?: string;
+  approvalStatus?: string;
+  ownerId?: string;
 }
 
 export interface ReportSummary {
@@ -175,4 +216,8 @@ export interface MissedSchedule {
   reasonForChange: string;
   notesAttachEvidence: string;
   owner: string;
+  scheduleId?: string;
+  ownerId?: string;
+  reason?: string;
+  evidence?: string;
 }
