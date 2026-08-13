@@ -49,7 +49,8 @@ export const getSchedules = async (params?: any): Promise<PaginatedResponse<Sche
     if (params?.engineerId) {
       list = await getEngineerSchedules(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const schedulesPromises = engs.data.map(e => getEngineerSchedules(e.id));
       const nestedSchedules = await Promise.all(schedulesPromises);
       list = nestedSchedules.flat();

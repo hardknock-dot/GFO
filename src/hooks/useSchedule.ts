@@ -7,22 +7,26 @@ import {
   deleteSchedule,
 } from '../services/schedule';
 import type { Schedule } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
 export const useSchedule = (params?: any) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+  };
+
   return useQuery({
-    queryKey: ['schedules', params],
-    queryFn: () => getSchedules(params),
+    queryKey: ['schedules', queryParams],
+    queryFn: () => getSchedules(queryParams),
     staleTime: 1000 * 60 * 5,
   });
 };
 
-export const useSchedules = (params?: any) => {
-  return useQuery({
-    queryKey: ['schedules', params],
-    queryFn: () => getSchedules(params),
-    staleTime: 1000 * 60 * 5,
-  });
-};
+export const useSchedules = useSchedule;
 
 export const useScheduleDetail = (id: string) => {
   return useQuery({
@@ -38,6 +42,7 @@ export const useCreateSchedule = () => {
     mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Schedule> }) => createSchedule(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -49,6 +54,7 @@ export const useUpdateSchedule = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -59,6 +65,7 @@ export const useDeleteSchedule = () => {
     mutationFn: (id: string) => deleteSchedule(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

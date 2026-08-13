@@ -192,6 +192,38 @@ export interface ReportSummary {
   downloadUrl: string;
 }
 
+export interface DistributionMetricData {
+  label: string;
+  count: number;
+  percentage?: number;
+}
+
+export interface ReportsSummaryData {
+  company_name: string;
+  total_engineers: number;
+  total_schedules: number;
+  upcoming_schedules: number;
+  active_schedules: number;
+  completed_schedules: number;
+  total_skills: number;
+  total_visas: number;
+  total_leaves: number;
+  total_travels: number;
+  total_performances: number;
+  avg_performance_score?: number | null;
+  total_missed_schedules: number;
+  total_operational_alerts: number;
+  warning_alerts_count: number;
+}
+
+export interface CategoryReportData {
+  category: string;
+  company_name: string;
+  total_count: number;
+  distributions: Record<string, DistributionMetricData[]>;
+  items: Record<string, any>[];
+}
+
 export interface UploadCardItem {
   id: string;
   title: string;
@@ -220,4 +252,59 @@ export interface MissedSchedule {
   ownerId?: string;
   reason?: string;
   evidence?: string;
+}
+
+export interface KPIStats {
+  total_engineers: number;
+  deployed_engineers: number;
+  utilization_rate: number;
+  upcoming_travel_count: number;
+  expiring_visas_count: number;
+  active_projects_count: number;
+}
+
+export interface DeploymentTrendMonth {
+  month: string;
+  Deployed: number;
+  Active: number;
+  OnLeave: number;
+}
+
+export interface StatusDistributionItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface CountryDistributionItem {
+  name: string;
+  value: number;
+}
+
+export interface RecentActivityItem {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  assignedSite?: string;
+  primaryTool?: string;
+  country?: string;
+  timeAgo: string;
+}
+
+export interface ActionChecklistItem {
+  id: string;
+  type: string;
+  title: string;
+  subtitle: string;
+  actionText: string;
+  targetRoute: string;
+}
+
+export interface DashboardMetrics {
+  kpi: KPIStats;
+  deployment_trend: DeploymentTrendMonth[];
+  status_distribution: StatusDistributionItem[];
+  country_distribution: CountryDistributionItem[];
+  recent_activity: RecentActivityItem[];
+  action_checklist: ActionChecklistItem[];
 }

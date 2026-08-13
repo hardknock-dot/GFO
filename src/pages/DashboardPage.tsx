@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
-import { useEngineers } from '../hooks/useEngineers';
-import { useTravel } from '../hooks/useTravel';
-import { useVisa } from '../hooks/useVisa';
-import { useSchedule } from '../hooks/useSchedule';
+import { useDashboard } from '../hooks/useDashboard';
+import { useCompanyOperationalAlerts } from '../hooks/useOperationalAlerts';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatCard } from '../components/common/StatCard';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
+import { ErrorState } from '../components/common/ErrorState';
 import { Button } from '../components/forms/Button';
 import {
   Users,
@@ -20,6 +19,7 @@ import {
   CheckSquare,
   Building2,
   RefreshCw,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   XAxis,
@@ -37,158 +37,41 @@ import {
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
+  const { data, isLoading, isError, refetch } = useDashboard();
+  const { data: opAlerts } = useCompanyOperationalAlerts();
 
-  const { data: engineersRes, isLoading: engLoading, refetch: refetchEng } = useEngineers();
-  const { data: travelRes, isLoading: trvLoading } = useTravel();
-  const { data: visaRes, isLoading: visaLoading } = useVisa();
-  const { data: scheduleRes, isLoading: schLoading } = useSchedule();
+  const kpi = data?.kpi || {
+    total_engineers: 0,
+    deployed_engineers: 0,
+    utilization_rate: 0,
+    upcoming_travel_count: 0,
+    expiring_visas_count: 0,
+    active_projects_count: 0,
+  };
 
-  const engineers = engineersRes?.data || [];
-  const travel = travelRes?.data || [];
-  const visas = visaRes?.data || [];
-  const schedules = scheduleRes?.data || [];
-
-  const totalEngineers = engineers.length;
-  const deployedEngineers = engineers.filter((e) => e.status === 'Deployed').length;
-  const upcomingTravelCount = travel.length;
-  const expiringVisasCount = visas.filter((v) => v.status === 'Expiring Soon' || v.daysUntilExpiry <= 30).length;
-  const activeProjectsCount = schedules.filter((s) => s.status === 'Active Assignment').length;
-
-  // Chart datasets computed dynamically
-  const deploymentData = React.useMemo(() => {
-    const months = [
-      { name: 'Jan', start: '2026-01-01', end: '2026-01-31' },
-      { name: 'Feb', start: '2026-02-01', end: '2026-02-28' },
-      { name: 'Mar', start: '2026-03-01', end: '2026-03-31' },
-      { name: 'Apr', start: '2026-04-01', end: '2026-04-30' },
-      { name: 'May', start: '2026-05-01', end: '2026-05-31' },
-      { name: 'Jun', start: '2026-06-01', end: '2026-06-30' },
-    ];
-
-    return months.map((m) => {
-      let deployedCount = 0;
-      let activeCount = 0;
-      let ptoCount = 0;
-
-      schedules.forEach((s) => {
-        if (s.startDate <= m.end && s.endDate >= m.start) {
-          const type = s.supportType;
-          if (type === 'Deployment' || type === 'Install') {
-            deployedCount++;
-          } else if (
-            type === 'PTO' ||
-            type === 'LOA' ||
-            type.startsWith('LOA') ||
-            type.startsWith('PTO')
-          ) {
-            ptoCount++;
-          } else {
-            activeCount++;
-          }
-        }
-      });
-
-      return {
-        month: m.name,
-        Deployed: deployedCount || (m.name === 'Jan' ? 32 : m.name === 'Feb' ? 38 : m.name === 'Mar' ? 42 : m.name === 'Apr' ? 45 : m.name === 'May' ? 48 : 50),
-        Active: activeCount || (m.name === 'Jan' ? 12 : m.name === 'Feb' ? 10 : m.name === 'Mar' ? 8 : m.name === 'Apr' ? 9 : m.name === 'May' ? 7 : 11),
-        OnLeave: ptoCount || (m.name === 'Jan' ? 4 : m.name === 'Feb' ? 3 : m.name === 'Mar' ? 5 : m.name === 'Apr' ? 2 : m.name === 'May' ? 3 : 4),
-      };
-    });
-  }, [schedules]);
-
-  const countryDistribution = React.useMemo(() => {
-    const distributionMap: Record<string, number> = {};
-
-    engineers.forEach((eng) => {
-      const country = eng.country || 'Other';
-      const label = eng.assignedSite ? `${country} (${eng.assignedSite})` : country;
-      distributionMap[label] = (distributionMap[label] || 0) + 1;
-    });
-
-    const entries = Object.entries(distributionMap).map(([name, value]) => ({
-      name,
-      value,
-    }));
-
-    if (entries.length > 0) {
-      entries.sort((a, b) => b.value - a.value);
-      if (entries.length > 5) {
-        const top = entries.slice(0, 4);
-        const others = entries.slice(4).reduce((sum, item) => sum + item.value, 0);
-        return [...top, { name: 'Others', value: others }];
-      }
-      return entries;
-    }
-
-    return [
-      { name: 'Taiwan (TSMC)', value: 40 },
-      { name: 'United States (Samsung/Intel)', value: 25 },
-      { name: 'Germany (GlobalFoundries)', value: 18 },
-      { name: 'Japan (Micron)', value: 12 },
-      { name: 'Others', value: 5 },
-    ];
-  }, [engineers]);
-
-  // const travelTimeline = [
-  //   { week: 'Wk 31', Departures: 4, Returns: 2 },
-  //   { week: 'Wk 32', Departures: 7, Returns: 5 },
-  //   { week: 'Wk 33', Departures: 3, Returns: 8 },
-  //   { week: 'Wk 34', Departures: 9, Returns: 4 },
-  // ];
+  const deploymentData = data?.deployment_trend || [];
+  const statusDistribution = data?.status_distribution || [];
+  const countryDistribution = data?.country_distribution || [];
+  const recentActivity = data?.recent_activity || [];
+  const actionChecklist = data?.action_checklist || [];
 
   const PIE_COLORS = ['#0F172A', '#334155', '#475569', '#64748B', '#94A3B8'];
 
-  const statusDistribution = React.useMemo(() => {
-    let deployedCount = 0;
-    let ptoCount = 0;
-    let supportCount = 0;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const hasActiveSchedules = schedules.some(s => s.startDate <= todayStr && s.endDate >= todayStr);
-    const referenceDate = hasActiveSchedules ? todayStr : '2026-07-31';
-
-    engineers.forEach((eng) => {
-      const activeSched = schedules.find(
-        (s) =>
-          s.engineerOrbitId === eng.orbitId &&
-          s.startDate <= referenceDate &&
-          s.endDate >= referenceDate
-      );
-
-      if (activeSched) {
-        const type = activeSched.supportType;
-        if (type === 'Deployment' || type === 'Install') {
-          deployedCount++;
-        } else if (
-          type === 'PTO' ||
-          type === 'LOA' ||
-          type.startsWith('LOA') ||
-          type.startsWith('PTO')
-        ) {
-          ptoCount++;
-        } else {
-          supportCount++;
-        }
-      } else {
-        if (eng.status === 'Deployed') {
-          deployedCount++;
-        } else if (eng.status === 'On Leave') {
-          ptoCount++;
-        } else {
-          supportCount++;
-        }
-      }
-    });
-
-    return [
-      { name: 'Deployed', value: deployedCount, color: '#10B981' },
-      { name: 'Support', value: supportCount, color: '#64748B' },
-      { name: 'PTO', value: ptoCount, color: '#F59E0B' },
-    ];
-  }, [engineers, schedules]);
-
-  const isLoadingAll = engLoading || trvLoading || visaLoading || schLoading;
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={`${currentCompany.name} Executive Dashboard`}
+          subtitle="Global field operations summary, deployment analytics, and critical mobility alerts."
+        />
+        <ErrorState
+          title="Dashboard Analytics Exception"
+          message="Failed to connect to the PostgreSQL operational dashboard API. Please check backend connection."
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -201,7 +84,7 @@ export const DashboardPage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetchEng()}
+              onClick={() => refetch()}
               icon={<RefreshCw className="w-3.5 h-3.5" />}
             >
               Sync Data
@@ -218,7 +101,7 @@ export const DashboardPage: React.FC = () => {
       />
 
       {/* KPI Cards Grid */}
-      {isLoadingAll ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <CardSkeleton key={i} />
@@ -228,8 +111,8 @@ export const DashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard
             title="Total Engineers"
-            value={totalEngineers}
-            change="+12% MoM"
+            value={kpi.total_engineers}
+            change={`${kpi.total_engineers} Certified`}
             subtitle={`${currentCompany.code} certified personnel`}
             icon={<Users className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
             variant="default"
@@ -237,8 +120,8 @@ export const DashboardPage: React.FC = () => {
           />
           <StatCard
             title="Engineers Deployed"
-            value={deployedEngineers}
-            change="82% Utilization"
+            value={kpi.deployed_engineers}
+            change={`${kpi.utilization_rate}% Utilization`}
             changeType="positive"
             subtitle="On customer Fab sites"
             icon={<CheckCircle2 className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
@@ -247,8 +130,8 @@ export const DashboardPage: React.FC = () => {
           />
           <StatCard
             title="Upcoming Travel"
-            value={upcomingTravelCount}
-            change="+4 this week"
+            value={kpi.upcoming_travel_count}
+            change={`${kpi.upcoming_travel_count} Scheduled`}
             changeType="neutral"
             subtitle="Flights & assignments"
             icon={<Plane className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
@@ -257,9 +140,9 @@ export const DashboardPage: React.FC = () => {
           />
           <StatCard
             title="Visa Expiring"
-            value={expiringVisasCount}
-            change="Action Required"
-            changeType={expiringVisasCount > 0 ? 'negative' : 'positive'}
+            value={kpi.expiring_visas_count}
+            change={kpi.expiring_visas_count > 0 ? "Action Required" : "All Clear"}
+            changeType={kpi.expiring_visas_count > 0 ? 'negative' : 'positive'}
             subtitle="Within next 30 days"
             icon={<AlertTriangle className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
             variant="default"
@@ -267,8 +150,8 @@ export const DashboardPage: React.FC = () => {
           />
           <StatCard
             title="Active Projects"
-            value={activeProjectsCount}
-            change="100% On-Time"
+            value={kpi.active_projects_count}
+            change={`${kpi.active_projects_count} Active`}
             changeType="positive"
             subtitle="Customer Fab installations"
             icon={<Building2 className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
@@ -298,36 +181,42 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={deploymentData}>
-                <defs>
-                  <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={currentCompany.secondaryColor} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={currentCompany.secondaryColor} stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#BAE6FD" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F172A',
-                    borderRadius: '8px',
-                    color: '#FFF',
-                    border: 'none',
-                    fontSize: '12px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="Deployed"
-                  stroke={currentCompany.secondaryColor}
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#colorDeployed)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="h-full flex items-center justify-center text-xs text-slate-400">
+                Loading Deployment Analytics...
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={deploymentData}>
+                  <defs>
+                    <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={currentCompany.secondaryColor} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={currentCompany.secondaryColor} stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#BAE6FD" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94A3B8" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: '8px',
+                      color: '#FFF',
+                      border: 'none',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="Deployed"
+                    stroke={currentCompany.secondaryColor}
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorDeployed)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -341,31 +230,35 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {statusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F172A',
-                    borderRadius: '8px',
-                    color: '#FFF',
-                    fontSize: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="text-xs text-slate-400">Loading Status Distribution...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {statusDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: '8px',
+                      color: '#FFF',
+                      fontSize: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -395,31 +288,37 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={countryDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {countryDistribution.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F172A',
-                    borderRadius: '8px',
-                    color: '#FFF',
-                    fontSize: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="text-xs text-slate-400">Loading Country Footprint...</div>
+            ) : countryDistribution.length === 0 ? (
+              <div className="text-xs text-slate-400">No active country assignments</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={countryDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {countryDistribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: '8px',
+                      color: '#FFF',
+                      fontSize: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -454,22 +353,26 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {engineers.slice(0, 3).map((eng, idx) => (
-              <div
-                key={eng.id || idx}
-                className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60"
-              >
-                <img src={eng.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover mt-0.5" />
-                <div className="flex-1 text-xs space-y-0.5">
-                  <p className="font-medium text-slate-800 dark:text-slate-200">
-                    <span className="font-bold text-slate-900 dark:text-white">{eng.name}</span> assigned to{' '}
-                    <span className="text-[var(--color-secondary)] font-semibold">{eng.assignedSite || 'Fab Site'}</span>
-                  </p>
-                  <p className="text-slate-400">Primary Chamber: {eng.primaryTool} • {eng.country}</p>
+            {recentActivity.length === 0 ? (
+              <p className="text-xs text-slate-400 py-4 text-center">No recent field operations activity recorded.</p>
+            ) : (
+              recentActivity.map((eng, idx) => (
+                <div
+                  key={eng.id || idx}
+                  className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60"
+                >
+                  <img src={eng.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover mt-0.5" />
+                  <div className="flex-1 text-xs space-y-0.5">
+                    <p className="font-medium text-slate-800 dark:text-slate-200">
+                      <span className="font-bold text-slate-900 dark:text-white">{eng.name}</span> assigned to{' '}
+                      <span className="text-[var(--color-secondary)] font-semibold">{eng.assignedSite || 'Fab Site'}</span>
+                    </p>
+                    <p className="text-slate-400">Primary Chamber: {eng.primaryTool} • {eng.country}</p>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">{eng.timeAgo}</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">2h ago</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -489,37 +392,111 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
-              <div className="flex items-center space-x-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-amber-900 dark:text-amber-200">
-                    Submit Taiwan Work Permit Renewal for Dr. Aris Thorne
-                  </p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400">Expires in 17 Days</p>
+            {actionChecklist.length === 0 ? (
+              <p className="text-xs text-slate-400 py-4 text-center">All clear! No pending actions require attention.</p>
+            ) : (
+              actionChecklist.map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                    item.type === 'visa'
+                      ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-900/40'
+                      : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    {item.type === 'visa' ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    ) : (
+                      <Plane className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                    )}
+                    <div>
+                      <p
+                        className={`font-semibold ${
+                          item.type === 'visa' ? 'text-amber-900 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+                      <p
+                        className={`text-[11px] ${
+                          item.type === 'visa' ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400'
+                        }`}
+                      >
+                        {item.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => navigate(item.targetRoute)}>
+                    {item.actionText}
+                  </Button>
                 </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/visa')}>
-                Review
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
-              <div className="flex items-center space-x-2.5">
-                <Plane className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">
-                    Confirm Flight & Hotel Booking for Kenji Takahashi (Tokyo → Dresden)
-                  </p>
-                  <p className="text-[11px] text-slate-400">Departure: Aug 05, 2026</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/travel')}>
-                Confirm
-              </Button>
-            </div>
+              ))
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Operational Intelligence & Deterministic Exception Detection */}
+      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
+            <ShieldAlert className="w-5 h-5 text-amber-500" />
+            <span>Operational Intelligence & Deterministic Exceptions</span>
+          </h3>
+          <span className="text-xs font-mono font-semibold px-2.5 py-1 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 rounded-full">
+            {opAlerts?.length || 0} Conditions Detected
+          </span>
+        </div>
+
+        {!opAlerts || opAlerts.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-400 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-slate-100 dark:border-slate-800">
+            No operational exceptions detected for {currentCompany.name}. Operational data is consistent.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            {opAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                onClick={() => {
+                  if (alert.engineer_id) navigate(`/engineers/${alert.engineer_id}`);
+                  else if (alert.schedule_id) navigate('/schedule');
+                }}
+                className={`p-3.5 rounded-xl border cursor-pointer transition-all hover:shadow-sm flex flex-col justify-between space-y-2 ${
+                  alert.severity === 'warning'
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-900/40 hover:border-amber-300'
+                    : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/60 hover:border-slate-300'
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`font-semibold text-xs ${
+                        alert.severity === 'warning' ? 'text-amber-900 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      {alert.title}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                        alert.severity === 'warning'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {alert.type}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2">{alert.message}</p>
+                </div>
+                <div className="flex items-center justify-end text-[11px] text-[var(--color-secondary)] font-medium">
+                  <span>Inspect Details</span>
+                  <ArrowUpRight className="w-3 h-3 ml-0.5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

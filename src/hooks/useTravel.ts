@@ -7,11 +7,21 @@ import {
   deleteTravelRecord,
 } from '../services/travel';
 import type { Travel } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
 export const useTravel = (params?: any) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+  };
+
   return useQuery({
-    queryKey: ['travel', params],
-    queryFn: () => getTravelRecords(params),
+    queryKey: ['travel', queryParams],
+    queryFn: () => getTravelRecords(queryParams),
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -31,6 +41,7 @@ export const useCreateTravel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -43,6 +54,7 @@ export const useUpdateTravel = () => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
       queryClient.invalidateQueries({ queryKey: ['travel-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -54,6 +66,7 @@ export const useDeleteTravel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['travel'] });
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

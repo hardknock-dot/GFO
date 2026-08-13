@@ -59,7 +59,8 @@ export const getTravelRecords = async (params?: any): Promise<PaginatedResponse<
     if (params?.engineerId) {
       list = await getEngineerTravel(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const travelPromises = engs.data.map(e => getEngineerTravel(e.id));
       const nestedTravel = await Promise.all(travelPromises);
       list = nestedTravel.flat();

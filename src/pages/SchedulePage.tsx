@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSchedule, useCreateSchedule, useUpdateSchedule, useDeleteSchedule } from '../hooks/useSchedule';
 import {
   useMissedSchedules,
@@ -7,6 +8,8 @@ import {
   useDeleteMissedSchedule,
 } from '../hooks/useMissedSchedules';
 import { useEngineers } from '../hooks/useEngineers';
+import { useLeaves } from '../hooks/useLeaves';
+import { useVisa } from '../hooks/useVisa';
 import { useCompany } from '../context/CompanyContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
@@ -18,9 +21,10 @@ import { TextInput } from '../components/forms/TextInput';
 import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import type { Schedule, MissedSchedule } from '../types';
-import { Plus, MapPin, Building2, Edit, Trash2, CalendarX } from 'lucide-react';
+import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, AlertTriangle } from 'lucide-react';
 
 export const SchedulePage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
 
@@ -40,6 +44,10 @@ export const SchedulePage: React.FC = () => {
     companyId ? { company_id: companyId } : undefined
   );
   const engineersList = engineersRes?.data || [];
+
+  // Query leaves and visas for cross-module informational indicators
+  const { data: leavesRes } = useLeaves({ companyId });
+  const { data: visaRes } = useVisa({ companyId });
 
   // Mutations
   const createScheduleMutation = useCreateSchedule();
@@ -356,6 +364,42 @@ export const SchedulePage: React.FC = () => {
       },
     },
     {
+      key: 'readiness',
+      header: 'Operational Readiness',
+      render: (s) => {
+        const engLeaves = leavesRes?.data?.filter((l) => l.engineerId === s.engineerId) || [];
+        const hasLeaveConflict = engLeaves.some((l) => {
+          if (!l.requestedDate || !s.startDate) return false;
+          return l.requestedDate >= s.startDate && (!s.endDate || l.requestedDate <= s.endDate);
+        });
+
+        const engVisas = visaRes?.data?.filter((v) => v.engineerId === s.engineerId) || [];
+        const hasVisa = engVisas.some(
+          (v) => (v.country || '').toLowerCase() === (s.country || '').toLowerCase() && v.status !== 'Expired'
+        );
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {hasLeaveConflict && (
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 flex items-center space-x-1">
+                <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                <span>Leave Conflict</span>
+              </span>
+            )}
+            {hasVisa ? (
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Visa Ready
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                No Visa
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: 'missedCount',
       header: 'Missed Log',
       render: (s) => {
@@ -427,7 +471,15 @@ export const SchedulePage: React.FC = () => {
         </div>
       </div>
 
-      <Table columns={columns} data={schedules} isLoading={isLoading} isError={isError} onRetry={refetch} emptyTitle="No Schedules Found" />
+      <Table
+        columns={columns}
+        data={schedules}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        onRowClick={(sch) => navigate(`/engineers/${sch.engineerId}`)}
+        emptyTitle="No Schedules Found"
+      />
 
       {/* Add / Edit Schedule Modal */}
       <Modal

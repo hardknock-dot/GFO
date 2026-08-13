@@ -58,7 +58,8 @@ export const getVisaRecords = async (params?: any): Promise<PaginatedResponse<Vi
     if (params?.engineerId) {
       list = await getEngineerVisas(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const visasPromises = engs.data.map(e => getEngineerVisas(e.id));
       const nestedVisas = await Promise.all(visasPromises);
       list = nestedVisas.flat();

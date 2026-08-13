@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEngineerDetail } from '../hooks/useEngineers';
+import { useEngineerOperationalAlerts } from '../hooks/useOperationalAlerts';
 import {
   useEngineerSkills,
   useCreateSkill,
@@ -50,6 +51,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const EngineerProfilePage: React.FC = () => {
@@ -60,6 +62,7 @@ export const EngineerProfilePage: React.FC = () => {
   const engineerId = id || 'eng-101';
   const { data: engineer, isLoading, isError, refetch } = useEngineerDetail(engineerId);
 
+  const { data: engAlerts } = useEngineerOperationalAlerts(engineerId);
   const { data: skills } = useEngineerSkills(engineerId);
   const { data: schedulesRes } = useSchedule({ engineerId });
   const { data: travelRes } = useTravel({ engineerId });
@@ -1415,6 +1418,39 @@ export const EngineerProfilePage: React.FC = () => {
                   <span className="text-[10px] text-slate-500 dark:text-slate-400">Valid</span>
                 </div>
               </div>
+            </div>
+
+            {/* Operational Intelligence & Exceptions summary for this engineer */}
+            <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-3">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <span>Operational Attention Summary</span>
+              </h3>
+
+              {!engAlerts || engAlerts.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-lg">
+                  No active operational warnings or exception alerts for {engineer.name}.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {engAlerts.map((alt) => (
+                    <div
+                      key={alt.id}
+                      className={`p-3 rounded-lg border flex items-start space-x-2.5 ${
+                        alt.severity === 'warning'
+                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200'
+                          : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="font-semibold">{alt.title}</p>
+                        <p className="text-[11px] opacity-80">{alt.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

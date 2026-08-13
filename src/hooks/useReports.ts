@@ -1,56 +1,31 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
-  getReports,
-  getReportById,
-  generateReport,
-  updateReport,
-  deleteReport,
+  getReportsSummary,
+  getCategoryReport,
 } from '../services/reports';
-import type { ReportSummary } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
-export const useReports = () => {
+export const useReportsSummary = (companyId?: string, startDate?: string, endDate?: string) => {
+  const { currentCompany } = useCompany();
+  const contextCompanyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = companyId !== undefined ? companyId : ((contextCompanyId && contextCompanyId !== 'all-data') ? contextCompanyId : undefined);
+
   return useQuery({
-    queryKey: ['reports'],
-    queryFn: () => getReports(),
+    queryKey: ['reports', 'summary', activeCompanyId || 'global', startDate || 'all', endDate || 'all'],
+    queryFn: () => getReportsSummary(activeCompanyId, startDate, endDate),
     staleTime: 1000 * 60 * 5,
   });
 };
 
-export const useReportDetail = (id: string) => {
+export const useCategoryReport = (category: string, companyId?: string, startDate?: string, endDate?: string) => {
+  const { currentCompany } = useCompany();
+  const contextCompanyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = companyId !== undefined ? companyId : ((contextCompanyId && contextCompanyId !== 'all-data') ? contextCompanyId : undefined);
+
   return useQuery({
-    queryKey: ['report-detail', id],
-    queryFn: () => getReportById(id),
-    enabled: !!id,
-  });
-};
-
-export const useGenerateReport = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (params: { title: string; category: string; format: string }) => generateReport(params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-    },
-  });
-};
-
-export const useUpdateReport = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ReportSummary> }) => updateReport(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-      queryClient.invalidateQueries({ queryKey: ['report-detail', variables.id] });
-    },
-  });
-};
-
-export const useDeleteReport = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteReport(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-    },
+    queryKey: ['reports', 'category', category, activeCompanyId || 'global', startDate || 'all', endDate || 'all'],
+    queryFn: () => getCategoryReport(category, activeCompanyId, startDate, endDate),
+    staleTime: 1000 * 60 * 5,
+    enabled: !!category,
   });
 };

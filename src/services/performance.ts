@@ -61,7 +61,8 @@ export const getPerformanceRecords = async (params?: any): Promise<PaginatedResp
     if (params?.engineerId) {
       list = await getEngineerPerformance(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const perfPromises = engs.data.map(e => getEngineerPerformance(e.id));
       const nestedPerf = await Promise.all(perfPromises);
       list = nestedPerf.flat();

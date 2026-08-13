@@ -41,7 +41,8 @@ export const getLeaves = async (params?: any): Promise<PaginatedResponse<Leave>>
     if (params?.engineerId) {
       list = await getEngineerLeaves(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const leavesPromises = engs.data.map(e => getEngineerLeaves(e.id));
       const nestedLeaves = await Promise.all(leavesPromises);
       list = nestedLeaves.flat();

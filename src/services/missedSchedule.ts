@@ -58,7 +58,8 @@ export const getMissedSchedules = async (params?: any): Promise<PaginatedRespons
     } else if (params?.engineerId) {
       list = await getEngineerMissedSchedules(params.engineerId);
     } else {
-      const engs = await getEngineers(params?.companyId ? { company_id: params.companyId } : undefined);
+      const activeCompId = params?.companyId || params?.company_id;
+      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
       const msPromises = engs.data.map(e => getEngineerMissedSchedules(e.id));
       const nestedMs = await Promise.all(msPromises);
       list = nestedMs.flat();

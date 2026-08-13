@@ -7,11 +7,21 @@ import {
   deleteLeaveRecord,
 } from '../services/leave';
 import type { Leave } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
 export const useLeaves = (params?: any) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+  };
+
   return useQuery({
-    queryKey: ['leaves', params],
-    queryFn: () => getLeaves(params),
+    queryKey: ['leaves', queryParams],
+    queryFn: () => getLeaves(queryParams),
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -31,6 +41,7 @@ export const useCreateLeave = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -43,6 +54,7 @@ export const useUpdateLeave = () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       queryClient.invalidateQueries({ queryKey: ['leave', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -54,6 +66,7 @@ export const useDeleteLeave = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       queryClient.invalidateQueries({ queryKey: ['engineer-leaves'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

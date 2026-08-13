@@ -9,11 +9,21 @@ import {
   renewVisa,
 } from '../services/visa';
 import type { Visa } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
 export const useVisa = (params?: any) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+  };
+
   return useQuery({
-    queryKey: ['visas', params],
-    queryFn: () => getVisaRecords(params),
+    queryKey: ['visas', queryParams],
+    queryFn: () => getVisaRecords(queryParams),
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -32,6 +42,7 @@ export const useCreateVisa = () => {
     mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Visa> }) => createVisaRecord(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -43,6 +54,7 @@ export const useUpdateVisa = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
       queryClient.invalidateQueries({ queryKey: ['visa-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -53,13 +65,18 @@ export const useDeleteVisa = () => {
     mutationFn: (id: string) => deleteVisaRecord(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
 
 export const useExpiringVisas = (days: number = 30) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
   return useQuery({
-    queryKey: ['expiring-visas', days],
+    queryKey: ['expiring-visas', days, activeCompanyId || 'global'],
     queryFn: () => getExpiringVisas(days),
     staleTime: 1000 * 60 * 5,
   });
@@ -72,6 +89,7 @@ export const useRenewVisa = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-visas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
