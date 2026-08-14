@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
 import { useReportsSummary, useCategoryReport } from '../hooks/useReports';
@@ -25,6 +25,7 @@ import {
   Filter,
   BarChart3,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 import {
   BarChart,
@@ -44,11 +45,23 @@ export const ReportsPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('workforce');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [selectedDistKey, setSelectedDistKey] = useState<string>('');
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
   // Queries
-  const { data: summary, isLoading: isSummaryLoading, isError: isSummaryError, refetch: refetchSummary } = useReportsSummary(companyId, startDate, endDate);
-  const { data: categoryData, isLoading: isCategoryLoading, isError: isCategoryError, refetch: refetchCategory } = useCategoryReport(activeCategory, companyId, startDate, endDate);
+  const {
+    data: summary,
+    isLoading: isSummaryLoading,
+    isError: isSummaryError,
+    refetch: refetchSummary,
+  } = useReportsSummary(companyId, startDate, endDate);
+
+  const {
+    data: categoryData,
+    isLoading: isCategoryLoading,
+    isError: isCategoryError,
+    refetch: refetchCategory,
+  } = useCategoryReport(activeCategory, companyId, startDate, endDate);
 
   const categories = [
     { id: 'workforce', label: 'Workforce', icon: Users },
@@ -59,7 +72,22 @@ export const ReportsPage: React.FC = () => {
     { id: 'travel', label: 'Travel', icon: Plane },
     { id: 'performance', label: 'Performance', icon: TrendingUp },
     { id: 'missed-schedules', label: 'Missed Schedules', icon: CalendarX },
+    { id: 'operational', label: 'Operational Exceptions', icon: AlertTriangle },
   ];
+
+  // Sync selected distribution key when categoryData loads or category changes
+  useEffect(() => {
+    if (categoryData?.distributions) {
+      const keys = Object.keys(categoryData.distributions);
+      if (keys.length > 0) {
+        setSelectedDistKey(keys[0]);
+      } else {
+        setSelectedDistKey('');
+      }
+    } else {
+      setSelectedDistKey('');
+    }
+  }, [categoryData, activeCategory]);
 
   const handleExportCsv = async () => {
     try {
@@ -76,14 +104,12 @@ export const ReportsPage: React.FC = () => {
     ? 'Reports — All Companies'
     : `Reports — ${currentCompany.name}`;
 
-  if (isSummaryLoading) return <CardSkeleton />;
-  if (isSummaryError || !summary) return <ErrorState onRetry={refetchSummary} message="Failed to load management report metrics." />;
+  // Prepare chart data from active distribution selection
+  const distKeys = categoryData?.distributions ? Object.keys(categoryData.distributions) : [];
+  const currentDistKey = selectedDistKey || distKeys[0];
+  const activeDist = currentDistKey && categoryData?.distributions ? categoryData.distributions[currentDistKey] || [] : [];
 
-  // Prepare chart data from distributions
-  const primaryDistributionKey = categoryData?.distributions ? Object.keys(categoryData.distributions)[0] : undefined;
-  const primaryDist = primaryDistributionKey ? categoryData?.distributions[primaryDistributionKey] || [] : [];
-
-  const chartData = primaryDist.map((d) => ({
+  const chartData = activeDist.map((d) => ({
     name: d.label,
     count: d.count,
   }));
@@ -103,6 +129,18 @@ export const ReportsPage: React.FC = () => {
           return (
             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${val ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
               {val ? 'Yes' : 'No'}
+            </span>
+          );
+        }
+        if (key === 'severity') {
+          const colors: Record<string, string> = {
+            critical: 'bg-rose-100 text-rose-800 border-rose-200',
+            warning: 'bg-amber-100 text-amber-800 border-amber-200',
+            info: 'bg-blue-100 text-blue-800 border-blue-200',
+          };
+          return (
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${colors[String(val).toLowerCase()] || 'bg-slate-100 text-slate-800'}`}>
+              {String(val)}
             </span>
           );
         }
@@ -133,7 +171,7 @@ export const ReportsPage: React.FC = () => {
           <Filter className="w-4 h-4 text-[var(--color-secondary)]" />
           <span>Report Scope Filters:</span>
           <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[var(--color-secondary)] font-mono">
-            {summary.company_name}
+            {summary?.company_name || currentCompany.name}
           </span>
         </div>
 
@@ -157,44 +195,51 @@ export const ReportsPage: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
               onClick={() => {
                 setStartDate('');
                 setEndDate('');
               }}
             >
-              Reset Filter
+              Reset Date Filter
             </Button>
           )}
         </div>
       </div>
 
       {/* Executive Management Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Workforce"
-          value={summary.total_engineers}
-          icon={<Users className="w-5 h-5 text-blue-500" />}
-          subtitle={`${summary.total_skills} Skills Logged`}
-        />
-        <StatCard
-          title="Field Schedules"
-          value={summary.total_schedules}
-          icon={<Calendar className="w-5 h-5 text-emerald-500" />}
-          subtitle={`${summary.active_schedules} Active • ${summary.upcoming_schedules} Upcoming`}
-        />
-        <StatCard
-          title="Avg Performance Score"
-          value={summary.avg_performance_score !== null ? `${summary.avg_performance_score} / 5.0` : 'N/A'}
-          icon={<TrendingUp className="w-5 h-5 text-amber-500" />}
-          subtitle={`${summary.total_performances} Evaluated Assignments`}
-        />
-        <StatCard
-          title="Operational Exceptions"
-          value={summary.total_operational_alerts}
-          icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
-          subtitle={`${summary.warning_alerts_count} Active Warnings`}
-        />
-      </div>
+      {isSummaryLoading ? (
+        <CardSkeleton />
+      ) : isSummaryError || !summary ? (
+        <ErrorState onRetry={refetchSummary} message="Failed to load executive summary metrics." />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Workforce"
+            value={summary.total_engineers}
+            icon={<Users className="w-5 h-5 text-blue-500" />}
+            subtitle={`${summary.total_skills} Skills Logged`}
+          />
+          <StatCard
+            title="Field Schedules"
+            value={summary.total_schedules}
+            icon={<Calendar className="w-5 h-5 text-emerald-500" />}
+            subtitle={`${summary.active_schedules} Active • ${summary.upcoming_schedules} Upcoming`}
+          />
+          <StatCard
+            title="Avg Performance Score"
+            value={summary.avg_performance_score !== null && summary.avg_performance_score !== undefined ? `${summary.avg_performance_score} / 5.0` : 'N/A'}
+            icon={<TrendingUp className="w-5 h-5 text-amber-500" />}
+            subtitle={`${summary.total_performances} Evaluated Assignments`}
+          />
+          <StatCard
+            title="Operational Exceptions"
+            value={summary.total_operational_alerts}
+            icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
+            subtitle={`${summary.warning_alerts_count} Active Warnings`}
+          />
+        </div>
+      )}
 
       {/* Report Category Selection Tabs */}
       <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-0.5">
@@ -232,12 +277,31 @@ export const ReportsPage: React.FC = () => {
             </span>
           </div>
 
+          {/* Distribution metric toggle if multiple exist */}
+          {distKeys.length > 1 && (
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1">
+              {distKeys.map((dk) => (
+                <button
+                  key={dk}
+                  onClick={() => setSelectedDistKey(dk)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors uppercase tracking-wider ${
+                    currentDistKey === dk
+                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {dk.replace('by_', '')}
+                </button>
+              ))}
+            </div>
+          )}
+
           {isCategoryLoading ? (
             <div className="h-64 flex items-center justify-center text-xs text-slate-400">Loading chart data...</div>
           ) : isCategoryError || chartData.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-center p-4 text-xs text-slate-400">
               <Layers className="w-8 h-8 mb-2 text-slate-300" />
-              <span>No distribution data available for this range.</span>
+              <span>No distribution data available for the selected scope or date range.</span>
             </div>
           ) : (
             <div className="h-64">
@@ -280,7 +344,8 @@ export const ReportsPage: React.FC = () => {
                 navigate('/schedule');
               }
             }}
-            emptyTitle={`No ${activeCategory} records found for selected filters`}
+            emptyTitle={`No ${activeCategory.replace('-', ' ')} records found for selected filters`}
+            emptyDescription="Adjust your company tenant or date range filters to view records."
           />
         </div>
       </div>

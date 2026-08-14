@@ -364,6 +364,56 @@ def get_category_report(
 
         distributions["by_reason"] = [DistributionMetric(label=k, count=v) for k, v in reason_counts.items()]
 
+    elif category_lower in ('travel', 'travels'):
+        trv_stmt = select(Travel).join(Schedule, Travel.schedule_id == Schedule.schedule_id).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+        if company_id:
+            trv_stmt = trv_stmt.where(Engineer.company_id == company_id)
+        if start_date:
+            trv_stmt = trv_stmt.where(Travel.travel_date >= start_date)
+        if end_date:
+            trv_stmt = trv_stmt.where(Travel.travel_date <= end_date)
+        travels = list(db.scalars(trv_stmt).all())
+        total_count = len(travels)
+
+        purpose_counts: Dict[str, int] = {}
+        for t in travels:
+            p = t.purpose or 'Customer Support'
+            purpose_counts[p] = purpose_counts.get(p, 0) + 1
+
+            items.append({
+                "id": str(t.travel_id),
+                "purpose": t.purpose,
+                "booking_date": str(t.booking_date) if t.booking_date else None,
+                "travel_date": str(t.travel_date) if t.travel_date else None,
+                "comments": t.comments
+            })
+
+        distributions["by_purpose"] = [DistributionMetric(label=k, count=v) for k, v in purpose_counts.items()]
+
+    elif category_lower in ('operational', 'operational-exceptions', 'alerts', 'exceptions'):
+        alerts = get_company_operational_alerts(db, company_id=company_id)
+        total_count = len(alerts)
+
+        severity_counts: Dict[str, int] = {}
+        type_counts: Dict[str, int] = {}
+        for a in alerts:
+            sev = a.severity or 'info'
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+            tp = a.type or 'general'
+            type_counts[tp] = type_counts.get(tp, 0) + 1
+
+            items.append({
+                "id": a.id,
+                "type": a.type,
+                "severity": a.severity,
+                "title": a.title,
+                "message": a.message,
+                "company_name": a.company_name
+            })
+
+        distributions["by_severity"] = [DistributionMetric(label=k, count=v) for k, v in severity_counts.items()]
+        distributions["by_type"] = [DistributionMetric(label=k, count=v) for k, v in type_counts.items()]
+
     else:
         # Default empty fallback
         pass

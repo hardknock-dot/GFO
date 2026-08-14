@@ -117,7 +117,7 @@ def get_dashboard_metrics(db: Session, company_id: Optional[UUID] = None) -> Das
         for s in schedules:
             if s.start_date <= m_end and (s.end_date is None or s.end_date >= m_start):
                 stype = (s.support_type or '').lower()
-                if 'deployment' in stype or 'install' in stype:
+                if 'deployment' in stype or 'install' in stype or 'support' in stype:
                     deployed_cnt += 1
                 elif 'pto' in stype or 'loa' in stype or 'leave' in stype:
                     on_leave_cnt += 1
@@ -143,7 +143,7 @@ def get_dashboard_metrics(db: Session, company_id: Optional[UUID] = None) -> Das
         )
         if active_s:
             stype = (active_s.support_type or '').lower()
-            if 'deployment' in stype or 'install' in stype:
+            if 'deployment' in stype or 'install' in stype or 'support' in stype:
                 deployed_status += 1
             elif 'pto' in stype or 'loa' in stype or 'leave' in stype:
                 pto_status += 1
