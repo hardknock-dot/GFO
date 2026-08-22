@@ -12,6 +12,7 @@ class ScheduleCreate(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = "Upcoming"
     remarks: str | None = None
+    owner_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -29,6 +30,7 @@ class ScheduleUpdate(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = None
     remarks: str | None = None
+    owner_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -37,9 +39,16 @@ class ScheduleUpdate(BaseModel):
                 raise ValueError("end_date should not be earlier than start_date")
         return self
 
+class ScheduleCommentUpdate(BaseModel):
+    remarks: str
+
+class ScheduleCommentStatusUpdate(BaseModel):
+    comment_status: str
+
 class ScheduleResponse(BaseModel):
     schedule_id: UUID
     engineer_id: UUID
+    owner_id: UUID | None = None
     support_type: str
     country: str
     fab_city: str | None = None
@@ -48,7 +57,10 @@ class ScheduleResponse(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = None
     remarks: str | None = None
+    comment_status: str | None = "UNADDRESSED"
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+

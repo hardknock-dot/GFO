@@ -3,7 +3,77 @@ export type CompetencyLevel = 'L1 Junior' | 'L2 Specialist' | 'L3 Senior' | 'L4 
 export type VisaStatus = 'Valid' | 'Expiring Soon' | 'Expired' | 'In Progress' | 'Renewal Pending';
 export type TravelStatus = 'Confirmed' | 'Pending Approval' | 'In Transit' | 'Completed' | 'Cancelled';
 export type ScheduleStatus = 'Active Assignment' | 'Upcoming' | 'Completed' | 'Standby';
-export type UserRole = 'Global Admin' | 'Company Admin' | 'Resource Manager' | 'Field Engineer' | 'Viewer';
+export type UserRole = 
+  | 'Main Admin' 
+  | 'Manager' 
+  | 'Ops Executive' 
+  | 'Engineer' 
+  | 'Viewer' 
+  | 'Global Admin' 
+  | 'Company Admin' 
+  | 'Resource Manager' 
+  | 'Field Engineer';
+
+export interface AuditLog {
+  audit_id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_role: string;
+  company_id?: string | null;
+  company_name?: string | null;
+  action: string;
+  entity_type: string;
+  entity_id?: string | null;
+  description?: string | null;
+  old_values?: any;
+  new_values?: any;
+  ip_address?: string | null;
+  created_at: string;
+}
+
+export interface GeneralDeleteRequest {
+  request_id: string;
+  requested_by: string;
+  requested_by_name?: string;
+  company_id: string;
+  company_name?: string;
+  entity_type: string;
+  entity_id: string;
+  entity_name?: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  reviewed_by?: string;
+  reviewed_by_name?: string;
+  reviewed_at?: string;
+  review_comment?: string;
+  created_at: string;
+}
+
+
+export type BulkUploadStatus = 'VALIDATING' | 'READY' | 'IMPORTING' | 'COMPLETED' | 'COMPLETED_WITH_ERRORS' | 'FAILED';
+
+export interface BulkUpload {
+  uploadId: string;
+  companyId: string;
+  companyName: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  fileName: string;
+  uploadType: string;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  duplicateRows: number;
+  existingRows: number;
+  warningRows: number;
+  importedRows: number;
+  failedRows: number;
+  status: BulkUploadStatus;
+  reportFile: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
 
 export interface Company {
   id: string;
@@ -31,6 +101,12 @@ export interface Company {
   borderColor: string;
 }
 
+export interface CompanySummary {
+  company_id: string;
+  company_name: string;
+  short_name?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -39,6 +115,9 @@ export interface User {
   role: UserRole;
   currentCompanyId: string;
   accessibleCompanies: string[];
+  companies?: CompanySummary[];
+  engineerId?: string;
+  engineer_id?: string;
 }
 
 export interface Engineer {
@@ -47,8 +126,8 @@ export interface Engineer {
   customerId: string;
   name: string;
   goesBy?: string;
-  email: string;
-  phone: string;
+  email?: string | null;
+  phoneNumber?: string | null;
   status: EngineerStatus;
   primaryTool: string;
   level: CompetencyLevel;
@@ -104,6 +183,9 @@ export interface Schedule {
   fabSite?: string;
   scheduleStatus?: string;
   remarks?: string;
+  commentStatus?: string;
+  ownerId?: string;
+  owner_id?: string;
 }
 
 export interface Travel {
@@ -140,8 +222,64 @@ export interface Visa {
   daysUntilExpiry: number;
   status: VisaStatus;
   appliedOn?: string;
+  visaStartDate?: string;
+  visaEndDate?: string;
+  comments?: string;
+  commentStatus?: string;
   ownerId?: string;
+  owner_id?: string;
 }
+
+export interface EngineerDeletionRequest {
+  requestId: string;
+  engineerId: string;
+  engineerName?: string;
+  orbitId?: string;
+  requestedBy: string;
+  requestedByName?: string;
+  companyId: string;
+  companyName?: string;
+  reason?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewComment?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
+export interface EngineerReportSkillSummary {
+  category: string;
+  tool_type: string;
+  number_of_tools: number;
+  role: string;
+  ready_for_primary_role: boolean;
+}
+
+export interface EngineerReportSummary {
+  engineer_id: string;
+  engineer_name: string;
+  upcoming_schedules: number;
+  active_skills: number;
+  visa_records: number;
+  performance_score: string;
+  raw_performance_score?: number | null;
+  schedules_completed: number;
+  next_schedule?: {
+    schedule_id?: string | null;
+    support_type?: string | null;
+    country?: string | null;
+    fab_city?: string | null;
+    fab_site?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    schedule_status?: string | null;
+    remarks?: string | null;
+  } | null;
+  skills_summary: EngineerReportSkillSummary[];
+}
+
 
 export interface Performance {
   id: string;
@@ -167,6 +305,8 @@ export interface Performance {
 }
 
 export interface Leave {
+
+
   id: string;
   engineerId: string;
   engineerName: string;
@@ -222,6 +362,7 @@ export interface CategoryReportData {
   total_count: number;
   distributions: Record<string, DistributionMetricData[]>;
   items: Record<string, any>[];
+  summary_metrics?: Record<string, any>;
 }
 
 export interface UploadCardItem {

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getVisaRecords,
   getVisaRecordById,
@@ -7,7 +7,9 @@ import {
   deleteVisaRecord,
   getExpiringVisas,
   renewVisa,
+  updateVisaCommentStatus,
 } from '../services/visa';
+
 import type { Visa } from '../types';
 import { useCompany } from '../context/CompanyContext';
 
@@ -24,6 +26,7 @@ export const useVisa = (params?: any) => {
   return useQuery({
     queryKey: ['visas', queryParams],
     queryFn: () => getVisaRecords(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -93,3 +96,17 @@ export const useRenewVisa = () => {
     },
   });
 };
+
+export const useUpdateVisaCommentStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, commentStatus }: { id: string; commentStatus: string }) =>
+      updateVisaCommentStatus(id, commentStatus),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['visa-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-operational-alerts'] });
+    },
+  });
+};
+

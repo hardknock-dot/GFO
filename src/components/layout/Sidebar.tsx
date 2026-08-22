@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +16,11 @@ import {
   Settings as SettingsIcon,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  User,
+  Wrench,
+  CheckSquare,
+  ShieldAlert
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,20 +36,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen = false,
   onCloseMobile,
 }) => {
-  const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
-    { label: 'Engineers', path: '/engineers', icon: Users },
-    { label: 'Schedule', path: '/schedule', icon: Calendar },
-    { label: 'Travel Operations', path: '/travel', icon: Plane },
-    { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
-    { label: 'Performance', path: '/performance', icon: TrendingUp },
-    { label: 'Leave Operations', path: '/leaves', icon: Clock },
-    { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
-    { label: 'Reports', path: '/reports', icon: BarChart3 },
-    { label: 'Data Upload', path: '/upload', icon: Upload },
-    { label: 'Settings', path: '/settings', icon: SettingsIcon },
-  ];
+  const { user } = useAuth();
+  const isMainAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
+  const isManager = user?.role === 'Manager' || user?.role === 'Company Admin';
+  const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
+
+  const isOpsExec = user?.role === 'Ops Executive';
+
+  const navItems = isEngineerUser
+    ? [
+        { label: 'Dashboard', path: '/engineer/dashboard', icon: LayoutDashboard },
+        { label: 'My Profile', path: '/engineer/profile', icon: User },
+        { label: 'My Skills', path: '/engineer/profile?tab=skills', icon: Wrench },
+        { label: 'My Schedule', path: '/engineer/profile?tab=schedule', icon: Calendar },
+        { label: 'My Visa', path: '/engineer/profile?tab=visa', icon: FileCheck },
+        { label: 'My Performance', path: '/engineer/profile?tab=performance', icon: TrendingUp },
+        { label: 'My Reports', path: '/engineer/profile?tab=reports', icon: BarChart3 },
+      ]
+    : [
+        { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+        ...((isMainAdmin || isManager || isOpsExec) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
+        { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
+        { label: 'Engineers', path: '/engineers', icon: Users },
+        { label: 'Schedule', path: '/schedule', icon: Calendar },
+        { label: 'Travel Operations', path: '/travel', icon: Plane },
+        { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
+        { label: 'Performance', path: '/performance', icon: TrendingUp },
+        { label: 'Leave Operations', path: '/leaves', icon: Clock },
+        { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
+        ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
+        { label: 'Reports', path: '/reports', icon: BarChart3 },
+        ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
+        ...(user?.role !== 'Viewer' ? [{ label: 'Data Upload', path: '/upload', icon: Upload }] : []),
+        ...(user?.role !== 'Viewer' ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
+      ];
 
   return (
     <>
@@ -91,11 +117,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* Footer Collapse Toggle (Desktop only) */}
+        {/* Footer Collapse Toggle */}
         <div className="p-3 border-t border-slate-200 flex items-center justify-between">
           {(!collapsed || mobileOpen) && (
             <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400">
-              v2.4 Enterprise
+              v2.0 Enterprise
             </span>
           )}
           <button

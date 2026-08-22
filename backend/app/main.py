@@ -2,7 +2,26 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health, companies, engineers, skills, schedules, visa, travel, performance, leave, missed_schedule, dashboard, operational, reports
+from app.database import engine, Base
+from sqlalchemy import text
+from app.routers import (
+    health, companies, engineers, skills, schedules, visa, travel,
+    performance, leave, missed_schedule, dashboard, operational,
+    reports, auth, users, upload, engineer_me, engineer_deletion_requests,
+    admin, delete_requests
+)
+
+# Startup table initialization & safe column migrations
+try:
+    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE schedules ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
+        conn.execute(text("ALTER TABLE visa_details ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
+        conn.execute(text("ALTER TABLE engineer_deletion_requests ALTER COLUMN engineer_id DROP NOT NULL;"))
+        conn.commit()
+except Exception as err:
+    logger.warning("Startup DB table initialization notice: %s", err)
+
 
 # Setup logging
 logging.basicConfig(
@@ -21,6 +40,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,6 +48,12 @@ app.add_middleware(
 
 # Register routers under prefix /api
 app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(delete_requests.router, prefix="/api")
+app.include_router(engineer_me.router, prefix="/api")
+app.include_router(engineer_deletion_requests.router, prefix="/api")
 app.include_router(companies.router, prefix="/api")
 app.include_router(engineers.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
@@ -40,6 +66,10 @@ app.include_router(missed_schedule.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(operational.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
+
+
+
 
 @app.get("/")
 def read_root():

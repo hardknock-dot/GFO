@@ -33,5 +33,6 @@ class CategoryReportResponse(BaseModel):
     total_count: int
     distributions: Dict[str, List[DistributionMetric]]
     items: List[Dict[str, Any]]
+    summary_metrics: Dict[str, Any] = {}
 
     model_config = ConfigDict(from_attributes=True)

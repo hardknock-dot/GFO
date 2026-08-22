@@ -14,7 +14,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = (requiredRole: string) => {
     if (!user) return false;
-    if (user.role === 'Global Admin') return true;
+    if (user.role === 'Main Admin' || user.role === 'Global Admin') return true;
     return user.role === requiredRole;
   };
 

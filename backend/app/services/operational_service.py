@@ -45,14 +45,24 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
     skill_stmt = select(Skill).join(Engineer, Skill.engineer_id == Engineer.engineer_id)
 
     if company_id is not None:
-        eng_stmt = eng_stmt.where(Engineer.company_id == company_id)
-        sch_stmt = sch_stmt.where(Engineer.company_id == company_id)
-        visa_stmt = visa_stmt.where(Engineer.company_id == company_id)
-        trv_stmt = trv_stmt.where(Engineer.company_id == company_id)
-        perf_stmt = perf_stmt.where(Engineer.company_id == company_id)
-        leave_stmt = leave_stmt.where(Engineer.company_id == company_id)
-        missed_stmt = missed_stmt.where(Engineer.company_id == company_id)
-        skill_stmt = skill_stmt.where(Engineer.company_id == company_id)
+        if isinstance(company_id, (list, set, tuple)):
+            eng_stmt = eng_stmt.where(Engineer.company_id.in_(company_id))
+            sch_stmt = sch_stmt.where(Engineer.company_id.in_(company_id))
+            visa_stmt = visa_stmt.where(Engineer.company_id.in_(company_id))
+            trv_stmt = trv_stmt.where(Engineer.company_id.in_(company_id))
+            perf_stmt = perf_stmt.where(Engineer.company_id.in_(company_id))
+            leave_stmt = leave_stmt.where(Engineer.company_id.in_(company_id))
+            missed_stmt = missed_stmt.where(Engineer.company_id.in_(company_id))
+            skill_stmt = skill_stmt.where(Engineer.company_id.in_(company_id))
+        else:
+            eng_stmt = eng_stmt.where(Engineer.company_id == company_id)
+            sch_stmt = sch_stmt.where(Engineer.company_id == company_id)
+            visa_stmt = visa_stmt.where(Engineer.company_id == company_id)
+            trv_stmt = trv_stmt.where(Engineer.company_id == company_id)
+            perf_stmt = perf_stmt.where(Engineer.company_id == company_id)
+            leave_stmt = leave_stmt.where(Engineer.company_id == company_id)
+            missed_stmt = missed_stmt.where(Engineer.company_id == company_id)
+            skill_stmt = skill_stmt.where(Engineer.company_id == company_id)
 
     engineers = list(db.scalars(eng_stmt).all())
     schedules = list(db.scalars(sch_stmt).all())
@@ -105,12 +115,19 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
 
     for eng_id, sch_list in eng_schedules_map.items():
         if len(sch_list) > 1:
-            for i in range(len(sch_list)):
-                for j in range(i + 1, len(sch_list)):
-                    s1, s2 = sch_list[i], sch_list[j]
-                    s1_end = s1.end_date or date(2099, 12, 31)
-                    s2_end = s2.end_date or date(2099, 12, 31)
-                    if s1.start_date <= s2_end and s2.start_date <= s1_end:
+            # Sort schedules by start_date to define earlier vs next
+            sorted_sch = sorted(sch_list, key=lambda x: x.start_date)
+            for i in range(len(sorted_sch)):
+                for j in range(i + 1, len(sorted_sch)):
+                    s1, s2 = sorted_sch[i], sorted_sch[j]
+                    # s1 is earlier or same day as s2
+                    is_overlap = False
+                    if s1.start_date == s2.start_date:
+                        is_overlap = True
+                    elif s1.end_date is not None and s1.end_date > s2.start_date:
+                        is_overlap = True
+                    
+                    if is_overlap:
                         eng = eng_map.get(eng_id)
                         eng_name = eng.engineer_name if eng else "Engineer"
                         c_id, c_name = get_comp_info(eng)
@@ -119,7 +136,7 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                             type="schedule",
                             severity="warning",
                             title="Potential Overlapping Schedules",
-                            message=f"Schedule '{s1.support_type}' overlaps with schedule '{s2.support_type}' for {eng_name}.",
+                            message=f"Schedule '{s1.support_type}' ({s1.start_date} to {s1.end_date or 'ongoing'}) overlaps with schedule '{s2.support_type}' ({s2.start_date} to {s2.end_date or 'ongoing'}) for {eng_name}.",
                             engineer_id=str(eng_id),
                             schedule_id=str(s1.schedule_id),
                             company_id=c_id,
@@ -197,17 +214,18 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
         eng_name = eng.engineer_name if eng else "Engineer"
         c_id, c_name = get_comp_info(eng)
         if s.schedule_id not in sch_perf_map:
-            alerts.append(OperationalAlert(
-                id=f"alert-perf-missing-{s.schedule_id}",
-                type="performance",
-                severity="info",
-                title="Performance not recorded",
-                message=f"Performance record has not been recorded for {eng_name}'s schedule '{s.support_type}'.",
-                engineer_id=str(s.engineer_id),
-                schedule_id=str(s.schedule_id),
-                company_id=c_id,
-                company_name=c_name
-            ))
+            if s.end_date and s.end_date < today:
+                alerts.append(OperationalAlert(
+                    id=f"alert-perf-missing-{s.schedule_id}",
+                    type="performance",
+                    severity="info",
+                    title="Performance not recorded",
+                    message=f"Performance record has not been recorded for {eng_name}'s schedule '{s.support_type}'.",
+                    engineer_id=str(s.engineer_id),
+                    schedule_id=str(s.schedule_id),
+                    company_id=c_id,
+                    company_name=c_name
+                ))
         else:
             p = sch_perf_map[s.schedule_id]
             if p.escalation is True and not (p.escalation_reason or '').strip():
@@ -261,7 +279,103 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                 company_name=c_name
             ))
 
+    # 8. Same-Country Pending PTO Conflict Alert (Feature 2)
+    PTO_ALERT_THRESHOLD = 2
+    pending_leaves = [l for l in leaves if (l.approval_status or '').strip().lower() == "pto requested"]
+    
+    # Group pending PTO requests by (company_id, country)
+    country_pto_map: dict[tuple, list] = {}
+    for l in pending_leaves:
+        eng = eng_map.get(l.engineer_id)
+        if not eng:
+            continue
+        c_id = eng.company_id
+        # Resolve country from engineer's schedule or profile
+        eng_sch = next((s for s in schedules if s.engineer_id == l.engineer_id), None)
+        cntry = eng_sch.country if (eng_sch and eng_sch.country) else (eng.country if eng.country != "No Schedule" else "General")
+        
+        country_pto_map.setdefault((c_id, cntry), []).append(l)
+
+    for (c_id, cntry), pto_list in country_pto_map.items():
+        if len(pto_list) >= PTO_ALERT_THRESHOLD:
+            comp_name = comp_map.get(c_id, "Company")
+            eng_summary = []
+            for pl in pto_list:
+                pl_eng = eng_map.get(pl.engineer_id)
+                pl_name = pl_eng.engineer_name if pl_eng else "Engineer"
+                eng_summary.append(f"{pl_name} ({pl.requested_date})")
+            
+            alerts.append(OperationalAlert(
+                id=f"alert-pto-conflict-{c_id}-{cntry}",
+                type="pto_conflict",
+                severity="warning",
+                title="⚠️ Multiple PTO Requests",
+                message=f"{len(pto_list)} engineers are requesting PTO in {cntry}: {', '.join(eng_summary)}.",
+                company_id=str(c_id) if c_id else None,
+                company_name=comp_name
+            ))
+
+    # 9. Engineer Deletion Request Alerts (Feature 5)
+    from app.models.engineer_deletion_request import EngineerDeletionRequest
+    del_stmt = select(EngineerDeletionRequest).where(EngineerDeletionRequest.status == "PENDING")
+    if company_id is not None:
+        if isinstance(company_id, (list, set, tuple)):
+            del_stmt = del_stmt.where(EngineerDeletionRequest.company_id.in_(company_id))
+        else:
+            del_stmt = del_stmt.where(EngineerDeletionRequest.company_id == company_id)
+    pending_del_reqs = list(db.scalars(del_stmt).all())
+    
+    for dr in pending_del_reqs:
+        dr_eng = eng_map.get(dr.engineer_id)
+        dr_eng_name = dr_eng.engineer_name if dr_eng else "Engineer"
+        dr_comp_name = comp_map.get(dr.company_id, "Company")
+        alerts.append(OperationalAlert(
+            id=f"alert-del-request-{dr.request_id}",
+            type="deletion_request",
+            severity="warning",
+            title="Engineer Deletion Requested",
+            message=f"Deletion request pending for engineer {dr_eng_name}.",
+            engineer_id=str(dr.engineer_id) if dr.engineer_id else None,
+            company_id=str(dr.company_id) if dr.company_id else None,
+            company_name=dr_comp_name
+        ))
+
+    # 10. Unaddressed Field Engineer Comment Alerts (Feature 4 & 5)
+    for s in schedules:
+        if s.remarks and (s.comment_status or '').strip().upper() == "UNADDRESSED":
+            eng = eng_map.get(s.engineer_id)
+            eng_name = eng.engineer_name if eng else "Engineer"
+            c_id, c_name = get_comp_info(eng)
+            alerts.append(OperationalAlert(
+                id=f"alert-sch-comment-unaddressed-{s.schedule_id}",
+                type="schedule_comment",
+                severity="info",
+                title="Unaddressed Schedule Remark",
+                message=f"Schedule comment from {eng_name} requires review: '{s.remarks}'.",
+                engineer_id=str(s.engineer_id),
+                schedule_id=str(s.schedule_id),
+                company_id=c_id,
+                company_name=c_name
+            ))
+
+    for v in visas:
+        if v.comments and (v.comment_status or '').strip().upper() == "UNADDRESSED":
+            eng = eng_map.get(v.engineer_id)
+            eng_name = eng.engineer_name if eng else "Engineer"
+            c_id, c_name = get_comp_info(eng)
+            alerts.append(OperationalAlert(
+                id=f"alert-visa-comment-unaddressed-{v.visa_id}",
+                type="visa_comment",
+                severity="info",
+                title="Unaddressed Visa Comment",
+                message=f"Visa comment from {eng_name} requires review: '{v.comments}'.",
+                engineer_id=str(v.engineer_id),
+                company_id=c_id,
+                company_name=c_name
+            ))
+
     return alerts
+
 
 def get_engineer_operational_alerts(db: Session, engineer_id: UUID) -> List[OperationalAlert]:
     """

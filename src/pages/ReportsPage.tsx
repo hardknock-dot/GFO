@@ -1,354 +1,332 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
-import { useReportsSummary, useCategoryReport } from '../hooks/useReports';
-import { downloadReportCsv } from '../services/reports';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/axios';
 import { PageHeader } from '../components/layout/PageHeader';
-import { StatCard } from '../components/common/StatCard';
-import { Table } from '../components/common/Table';
-import type { Column } from '../components/common/Table';
-import { Button } from '../components/forms/Button';
-import { DatePicker } from '../components/forms/DatePicker';
-import { CardSkeleton } from '../components/common/LoadingSkeleton';
-import { ErrorState } from '../components/common/ErrorState';
 import {
   Users,
   Calendar,
   Wrench,
   FileCheck,
-  Clock,
-  Plane,
-  TrendingUp,
-  CalendarX,
   AlertTriangle,
-  Download,
   Filter,
-  BarChart3,
-  Layers,
-  RotateCcw,
+  Globe,
+  Award,
+  Building2
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 
 export const ReportsPage: React.FC = () => {
-  const navigate = useNavigate();
   const { currentCompany } = useCompany();
-  const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
+  const { user } = useAuth();
+  const isMainAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
 
-  const [activeCategory, setActiveCategory] = useState<string>('workforce');
+  const [companyId, setCompanyId] = useState<string>(
+    currentCompany.id === 'all-data' ? 'all-data' : (currentCompany.company_id || currentCompany.id)
+  );
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [selectedDistKey, setSelectedDistKey] = useState<string>('');
-  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'feedback' | 'escalations' | 'deployments' | 'workforce' | 'schedules' | 'skills' | 'visa'>('feedback');
 
-  // Queries
-  const {
-    data: summary,
-    isLoading: isSummaryLoading,
-    isError: isSummaryError,
-    refetch: refetchSummary,
-  } = useReportsSummary(companyId, startDate, endDate);
+  // Specific Report Data
+  const [reportData, setReportData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [companiesList, setCompaniesList] = useState<Array<{ company_id: string; company_name: string }>>([]);
 
-  const {
-    data: categoryData,
-    isLoading: isCategoryLoading,
-    isError: isCategoryError,
-    refetch: refetchCategory,
-  } = useCategoryReport(activeCategory, companyId, startDate, endDate);
-
-  const categories = [
-    { id: 'workforce', label: 'Workforce', icon: Users },
-    { id: 'schedules', label: 'Schedules', icon: Calendar },
-    { id: 'skills', label: 'Skills & Tools', icon: Wrench },
-    { id: 'visa', label: 'Visas & Permits', icon: FileCheck },
-    { id: 'leaves', label: 'Leaves', icon: Clock },
-    { id: 'travel', label: 'Travel', icon: Plane },
-    { id: 'performance', label: 'Performance', icon: TrendingUp },
-    { id: 'missed-schedules', label: 'Missed Schedules', icon: CalendarX },
-    { id: 'operational', label: 'Operational Exceptions', icon: AlertTriangle },
-  ];
-
-  // Sync selected distribution key when categoryData loads or category changes
   useEffect(() => {
-    if (categoryData?.distributions) {
-      const keys = Object.keys(categoryData.distributions);
-      if (keys.length > 0) {
-        setSelectedDistKey(keys[0]);
-      } else {
-        setSelectedDistKey('');
-      }
-    } else {
-      setSelectedDistKey('');
+    if (isMainAdmin) {
+      api.get('/companies').then((res) => setCompaniesList(res.data)).catch(() => {});
     }
-  }, [categoryData, activeCategory]);
+  }, [isMainAdmin]);
 
-  const handleExportCsv = async () => {
+  const fetchCurrentReport = async () => {
+    setLoading(true);
     try {
-      setIsExporting(true);
-      await downloadReportCsv(activeCategory, companyId, startDate, endDate);
+      const params: any = {};
+      if (companyId && companyId !== 'all-data') params.company_id = companyId;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      let url = '/reports/feedback';
+      if (activeTab === 'escalations') url = '/reports/escalations';
+      else if (activeTab === 'deployments') url = '/reports/deployments-by-country';
+      else if (activeTab === 'workforce') url = '/reports/category/workforce';
+      else if (activeTab === 'schedules') url = '/reports/category/schedules';
+      else if (activeTab === 'skills') url = '/reports/category/skills';
+      else if (activeTab === 'visa') url = '/reports/category/visa';
+
+      const res = await api.get(url, { params });
+      setReportData(res.data);
     } catch (err) {
-      alert('Failed to export report CSV.');
+      console.error('Failed to load report:', err);
+      setReportData(null);
     } finally {
-      setIsExporting(false);
+      setLoading(false);
     }
   };
 
-  const pageTitle = currentCompany.id === 'all-data'
-    ? 'Reports — All Companies'
-    : `Reports — ${currentCompany.name}`;
-
-  // Prepare chart data from active distribution selection
-  const distKeys = categoryData?.distributions ? Object.keys(categoryData.distributions) : [];
-  const currentDistKey = selectedDistKey || distKeys[0];
-  const activeDist = currentDistKey && categoryData?.distributions ? categoryData.distributions[currentDistKey] || [] : [];
-
-  const chartData = activeDist.map((d) => ({
-    name: d.label,
-    count: d.count,
-  }));
-
-  // Build dynamic table columns based on category items
-  const buildTableColumns = (): Column<any>[] => {
-    if (!categoryData?.items || categoryData.items.length === 0) return [];
-    const sample = categoryData.items[0];
-    const keys = Object.keys(sample).filter((k) => k !== 'id');
-
-    return keys.map((key) => ({
-      key,
-      header: key.replace(/_/g, ' ').toUpperCase(),
-      render: (item: any) => {
-        const val = item[key];
-        if (typeof val === 'boolean') {
-          return (
-            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${val ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-              {val ? 'Yes' : 'No'}
-            </span>
-          );
-        }
-        if (key === 'severity') {
-          const colors: Record<string, string> = {
-            critical: 'bg-rose-100 text-rose-800 border-rose-200',
-            warning: 'bg-amber-100 text-amber-800 border-amber-200',
-            info: 'bg-blue-100 text-blue-800 border-blue-200',
-          };
-          return (
-            <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${colors[String(val).toLowerCase()] || 'bg-slate-100 text-slate-800'}`}>
-              {String(val)}
-            </span>
-          );
-        }
-        return <span className="text-xs text-slate-800 dark:text-slate-200">{val !== null && val !== undefined ? String(val) : 'N/A'}</span>;
-      },
-    }));
-  };
+  useEffect(() => {
+    fetchCurrentReport();
+  }, [activeTab, companyId, startDate, endDate]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6">
       <PageHeader
-        title={pageTitle}
-        subtitle="Comprehensive management analytics, workforce metrics, performance scores, and exportable executive reports."
-        actions={
-          <Button
-            loading={isExporting}
-            onClick={handleExportCsv}
-            icon={<Download className="w-4 h-4" />}
-          >
-            Export {activeCategory.replace('-', ' ').toUpperCase()} CSV
-          </Button>
-        }
+        title="Executive Reports & Global Analytics"
+        subtitle="Multi-tenant performance, customer feedback, escalations timeline, and country deployments."
       />
 
-      {/* Date Filter & Scope Controls Bar */}
-      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-          <Filter className="w-4 h-4 text-[var(--color-secondary)]" />
-          <span>Report Scope Filters:</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[var(--color-secondary)] font-mono">
-            {summary?.company_name || currentCompany.name}
-          </span>
-        </div>
+      {/* Global Filter Bar */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-4 text-xs">
+          {/* Company Filter */}
+          {isMainAdmin ? (
+            <div className="flex items-center space-x-2">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span className="font-semibold text-slate-700">Company Scope:</span>
+              <select
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                <option value="all-data">All Companies (Global)</option>
+                {companiesList.map((c) => (
+                  <option key={c.company_id} value={c.company_id}>
+                    {c.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span className="font-semibold text-slate-700">Company Scope:</span>
+              <span className="px-3 py-1 bg-slate-100 rounded-xl font-bold text-slate-800">
+                {currentCompany.name}
+              </span>
+            </div>
+          )}
 
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <div className="w-40">
-            <DatePicker
+          {/* Date Range Pickers */}
+          <div className="flex items-center space-x-2">
+            <span className="font-semibold text-slate-700">Date From:</span>
+            <input
+              type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Start Date"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none"
             />
           </div>
-          <span className="text-slate-400">to</span>
-          <div className="w-40">
-            <DatePicker
+          <div className="flex items-center space-x-2">
+            <span className="font-semibold text-slate-700">Date To:</span>
+            <input
+              type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              placeholder="End Date"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none"
             />
           </div>
-          {(startDate || endDate) && (
-            <Button
-              size="sm"
-              variant="outline"
-              icon={<RotateCcw className="w-3.5 h-3.5" />}
-              onClick={() => {
-                setStartDate('');
-                setEndDate('');
-              }}
-            >
-              Reset Date Filter
-            </Button>
-          )}
         </div>
+
+        <button
+          onClick={fetchCurrentReport}
+          className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
+        >
+          <Filter className="w-3.5 h-3.5" />
+          <span>Apply Filters</span>
+        </button>
       </div>
 
-      {/* Executive Management Summary KPI Cards */}
-      {isSummaryLoading ? (
-        <CardSkeleton />
-      ) : isSummaryError || !summary ? (
-        <ErrorState onRetry={refetchSummary} message="Failed to load executive summary metrics." />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Workforce"
-            value={summary.total_engineers}
-            icon={<Users className="w-5 h-5 text-blue-500" />}
-            subtitle={`${summary.total_skills} Skills Logged`}
-          />
-          <StatCard
-            title="Field Schedules"
-            value={summary.total_schedules}
-            icon={<Calendar className="w-5 h-5 text-emerald-500" />}
-            subtitle={`${summary.active_schedules} Active • ${summary.upcoming_schedules} Upcoming`}
-          />
-          <StatCard
-            title="Avg Performance Score"
-            value={summary.avg_performance_score !== null && summary.avg_performance_score !== undefined ? `${summary.avg_performance_score} / 5.0` : 'N/A'}
-            icon={<TrendingUp className="w-5 h-5 text-amber-500" />}
-            subtitle={`${summary.total_performances} Evaluated Assignments`}
-          />
-          <StatCard
-            title="Operational Exceptions"
-            value={summary.total_operational_alerts}
-            icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
-            subtitle={`${summary.warning_alerts_count} Active Warnings`}
-          />
-        </div>
-      )}
-
-      {/* Report Category Selection Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-0.5">
-        {categories.map((c) => {
-          const Icon = c.icon;
-          const isActive = activeCategory === c.id;
+      {/* Tabs Bar */}
+      <div className="flex items-center space-x-2 border-b border-slate-200 overflow-x-auto pb-1">
+        {[
+          { id: 'feedback', label: 'Feedback Report', icon: Award },
+          { id: 'escalations', label: 'Escalation Report', icon: AlertTriangle },
+          { id: 'deployments', label: 'Deployments by Country', icon: Globe },
+          { id: 'workforce', label: 'Workforce Roster', icon: Users },
+          { id: 'schedules', label: 'Schedules', icon: Calendar },
+          { id: 'skills', label: 'Skills Matrix', icon: Wrench },
+          { id: 'visa', label: 'Visas & Permits', icon: FileCheck },
+        ].map((t) => {
+          const Icon = t.icon;
+          const isActive = activeTab === t.id;
           return (
             <button
-              key={c.id}
-              onClick={() => setActiveCategory(c.id)}
-              className={`flex items-center space-x-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all duration-150 whitespace-nowrap ${
+              key={t.id}
+              onClick={() => setActiveTab(t.id as any)}
+              className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                 isActive
-                  ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white bg-slate-50 dark:bg-slate-800/40 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
               <Icon className="w-4 h-4" />
-              <span>{c.label}</span>
+              <span>{t.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Category Analytics & Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Visual Analytics Chart */}
-        <div className="lg:col-span-1 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-[var(--color-secondary)]" />
-              <span>Distribution Breakdown</span>
-            </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              {categoryData?.total_count || 0} Total
-            </span>
-          </div>
+      {/* REPORT CONTENT DISPLAY */}
+      {loading ? (
+        <div className="p-12 text-center text-xs text-slate-400">Loading report analytics...</div>
+      ) : !reportData ? (
+        <div className="p-12 text-center text-xs text-slate-400">No report records found matching criteria.</div>
+      ) : (
+        <div className="space-y-6">
+          {/* TAB: FEEDBACK REPORT */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Total Feedback Items</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{reportData.total_feedback ?? reportData.total_feedback_count ?? 0}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Positive Feedback</span>
+                  <p className="text-2xl font-bold text-emerald-600 mt-1">{reportData.positive_feedback_count}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Negative Feedback</span>
+                  <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.negative_feedback_count}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Average Rating Score</span>
+                  <p className="text-2xl font-bold text-indigo-600 mt-1">{reportData.average_score} / 5.0</p>
+                </div>
+              </div>
 
-          {/* Distribution metric toggle if multiple exist */}
-          {distKeys.length > 1 && (
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1">
-              {distKeys.map((dk) => (
-                <button
-                  key={dk}
-                  onClick={() => setSelectedDistKey(dk)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors uppercase tracking-wider ${
-                    currentDistKey === dk
-                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  {dk.replace('by_', '')}
-                </button>
-              ))}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="p-4 border-b border-slate-100 font-bold text-slate-800 text-sm">
+                  Customer & Manager Feedback Log
+                </div>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="px-5 py-3.5">Engineer</th>
+                      <th className="px-5 py-3.5">Company</th>
+                      <th className="px-5 py-3.5">Score</th>
+                      <th className="px-5 py-3.5">Reviewer</th>
+                      <th className="px-5 py-3.5">Feedback Text</th>
+                      <th className="px-5 py-3.5">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {reportData.items.map((fb: any) => (
+                      <tr key={fb.id} className="hover:bg-slate-50/80">
+                        <td className="px-5 py-4 font-bold text-slate-900">{fb.engineer_name}</td>
+                        <td className="px-5 py-4 text-slate-600">{fb.company_name}</td>
+                        <td className="px-5 py-4 font-bold text-amber-500">★ {fb.score || fb.rating}</td>
+                        <td className="px-5 py-4 text-slate-600">{fb.reviewer || 'Customer'}</td>
+                        <td className="px-5 py-4 max-w-sm truncate text-slate-600" title={fb.feedback}>
+                          {fb.feedback}
+                        </td>
+                        <td className="px-5 py-4 font-mono text-slate-400 text-[11px]">{fb.review_date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {isCategoryLoading ? (
-            <div className="h-64 flex items-center justify-center text-xs text-slate-400">Loading chart data...</div>
-          ) : isCategoryError || chartData.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-center p-4 text-xs text-slate-400">
-              <Layers className="w-8 h-8 mb-2 text-slate-300" />
-              <span>No distribution data available for the selected scope or date range.</span>
+          {/* TAB: ESCALATIONS REPORT */}
+          {activeTab === 'escalations' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Total Escalation Incidents</span>
+                  <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.total_escalations}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Engineers Escalated</span>
+                  <p className="text-2xl font-bold text-amber-600 mt-1">{Object.keys(reportData.by_engineer || {}).length}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-xs font-semibold text-slate-400">Countries Impacted</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{Object.keys(reportData.by_country || {}).length}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="p-4 border-b border-slate-100 font-bold text-slate-800 text-sm">
+                  Operational Escalation Timeline
+                </div>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="px-5 py-3.5">Engineer</th>
+                      <th className="px-5 py-3.5">Company</th>
+                      <th className="px-5 py-3.5">Escalation Reason</th>
+                      <th className="px-5 py-3.5">Reviewer</th>
+                      <th className="px-5 py-3.5">Notes</th>
+                      <th className="px-5 py-3.5">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {reportData.items.map((esc: any) => (
+                      <tr key={esc.id} className="hover:bg-slate-50/80">
+                        <td className="px-5 py-4 font-bold text-slate-900">{esc.engineer_name}</td>
+                        <td className="px-5 py-4 text-slate-600">{esc.company_name}</td>
+                        <td className="px-5 py-4 font-bold text-rose-700">{esc.escalation_reason}</td>
+                        <td className="px-5 py-4 text-slate-600">{esc.reviewer}</td>
+                        <td className="px-5 py-4 text-slate-600">{esc.notes}</td>
+                        <td className="px-5 py-4 font-mono text-slate-400 text-[11px]">{esc.review_date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#fff', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="count" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          )}
+
+          {/* TAB: DEPLOYMENTS BY COUNTRY */}
+          {activeTab === 'deployments' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="p-4 border-b border-slate-100 font-bold text-slate-800 text-sm">
+                  Global Deployment Footprint by Country
+                </div>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="px-5 py-3.5">Country</th>
+                      <th className="px-5 py-3.5">Deployment Count</th>
+                      <th className="px-5 py-3.5">Unique Engineers</th>
+                      <th className="px-5 py-3.5">Active Deployments</th>
+                      <th className="px-5 py-3.5">Upcoming Deployments</th>
+                      <th className="px-5 py-3.5">Completed Deployments</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {reportData.countries.map((c: any) => (
+                      <tr key={c.country} className="hover:bg-slate-50/80">
+                        <td className="px-5 py-4 font-bold text-slate-900">{c.country}</td>
+                        <td className="px-5 py-4 font-bold text-indigo-600">{c.deployment_count}</td>
+                        <td className="px-5 py-4 font-semibold text-slate-800">{c.unique_engineers_count}</td>
+                        <td className="px-5 py-4 text-emerald-600 font-semibold">{c.active_deployments}</td>
+                        <td className="px-5 py-4 text-amber-600 font-semibold">{c.upcoming_deployments}</td>
+                        <td className="px-5 py-4 text-slate-500 font-semibold">{c.completed_deployments}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* OTHER CATEGORY TAB (WORKFORCE, SCHEDULES, SKILLS, VISA) */}
+          {['workforce', 'schedules', 'skills', 'visa'].includes(activeTab) && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-100 font-bold text-slate-800 text-sm capitalize">
+                {activeTab} Report Records ({reportData.items?.length || 0})
+              </div>
+              <div className="p-4 text-xs text-slate-600">
+                Total Records: <span className="font-bold text-slate-900">{reportData.total_count || reportData.items?.length || 0}</span>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Category Data Items Table */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-              {activeCategory.replace('-', ' ')} Operational Records
-            </h3>
-            <span className="text-xs text-slate-500">
-              Showing {categoryData?.items?.length || 0} records
-            </span>
-          </div>
-
-          <Table
-            columns={buildTableColumns()}
-            data={categoryData?.items || []}
-            isLoading={isCategoryLoading}
-            isError={isCategoryError}
-            onRetry={refetchCategory}
-            onRowClick={(item) => {
-              if (item.engineer_id || item.orbit_id) {
-                navigate(`/engineers/${item.engineer_id || item.id}`);
-              } else if (item.project_code || item.schedule_id) {
-                navigate('/schedule');
-              }
-            }}
-            emptyTitle={`No ${activeCategory.replace('-', ' ')} records found for selected filters`}
-            emptyDescription="Adjust your company tenant or date range filters to view records."
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 };

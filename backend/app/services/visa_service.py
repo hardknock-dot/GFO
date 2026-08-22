@@ -18,7 +18,7 @@ def get_engineer_visa(db: Session, engineer_id: UUID) -> List[Visa]:
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate) -> Visa:
+def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate, owner_id: Optional[UUID] = None) -> Visa:
     """
     Create a new visa record associated with one engineer.
     """
@@ -34,7 +34,7 @@ def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate) -> Visa:
     db_visa = Visa(
         visa_id=uuid.uuid4(),
         engineer_id=engineer_id,
-        owner_id=None,  # Leave NULL since no authentication mechanism is present
+        owner_id=owner_id,
         country=visa_data.country,
         visa_type=visa_data.visa_type,
         applied_on=visa_data.applied_on,

@@ -4,8 +4,11 @@ import { PRESET_COMPANIES } from '../context/CompanyContext';
 
 const mapApiCompanyToFrontend = (apiComp: any): Company => {
   const preset = PRESET_COMPANIES.find(
-    (c) => c.name.toLowerCase() === apiComp.company_name.toLowerCase() ||
-           c.code.toLowerCase() === apiComp.short_name.toLowerCase()
+    (c) =>
+      c.company_id === apiComp.company_id ||
+      c.id === apiComp.company_id ||
+      c.name.toLowerCase() === apiComp.company_name?.toLowerCase() ||
+      c.code.toLowerCase() === apiComp.short_name?.toLowerCase()
   ) || PRESET_COMPANIES[0];
 
   return {

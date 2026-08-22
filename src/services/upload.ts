@@ -130,3 +130,56 @@ export const deleteUpload = async (id: string): Promise<{ success: boolean }> =>
   }
   return { success: true };
 };
+
+import type { BulkUpload } from '../types';
+
+const mapApiUploadToFrontend = (apiUp: any): BulkUpload => {
+  return {
+    uploadId: apiUp.upload_id,
+    companyId: apiUp.company_id,
+    companyName: apiUp.company_name,
+    uploadedBy: apiUp.uploaded_by,
+    uploadedByName: apiUp.uploaded_by_name,
+    fileName: apiUp.file_name,
+    uploadType: apiUp.upload_type,
+    totalRows: apiUp.total_rows,
+    validRows: apiUp.valid_rows,
+    errorRows: apiUp.error_rows,
+    duplicateRows: apiUp.duplicate_rows,
+    existingRows: apiUp.existing_rows,
+    warningRows: apiUp.warning_rows,
+    importedRows: apiUp.imported_rows,
+    failedRows: apiUp.failed_rows,
+    status: apiUp.status,
+    reportFile: apiUp.report_file,
+    createdAt: apiUp.created_at,
+    completedAt: apiUp.completed_at,
+  };
+};
+
+export const getUploadHistory = async (companyId?: string): Promise<BulkUpload[]> => {
+  try {
+    const params = companyId && companyId !== 'all-data' ? { company_id: companyId } : {};
+    const res = await api.get('/upload/history', { params });
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(mapApiUploadToFrontend);
+    }
+    return [];
+  } catch (err) {
+    console.error('Error fetching upload history:', err);
+    throw err;
+  }
+};
+
+export const getUploadHistoryById = async (uploadId: string): Promise<BulkUpload | null> => {
+  try {
+    const res = await api.get(`/upload/history/${uploadId}`);
+    if (res.data) {
+      return mapApiUploadToFrontend(res.data);
+    }
+    return null;
+  } catch (err) {
+    console.error(`Error fetching upload detail ${uploadId}:`, err);
+    throw err;
+  }
+};

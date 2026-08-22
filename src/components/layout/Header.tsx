@@ -27,7 +27,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
   const { currentCompany, companies, setCompany } = useCompany();
-  const { user, logout } = useAuth();
+  const { user, logout, selectCompany } = useAuth();
   const navigate = useNavigate();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
           </button>
         )}
 
-        <div className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+        <div className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer" onClick={() => navigate(user?.role === 'Field Engineer' || user?.role === 'Engineer' ? '/engineer/dashboard' : '/dashboard')}>
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[var(--color-primary)] to-[var(--color-secondary)] p-0.5 shadow-sm flex items-center justify-center flex-shrink-0">
             <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center overflow-hidden">
               <span className="font-black text-xs sm:text-sm text-[var(--color-secondary)] tracking-wider">
@@ -129,41 +129,63 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
                 <Layers className="w-3 h-3" />
                 <span>Select Company Workspace</span>
               </div>
-              {companies.map((comp) => (
-                <button
-                  key={comp.id}
-                  onClick={() => {
-                    setCompany(comp.id);
-                    setCompanyMenuOpen(false);
-                    if (comp.id === 'all-data') {
-                      navigate('/all-data');
-                    } else {
-                      navigate('/dashboard');
-                    }
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 ${
-                    comp.id === currentCompany.id
-                      ? 'font-bold text-[var(--color-secondary)] bg-slate-50 dark:bg-slate-800/50'
-                      : 'text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  <span>{comp.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">
-                    {comp.code}
-                  </span>
-                </button>
-              ))}
-              <div className="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
-                <button
-                  onClick={() => {
-                    setCompanyMenuOpen(false);
-                    navigate('/company-selection');
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-secondary)] font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  View All Enterprise Accounts →
-                </button>
-              </div>
+              {companies
+                .filter((comp) => {
+                  if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
+                  if (user?.accessibleCompanies && user.accessibleCompanies.length > 0) {
+                    return (
+                      comp.id !== 'all-data' &&
+                      comp.company_id !== 'all-data' &&
+                      (user.accessibleCompanies.includes(comp.id) || user.accessibleCompanies.includes(comp.company_id))
+                    );
+                  }
+                  return (
+                    comp.id !== 'all-data' &&
+                    comp.company_id !== 'all-data' &&
+                    (comp.id === user?.currentCompanyId || comp.company_id === user?.currentCompanyId)
+                  );
+                })
+                .map((comp) => (
+                  <button
+                    key={comp.id}
+                    onClick={() => {
+                      const targetId = comp.company_id || comp.id;
+                      setCompany(targetId);
+                      selectCompany(targetId);
+                      setCompanyMenuOpen(false);
+                      if (comp.id === 'all-data' || comp.company_id === 'all-data') {
+                        navigate('/all-data');
+                      } else if (user?.role === 'Field Engineer' || user?.role === 'Engineer') {
+                        navigate('/engineer/dashboard');
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 ${
+                      comp.id === currentCompany.id
+                        ? 'font-bold text-[var(--color-secondary)] bg-slate-50 dark:bg-slate-800/50'
+                        : 'text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span>{comp.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">
+                      {comp.code}
+                    </span>
+                  </button>
+                ))}
+              {(user?.role === 'Main Admin' || user?.role === 'Global Admin') && (
+                <div className="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      setCompanyMenuOpen(false);
+                      navigate('/company-selection');
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-[var(--color-secondary)] font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    View All Enterprise Accounts →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -177,98 +199,100 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
       {/* Right: Notification Bell & User Controls */}
       <div className="flex items-center space-x-2 sm:space-x-3">
         {/* Company-Aware Operational Notification Bell */}
-        <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => setNotifMenuOpen(!notifMenuOpen)}
-            className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-            {alertCount > 0 && (
-              <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900">
-                {alertCount > 99 ? '99+' : alertCount}
-              </span>
-            )}
-          </button>
+        {user?.role !== 'Viewer' && (
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifMenuOpen(!notifMenuOpen)}
+              className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              {alertCount > 0 && (
+                <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900">
+                  {alertCount > 99 ? '99+' : alertCount}
+                </span>
+              )}
+            </button>
 
-          {/* Notification Popover Dropdown */}
-          {notifMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden text-xs">
-              {/* Header */}
-              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
-                <div className="flex items-center space-x-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-500" />
-                  <span className="font-bold text-slate-900 dark:text-white">Operational Notifications</span>
-                </div>
-                {alertCount > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-semibold font-mono rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                    {alertCount} Active
-                  </span>
-                )}
-              </div>
-
-              {/* Alert List Container */}
-              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                {isLoading ? (
-                  <div className="p-6 text-center text-slate-400">Loading alerts...</div>
-                ) : isError ? (
-                  <div className="p-4 text-center text-rose-500">Unable to load notifications</div>
-                ) : displayAlerts.length === 0 ? (
-                  <div className="p-8 text-center space-y-2">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">No operational alerts</p>
-                    <p className="text-[11px] text-slate-400">Operational data is clean and consistent.</p>
+            {/* Notification Popover Dropdown */}
+            {notifMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden text-xs">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                  <div className="flex items-center space-x-2">
+                    <ShieldAlert className="w-4 h-4 text-amber-500" />
+                    <span className="font-bold text-slate-900 dark:text-white">Operational Notifications</span>
                   </div>
-                ) : (
-                  displayAlerts.map((alt) => (
-                    <button
-                      key={alt.id}
-                      onClick={() => handleAlertClick(alt)}
-                      className={`w-full text-left p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors flex items-start space-x-3 ${
-                        alt.severity === 'warning' || alt.severity === 'critical'
-                          ? 'bg-amber-50/30 dark:bg-amber-950/10'
-                          : ''
-                      }`}
-                    >
-                      {alt.severity === 'warning' || alt.severity === 'critical' ? (
-                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <Info className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1 space-y-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{alt.title}</p>
-                          {currentCompany.id === 'all-data' && alt.company_name && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-medium flex-shrink-0">
-                              {alt.company_name}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-tight">
-                          {alt.message}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
+                  {alertCount > 0 && (
+                    <span className="px-2 py-0.5 text-[10px] font-semibold font-mono rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                      {alertCount} Active
+                    </span>
+                  )}
+                </div>
 
-              {/* Footer Link */}
-              <div className="p-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 text-center">
-                <button
-                  onClick={() => {
-                    setNotifMenuOpen(false);
-                    navigate('/dashboard');
-                  }}
-                  className="text-xs font-semibold text-[var(--color-secondary)] hover:underline inline-flex items-center"
-                >
-                  <span>View all operational alerts ({alertCount})</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-                </button>
+                {/* Alert List Container */}
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                  {isLoading ? (
+                    <div className="p-6 text-center text-slate-400">Loading alerts...</div>
+                  ) : isError ? (
+                    <div className="p-4 text-center text-rose-500">Unable to load notifications</div>
+                  ) : displayAlerts.length === 0 ? (
+                    <div className="p-8 text-center space-y-2">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">No operational alerts</p>
+                      <p className="text-[11px] text-slate-400">Operational data is clean and consistent.</p>
+                    </div>
+                  ) : (
+                    displayAlerts.map((alt) => (
+                      <button
+                        key={alt.id}
+                        onClick={() => handleAlertClick(alt)}
+                        className={`w-full text-left p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors flex items-start space-x-3 ${
+                          alt.severity === 'warning' || alt.severity === 'critical'
+                            ? 'bg-amber-50/30 dark:bg-amber-950/10'
+                            : ''
+                        }`}
+                      >
+                        {alt.severity === 'warning' || alt.severity === 'critical' ? (
+                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <Info className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 space-y-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-semibold text-slate-900 dark:text-white truncate">{alt.title}</p>
+                            {currentCompany.id === 'all-data' && alt.company_name && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-medium flex-shrink-0">
+                                {alt.company_name}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-tight">
+                            {alt.message}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                {/* Footer Link */}
+                <div className="p-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 text-center">
+                  <button
+                    onClick={() => {
+                      setNotifMenuOpen(false);
+                      navigate('/alerts');
+                    }}
+                    className="text-xs font-semibold text-[var(--color-secondary)] hover:underline inline-flex items-center"
+                  >
+                    <span>View all operational alerts ({alertCount})</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Profile Dropdown */}
         <div className="relative" ref={userMenuRef}>
@@ -283,7 +307,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
             />
             <div className="hidden md:flex flex-col text-left">
               <span className="text-xs font-semibold text-slate-800">{user?.name}</span>
-              <span className="text-[10px] text-slate-400 font-medium">{user?.role}</span>
+              <span className="text-[10px] text-slate-400 font-medium">{user?.role === 'Global Admin' ? 'Main Admin' : user?.role}</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
           </button>
@@ -297,13 +321,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
               <button
                 onClick={() => {
                   setDropdownOpen(false);
-                  navigate('/settings');
+                  navigate(user?.role === 'Field Engineer' || user?.role === 'Engineer' ? '/engineer/profile' : '/settings');
                 }}
                 className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2"
               >
                 <UserIcon className="w-4 h-4 text-slate-400" />
-                <span>Account Settings</span>
+                <span>{user?.role === 'Field Engineer' || user?.role === 'Engineer' ? 'My Profile' : 'Account Settings'}</span>
               </button>
+
               <button
                 onClick={() => {
                   setDropdownOpen(false);

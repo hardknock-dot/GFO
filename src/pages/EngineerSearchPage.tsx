@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEngineers } from '../hooks/useEngineers';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Dropdown } from '../components/forms/Dropdown';
 import { Button } from '../components/forms/Button';
-import { GlobalSearch } from '../components/common/GlobalSearch';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import {
   Users,
@@ -15,6 +14,7 @@ import {
   ArrowRight,
   RotateCcw,
   Building2,
+  X,
 } from 'lucide-react';
 
 export const EngineerSearchPage: React.FC = () => {
@@ -29,16 +29,113 @@ export const EngineerSearchPage: React.FC = () => {
   const [minExpFilter, setMinExpFilter] = useState<number>(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
-  const { data: res, isLoading, isError, refetch } = useEngineers({
-    search,
-    status: statusFilter,
-    tool: toolFilter,
-    country: countryFilter,
-    level: levelFilter,
-    minExperience: minExpFilter,
-  });
+  const { data: res, isLoading, isError, refetch } = useEngineers();
+  const rawEngineers = useMemo(() => res?.data || [], [res]);
 
-  const engineers = res?.data || [];
+  // Extract dynamic filter options from raw dataset
+  const availableStatuses = useMemo(() => {
+    const set = new Set<string>();
+    rawEngineers.forEach((eng) => {
+      if (eng.status) set.add(eng.status);
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [rawEngineers]);
+
+  const availableTools = useMemo(() => {
+    const set = new Set<string>();
+    rawEngineers.forEach((eng) => {
+      if (eng.primaryTool) set.add(eng.primaryTool);
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [rawEngineers]);
+
+  const availableLevels = useMemo(() => {
+    const set = new Set<string>();
+    rawEngineers.forEach((eng) => {
+      if (eng.level) set.add(eng.level);
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [rawEngineers]);
+
+  const availableCountries = useMemo(() => {
+    const set = new Set<string>();
+    rawEngineers.forEach((eng) => {
+      if (eng.country) set.add(eng.country);
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [rawEngineers]);
+
+  // Client-side filtering logic across all attributes
+  const engineers = useMemo(() => {
+    return rawEngineers.filter((eng) => {
+      // Keyword search
+      if (search.trim()) {
+        const q = search.toLowerCase().trim();
+        const matchName = eng.name?.toLowerCase().includes(q);
+        const matchGoesBy = eng.goesBy?.toLowerCase().includes(q);
+        const matchEmail = eng.email?.toLowerCase().includes(q);
+        const matchOrbit = eng.orbitId?.toLowerCase().includes(q);
+        const matchCustomer = eng.customerId?.toLowerCase().includes(q);
+        const matchTool = eng.primaryTool?.toLowerCase().includes(q);
+        const matchCountry = eng.country?.toLowerCase().includes(q);
+        const matchCity = eng.city?.toLowerCase().includes(q);
+        const matchLevel = eng.level?.toLowerCase().includes(q);
+        const matchSite = eng.assignedSite?.toLowerCase().includes(q);
+
+        if (
+          !matchName &&
+          !matchGoesBy &&
+          !matchEmail &&
+          !matchOrbit &&
+          !matchCustomer &&
+          !matchTool &&
+          !matchCountry &&
+          !matchCity &&
+          !matchLevel &&
+          !matchSite
+        ) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (statusFilter !== 'All') {
+        if (eng.status?.toLowerCase() !== statusFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Tool filter
+      if (toolFilter !== 'All') {
+        if (eng.primaryTool?.toLowerCase() !== toolFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Level filter
+      if (levelFilter !== 'All') {
+        if (eng.level?.toLowerCase() !== levelFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Country filter
+      if (countryFilter !== 'All') {
+        if (!eng.country?.toLowerCase().includes(countryFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Minimum Experience filter
+      if (minExpFilter > 0) {
+        if ((eng.yearsExperience || 0) < minExpFilter) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [rawEngineers, search, statusFilter, toolFilter, levelFilter, countryFilter, minExpFilter]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -86,11 +183,11 @@ export const EngineerSearchPage: React.FC = () => {
         }
       />
 
-      {/* Main Layout: Left Filter Sidebar + Right Gallery Grid */}
+      {/* Main Layout: Left Filter Sidebar Card + Right Cards Gallery */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Sidebar Filter Panel */}
+        {/* Left Sidebar Filter Card Panel */}
         <div
-          className={`space-y-5 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-all ${
+          className={`space-y-5 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm lg:sticky lg:top-20 transition-all ${
             filterPanelOpen ? 'block' : 'hidden lg:block'
           }`}
         >
@@ -104,18 +201,32 @@ export const EngineerSearchPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Search Query */}
+          {/* Search Query Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Keyword Search
             </label>
-            <GlobalSearch
-              onSearch={(q) => setSearch(q)}
-              placeholder="Name, Orbit ID, Fab site..."
-            />
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name, Orbit ID, Fab site..."
+                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Tool Model / Chamber Filter */}
+          {/* Primary Tool / Chamber Filter */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Primary Tool / Chamber
@@ -123,7 +234,7 @@ export const EngineerSearchPage: React.FC = () => {
             <Dropdown
               value={toolFilter}
               onChange={(e) => setToolFilter(e.target.value)}
-              options={['All', 'Etch', 'SENSAI', 'Kiyo', 'Purion', 'ALTUS', 'CVD', 'ALD']}
+              options={availableTools}
             />
           </div>
 
@@ -135,17 +246,11 @@ export const EngineerSearchPage: React.FC = () => {
             <Dropdown
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value)}
-              options={[
-                'All',
-                'L1 Junior Engineer',
-                'L2 Field Engineer',
-                'L3 Senior Specialist',
-                'Master Engineer',
-              ]}
+              options={availableLevels}
             />
           </div>
 
-          {/* Status Filter */}
+          {/* Deployment Status Filter */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Deployment Status
@@ -153,7 +258,7 @@ export const EngineerSearchPage: React.FC = () => {
             <Dropdown
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training']}
+              options={availableStatuses}
             />
           </div>
 
@@ -165,7 +270,7 @@ export const EngineerSearchPage: React.FC = () => {
             <Dropdown
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
-              options={['All', 'Japan', 'Taiwan', 'USA', 'Germany', 'Singapore', 'India', 'Italy']}
+              options={availableCountries}
             />
           </div>
 
@@ -177,7 +282,7 @@ export const EngineerSearchPage: React.FC = () => {
             <select
               value={minExpFilter}
               onChange={(e) => setMinExpFilter(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-slate-400"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
             >
               <option value={0}>Any Experience</option>
               <option value={1}>1+ Years</option>
@@ -202,7 +307,7 @@ export const EngineerSearchPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column: Gallery Cards Grid */}
+        {/* Right Column: Matched Engineer Cards Gallery Grid */}
         <div className="lg:col-span-3 space-y-4">
           {/* Active Filter Summary Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
@@ -254,11 +359,12 @@ export const EngineerSearchPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {engineers.map((eng) => {
                 const statusBadgeColors: Record<string, string> = {
-                  Deployed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200',
-                  Active: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700',
-                  'On Leave': 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200',
-                  'In Transit': 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200',
-                  Training: 'bg-slate-50 text-slate-600 dark:bg-slate-900/60 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+                  Deployed: 'bg-emerald-600 text-white dark:bg-emerald-700 border-emerald-500',
+                  Active: 'bg-slate-700 text-white dark:bg-slate-800 border-slate-600',
+                  'Active Assignment': 'bg-emerald-600 text-white dark:bg-emerald-700 border-emerald-500',
+                  'On Leave': 'bg-amber-600 text-white dark:bg-amber-700 border-amber-500',
+                  'In Transit': 'bg-purple-600 text-white dark:bg-purple-700 border-purple-500',
+                  Training: 'bg-blue-600 text-white dark:bg-blue-700 border-blue-500',
                 };
 
                 return (
@@ -292,18 +398,19 @@ export const EngineerSearchPage: React.FC = () => {
                       </div>
 
                       <div className="flex flex-col items-end space-y-1">
-                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-700 dark:bg-slate-800 text-white !text-white border border-slate-600 dark:border-slate-700">
                           {eng.orbitId}
                         </span>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            statusBadgeColors[eng.status] || 'bg-slate-100 text-slate-700'
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border text-white !text-white ${
+                            statusBadgeColors[eng.status] || 'bg-slate-700 text-white dark:bg-slate-800 border-slate-600'
                           }`}
                         >
                           {eng.status}
                         </span>
                       </div>
                     </div>
+
 
                     {/* Middle Info: Name, Tool, Level */}
                     <div className="space-y-1.5">
@@ -315,8 +422,8 @@ export const EngineerSearchPage: React.FC = () => {
                       )}
 
                       <div className="pt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                          <Wrench className="w-3 h-3 mr-1 text-slate-400" />
+                        <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-white">
+                          <Wrench className="w-3 h-3 mr-1 text-white" />
                           <span className="truncate max-w-[150px]">{eng.primaryTool}</span>
                         </span>
                         <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 px-2 py-0.5 rounded border border-slate-200/60 dark:border-slate-800">
@@ -324,6 +431,7 @@ export const EngineerSearchPage: React.FC = () => {
                         </span>
                       </div>
                     </div>
+
 
                     {/* Location & Experience Attributes */}
                     <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs space-y-1.5 text-slate-500 dark:text-slate-400">

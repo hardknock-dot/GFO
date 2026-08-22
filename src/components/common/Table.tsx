@@ -23,6 +23,7 @@ interface TableProps<T> {
   emptyDescription?: string;
   onRowClick?: (item: T) => void;
   pageSize?: number;
+  rowClassName?: (item: T) => string;
 }
 
 export function Table<T extends { id?: string | number }>({
@@ -35,6 +36,7 @@ export function Table<T extends { id?: string | number }>({
   emptyDescription = 'There are no entries available for display in this view.',
   onRowClick,
   pageSize = 10,
+  rowClassName,
 }: TableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -116,14 +118,14 @@ export function Table<T extends { id?: string | number }>({
           </thead>
 
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
-            {paginatedData.map((item, idx) => (
-              <tr
-                key={item.id ?? idx}
-                onClick={() => onRowClick && onRowClick(item)}
-                className={`transition-colors duration-150 ${
-                  onRowClick ? 'cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50' : 'hover:bg-slate-50/40 dark:hover:bg-slate-800/20'
-                }`}
-              >
+            {paginatedData.map((item, idx) => {
+              const customClass = rowClassName ? rowClassName(item) : '';
+              return (
+                <tr
+                  key={item.id ?? idx}
+                  onClick={() => onRowClick && onRowClick(item)}
+                  className={`transition-colors duration-150 ${customClass || (onRowClick ? 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50' : 'hover:bg-slate-50/40 dark:hover:bg-slate-800/20')} ${onRowClick ? 'cursor-pointer' : ''} ${customClass}`}
+                >
                 {columns.map((col) => (
                   <td
                     key={col.key}
@@ -135,7 +137,8 @@ export function Table<T extends { id?: string | number }>({
                   </td>
                 ))}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

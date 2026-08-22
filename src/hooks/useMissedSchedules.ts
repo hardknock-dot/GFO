@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getMissedSchedules,
   createMissedScheduleRecord,
@@ -21,6 +21,7 @@ export const useMissedSchedules = (params?: any) => {
   return useQuery({
     queryKey: ['missedSchedules', queryParams],
     queryFn: () => getMissedSchedules(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };

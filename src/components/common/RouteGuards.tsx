@@ -8,13 +8,15 @@ interface GuardProps {
 }
 
 export const GuestRoute: React.FC<GuardProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
-    // Persistent active company check
     const activeCompany = localStorage.getItem('ormp_active_company');
     if (activeCompany === 'all-data') {
       return <Navigate to="/all-data" replace />;
+    }
+    if (user?.role === 'Field Engineer' || user?.role === 'Engineer') {
+      return <Navigate to="/engineer/dashboard" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
@@ -43,8 +45,8 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles, children }) 
     return <Navigate to="/" replace />;
   }
 
-  // Global Admin always has access to all routes
-  const isAllowed = user?.role === 'Global Admin' || (user && allowedRoles.includes(user.role));
+  // Main Admin always has global access
+  const isAllowed = user?.role === 'Main Admin' || user?.role === 'Global Admin' || (user && allowedRoles.includes(user.role));
 
   if (!isAllowed) {
     return <Navigate to="/403" replace />;
@@ -53,17 +55,47 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles, children }) 
   return children ? children : <Outlet />;
 };
 
-// Admin Guard
+// Main Admin Guard
+export const MainAdminRoute: React.FC<GuardProps> = ({ children }) => {
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin']}>{children}</RoleGuard>;
+};
+
+// Admin Guard (alias)
 export const AdminRoute: React.FC<GuardProps> = ({ children }) => {
-  return <RoleGuard allowedRoles={['Global Admin', 'Company Admin']}>{children}</RoleGuard>;
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin']}>{children}</RoleGuard>;
 };
 
 // Manager Guard
 export const ManagerRoute: React.FC<GuardProps> = ({ children }) => {
-  return <RoleGuard allowedRoles={['Global Admin', 'Company Admin', 'Resource Manager']}>{children}</RoleGuard>;
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin']}>{children}</RoleGuard>;
+};
+
+// Ops Executive Guard
+export const OpsExecutiveRoute: React.FC<GuardProps> = ({ children }) => {
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive', 'Resource Manager']}>{children}</RoleGuard>;
 };
 
 // Viewer Guard
 export const ViewerRoute: React.FC<GuardProps> = ({ children }) => {
-  return <RoleGuard allowedRoles={['Global Admin', 'Company Admin', 'Resource Manager', 'Field Engineer', 'Viewer']}>{children}</RoleGuard>;
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive', 'Resource Manager', 'Engineer', 'Field Engineer', 'Viewer']}>{children}</RoleGuard>;
+};
+
+// Engineer Guard
+export const EngineerRoute: React.FC<GuardProps> = ({ children }) => {
+  return <RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive', 'Resource Manager', 'Engineer', 'Field Engineer']}>{children}</RoleGuard>;
+};
+
+// Non-Engineer Guard
+export const NonEngineerRoute: React.FC<GuardProps> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user?.role === 'Field Engineer' || user?.role === 'Engineer') {
+    return <Navigate to="/engineer/dashboard" replace />;
+  }
+
+  return children ? children : <Outlet />;
 };

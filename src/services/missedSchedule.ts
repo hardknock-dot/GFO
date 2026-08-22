@@ -71,7 +71,8 @@ export const getMissedSchedules = async (params?: any): Promise<PaginatedRespons
         (ms) =>
           ms.engineerName.toLowerCase().includes(q) ||
           ms.reasonForChange.toLowerCase().includes(q) ||
-          ms.notesAttachEvidence.toLowerCase().includes(q)
+          ms.notesAttachEvidence.toLowerCase().includes(q) ||
+          (ms.scheduleId && ms.scheduleId.toLowerCase().includes(q))
       );
     }
 

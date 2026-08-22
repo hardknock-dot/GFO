@@ -9,7 +9,10 @@ import { Button } from '../components/forms/Button';
 import type { Skill } from '../types';
 import { CheckCircle2, Plus } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+
 export const SkillsPage: React.FC = () => {
+  const { canEdit } = useAuth();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
@@ -39,7 +42,7 @@ export const SkillsPage: React.FC = () => {
       <PageHeader
         title="Semiconductor Tool Skills Matrix"
         subtitle="Cross-company competency mapping for Etch, Deposition, Metrology, Clean, and Ion Implantation modules."
-        actions={<Button icon={<Plus className="w-4 h-4" />} onClick={() => alert('FastAPI Skill Certification Endpoint')}>Log Skill Assessment</Button>}
+        actions={canEdit ? <Button icon={<Plus className="w-4 h-4" />} onClick={() => alert('FastAPI Skill Certification Endpoint')}>Log Skill Assessment</Button> : undefined}
       />
 
       <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">

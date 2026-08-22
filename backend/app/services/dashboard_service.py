@@ -21,33 +21,32 @@ from app.schemas.dashboard import (
     ActionChecklistItem
 )
 
-def get_dashboard_metrics(db: Session, company_id: Optional[UUID] = None) -> DashboardMetricsResponse:
+def get_dashboard_metrics(
+    db: Session,
+    company_id: Optional[UUID] = None,
+    company_ids: Optional[List[UUID]] = None
+) -> DashboardMetricsResponse:
     """
     Compute operational dashboard metrics backed by real PostgreSQL data.
-    Supports Company Isolation and Master All Data.
+    Supports single company_id, list of company_ids, or Master All Data (None).
     """
     today = date.today()
 
-    # 1. Company Validation if company_id is provided
-    if company_id is not None:
-        company = db.get(Company, company_id)
-        if company is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Company not found"
-            )
+    target_cids = company_ids
+    if target_cids is None and company_id is not None:
+        target_cids = [company_id]
 
-    # 2. Base Queries with Company Filtering
+    # 1. Base Queries with Company Filtering
     eng_stmt = select(Engineer)
     sch_stmt = select(Schedule).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
     visa_stmt = select(Visa).join(Engineer, Visa.engineer_id == Engineer.engineer_id)
     trv_stmt = select(Travel).join(Schedule, Travel.schedule_id == Schedule.schedule_id).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
 
-    if company_id is not None:
-        eng_stmt = eng_stmt.where(Engineer.company_id == company_id)
-        sch_stmt = sch_stmt.where(Engineer.company_id == company_id)
-        visa_stmt = visa_stmt.where(Engineer.company_id == company_id)
-        trv_stmt = trv_stmt.where(Engineer.company_id == company_id)
+    if target_cids is not None:
+        eng_stmt = eng_stmt.where(Engineer.company_id.in_(target_cids))
+        sch_stmt = sch_stmt.where(Engineer.company_id.in_(target_cids))
+        visa_stmt = visa_stmt.where(Engineer.company_id.in_(target_cids))
+        trv_stmt = trv_stmt.where(Engineer.company_id.in_(target_cids))
 
     engineers = list(db.scalars(eng_stmt).all())
     schedules = list(db.scalars(sch_stmt).all())

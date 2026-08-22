@@ -4,10 +4,10 @@ import { getCompanies } from '../services/company';
 
 export const PRESET_COMPANIES: Company[] = [
   {
-    id: 'lam-research',
+    id: '11b9d863-b83c-4af3-8db5-b6e773f78235',
     name: 'LAM Research',
     code: 'LAM',
-    company_id: 'lam-research',
+    company_id: '11b9d863-b83c-4af3-8db5-b6e773f78235',
     company_name: 'LAM Research',
     short_name: 'LAM',
     logo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&auto=format&fit=crop&q=80',
@@ -29,14 +29,36 @@ export const PRESET_COMPANIES: Company[] = [
     borderColor: '#BAE6FD',
   },
   {
-    id: 'axcelis',
+    id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
     name: 'Axcelis Technologies',
-    code: 'AXCL',
-    company_id: 'axcelis',
+    code: 'AXCELIS',
+    company_id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
     company_name: 'Axcelis Technologies',
-    short_name: 'AXCL',
+    short_name: 'AXCELIS',
     logo: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=120&auto=format&fit=crop&q=80',
     tagline: 'Ion Implantation Solutions for Semiconductor Fabrication',
+    primaryColor: '#0F172A',
+    primaryHover: '#1E293B',
+    secondaryColor: '#0F172A',
+    accentColor: '#0F172A',
+    accentTransparent: 'rgba(15, 23, 42, 0.08)',
+    backgroundColor: '#F1F5F9',
+    cardColor: '#E0F2FE',
+    sidebarColor: '#FFFFFF',
+    sidebarActiveColor: '#F1F5F9',
+    textColor: '#0F172A',
+    textMutedColor: '#475569',
+    borderColor: '#BAE6FD',
+  },
+  {
+    id: '34d51cd0-fb63-4684-96a3-662477298678',
+    name: 'Vishay Semiconductor',
+    code: 'VISHAY',
+    company_id: '34d51cd0-fb63-4684-96a3-662477298678',
+    company_name: 'Vishay Semiconductor',
+    short_name: 'VISHAY',
+    logo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&auto=format&fit=crop&q=80',
+    tagline: 'Discrete Semiconductors & Passive Electronic Components',
     primaryColor: '#0F172A',
     primaryHover: '#1E293B',
     secondaryColor: '#0F172A',
@@ -80,6 +102,8 @@ export const PRESET_COMPANIES: Company[] = [
 interface CompanyContextType {
   currentCompany: Company;
   companies: Company[];
+  selectedCompanyIds: string[];
+  setSelectedCompanyIds: (ids: string[]) => void;
   setCompany: (companyId: string) => void;
 }
 
@@ -88,6 +112,7 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [companies, setCompanies] = useState<Company[]>(PRESET_COMPANIES);
   const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
+  const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
 
   useEffect(() => {
     const loadCompanies = async () => {
@@ -95,21 +120,34 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const list = await getCompanies();
         if (list && list.length > 0) {
           const allDataPreset = PRESET_COMPANIES.find((c) => c.id === 'all-data');
-          const combined = allDataPreset ? [...list, allDataPreset] : list;
+          const hasAllData = list.some((c) => c.id === 'all-data' || c.company_id === 'all-data');
+          const combined = !hasAllData && allDataPreset ? [...list, allDataPreset] : list;
           setCompanies(combined);
-          
+
           const activeId = localStorage.getItem('ormp_active_company');
           const found = combined.find(
             (c) =>
               c.company_id === activeId ||
               c.id === activeId ||
-              c.code.toLowerCase() === activeId?.toLowerCase() ||
-              c.name.toLowerCase() === activeId?.toLowerCase()
+              c.code?.toLowerCase() === activeId?.toLowerCase() ||
+              c.name?.toLowerCase() === activeId?.toLowerCase()
           );
           if (found) {
             setCurrentCompany(found);
           } else {
             setCurrentCompany(combined[0]);
+          }
+
+          const savedSelected = localStorage.getItem('ormp_selected_company_ids');
+          if (savedSelected) {
+            try {
+              const parsed = JSON.parse(savedSelected);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setSelectedCompanyIdsState(parsed);
+              }
+            } catch (_e) {
+              // Ignore invalid JSON
+            }
           }
         }
       } catch (err) {
@@ -118,6 +156,11 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     loadCompanies();
   }, []);
+
+  const setSelectedCompanyIds = (ids: string[]) => {
+    setSelectedCompanyIdsState(ids);
+    localStorage.setItem('ormp_selected_company_ids', JSON.stringify(ids));
+  };
 
   const applyCompanyTheme = (company: Company) => {
     const root = document.documentElement;
@@ -130,26 +173,46 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     root.style.setProperty('--color-card', company.cardColor);
     root.style.setProperty('--color-sidebar', company.sidebarColor);
     root.style.setProperty('--color-sidebar-active', company.sidebarActiveColor);
-    root.style.setProperty('--color-text-primary', company.textColor);
-    root.style.setProperty('--color-text-secondary', company.textMutedColor);
-    root.style.setProperty('--color-text-accent', company.textSecondaryAccent || '#E8DAB2');
+    root.style.setProperty('--color-text', company.textColor);
+    root.style.setProperty('--color-text-muted', company.textMutedColor);
     root.style.setProperty('--color-border', company.borderColor);
+
+    if (company.textSecondaryAccent) {
+      root.style.setProperty('--color-text-secondary-accent', company.textSecondaryAccent);
+    }
+    if (company.textOnPrimary) {
+      root.style.setProperty('--color-text-on-primary', company.textOnPrimary);
+    }
+    if (company.textMainReverse) {
+      root.style.setProperty('--color-text-main-reverse', company.textMainReverse);
+    }
   };
 
-  useEffect(() => {
-    applyCompanyTheme(currentCompany);
-  }, [currentCompany]);
-
   const setCompany = (companyId: string) => {
-    const target = companies.find((c) => c.company_id === companyId || c.id === companyId);
-    if (target) {
-      setCurrentCompany(target);
-      applyCompanyTheme(target);
+    const found = companies.find(
+      (c) =>
+        c.id === companyId ||
+        c.company_id === companyId ||
+        c.code.toLowerCase() === companyId.toLowerCase() ||
+        c.name.toLowerCase() === companyId.toLowerCase()
+    );
+    if (found) {
+      setCurrentCompany(found);
+      applyCompanyTheme(found);
+      localStorage.setItem('ormp_active_company', found.company_id || found.id);
     }
   };
 
   return (
-    <CompanyContext.Provider value={{ currentCompany, companies, setCompany }}>
+    <CompanyContext.Provider
+      value={{
+        currentCompany,
+        companies,
+        selectedCompanyIds,
+        setSelectedCompanyIds,
+        setCompany,
+      }}
+    >
       {children}
     </CompanyContext.Provider>
   );

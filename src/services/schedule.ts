@@ -17,6 +17,7 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
     fabSite: apiSch.fab_site || '',
     scheduleStatus: apiSch.schedule_status || 'Upcoming',
     remarks: apiSch.remarks || '',
+    commentStatus: apiSch.comment_status || 'UNADDRESSED',
     startDate: apiSch.start_date || '',
     endDate: apiSch.end_date || '',
 
@@ -28,6 +29,12 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
     shiftType: 'Day Shift',
   };
 };
+
+export const updateScheduleCommentStatus = async (scheduleId: string, commentStatus: string): Promise<Schedule> => {
+  const res = await api.patch(`/schedules/${scheduleId}/comments/status`, { comment_status: commentStatus });
+  return mapApiScheduleToFrontend(res.data);
+};
+
 
 export const getEngineerSchedules = async (engineerId: string): Promise<Schedule[]> => {
   try {

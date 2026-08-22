@@ -15,29 +15,7 @@ const api = axios.create({
   timeout: 15000,
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
-// Placeholder refresh token API call
-const mockRefreshTokenApi = async (): Promise<string> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const dummyToken = 'refreshed-jwt-token-' + Date.now();
-      resolve(dummyToken);
-    }, 500);
-  });
-};
 
 api.interceptors.request.use(
   (config) => {
@@ -91,39 +69,19 @@ api.interceptors.response.use(
       console.error('[API Error]:', parsedError.message, error);
     }
 
-    // 401 handling + Automatic refresh token placeholder
+    // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return api(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
 
-      try {
-        const token = await mockRefreshTokenApi();
-        localStorage.setItem('ormp_auth_token', token);
-        isRefreshing = false;
-        processQueue(null, token);
-
-        originalRequest.headers['Authorization'] = 'Bearer ' + token;
-        return api(originalRequest);
-      } catch (refreshError) {
-        isRefreshing = false;
-        processQueue(refreshError, null);
-        // Clear local storage auth keys and trigger custom logout event
+      // Do not handle logout loop for login endpoint itself
+      if (!originalRequest.url?.includes('/auth/login')) {
         localStorage.removeItem('ormp_auth_token');
         localStorage.removeItem('ormp_user');
+        localStorage.removeItem('ormp_active_company');
         window.dispatchEvent(new Event('ormp_logout'));
-        return Promise.reject(refreshError);
       }
+
+      return Promise.reject(parsedError);
     }
 
     return Promise.reject(parsedError);

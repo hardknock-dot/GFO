@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   getReportsSummary,
   getCategoryReport,
@@ -13,6 +13,7 @@ export const useReportsSummary = (companyId?: string, startDate?: string, endDat
   return useQuery({
     queryKey: ['reports', 'summary', activeCompanyId || 'global', startDate || 'all', endDate || 'all'],
     queryFn: () => getReportsSummary(activeCompanyId, startDate, endDate),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -25,6 +26,7 @@ export const useCategoryReport = (category: string, companyId?: string, startDat
   return useQuery({
     queryKey: ['reports', 'category', category, activeCompanyId || 'global', startDate || 'all', endDate || 'all'],
     queryFn: () => getCategoryReport(category, activeCompanyId, startDate, endDate),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
     enabled: !!category,
   });

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getSkills,
   getSkillById,
@@ -13,6 +13,7 @@ export const useSkills = (params?: any) => {
   return useQuery({
     queryKey: ['skills', params],
     queryFn: () => getSkills(params),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };

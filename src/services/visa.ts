@@ -34,9 +34,20 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
     daysUntilExpiry,
     status,
     appliedOn: apiVisa.applied_on || '',
-    ownerId: apiVisa.owner_id || undefined,
+    visaStartDate: apiVisa.visa_start_date || '',
+    visaEndDate: apiVisa.visa_end_date || '',
+    comments: apiVisa.comments || '',
+    commentStatus: apiVisa.comment_status || 'UNADDRESSED',
+    ownerId: apiVisa.owner_id,
+    owner_id: apiVisa.owner_id,
   };
 };
+
+export const updateVisaCommentStatus = async (visaId: string, commentStatus: string): Promise<Visa> => {
+  const res = await api.patch(`/visa/${visaId}/comments/status`, { comment_status: commentStatus });
+  return mapApiVisaToFrontend(res.data);
+};
+
 
 export const getEngineerVisas = async (engineerId: string): Promise<Visa[]> => {
   try {

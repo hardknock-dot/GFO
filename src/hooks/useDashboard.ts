@@ -1,15 +1,27 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { getDashboardMetrics } from '../services/dashboard';
 import { useCompany } from '../context/CompanyContext';
 
 export const useDashboard = () => {
-  const { currentCompany } = useCompany();
-  const companyId = currentCompany?.company_id || currentCompany?.id;
-  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+  const { currentCompany, selectedCompanyIds } = useCompany();
+  const rawId = currentCompany?.company_id || currentCompany?.id;
+
+  let queryTarget: string[] | string | undefined = undefined;
+
+  if (selectedCompanyIds && selectedCompanyIds.length > 0) {
+    queryTarget = selectedCompanyIds;
+  } else if (rawId && rawId !== 'all-data') {
+    queryTarget = rawId;
+  }
+
+  const cacheKey = Array.isArray(queryTarget)
+    ? [...queryTarget].sort().join(',')
+    : (queryTarget || 'global');
 
   return useQuery({
-    queryKey: ['dashboard', activeCompanyId || 'global'],
-    queryFn: () => getDashboardMetrics(activeCompanyId),
-    staleTime: 1000 * 60 * 5, // 5 mins
+    queryKey: ['dashboard', cacheKey],
+    queryFn: () => getDashboardMetrics(queryTarget),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5,
   });
 };

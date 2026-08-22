@@ -1,5 +1,7 @@
 import api from './axios';
-import type { Engineer } from '../types';
+import type { Engineer, EngineerReportSummary } from '../types';
+
+
 
 export interface EngineerQueryParams {
   search?: string;
@@ -28,8 +30,8 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
     customerId: apiEng.lam_id || apiEng.employee_id || '',
     name: apiEng.engineer_name,
     goesBy: apiEng.goes_by || '',
-    email: apiEng.email || `${apiEng.goes_by?.toLowerCase() || 'engineer'}@company.com`,
-    phone: apiEng.phone || '+1 (555) 019-1000',
+    email: apiEng.email || null,
+    phoneNumber: apiEng.phone_number || null,
     status: apiEng.status || 'Active',
     primaryTool: apiEng.primary_tool_type || apiEng.primary_tool || '',
     level: apiEng.level || 'L2 Specialist',
@@ -95,6 +97,8 @@ export const createEngineer = async (data: Partial<Engineer>): Promise<Engineer>
     customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
     industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
     status: data.status,
+    email: data.email || null,
+    phone_number: data.phoneNumber || null,
   };
   const response = await api.post('/engineers', payload);
   return mapApiEngineerToFrontend(response.data);
@@ -112,6 +116,8 @@ export const updateEngineer = async (id: string, data: Partial<Engineer>): Promi
     customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
     industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
     status: data.status,
+    email: data.email || null,
+    phone_number: data.phoneNumber || null,
   };
   const response = await api.put(`/engineers/${id}`, payload);
   return mapApiEngineerToFrontend(response.data);
@@ -121,3 +127,9 @@ export const deleteEngineer = async (id: string): Promise<{ success: boolean }> 
   await api.delete(`/engineers/${id}`);
   return { success: true };
 };
+
+export const getEngineerReportSummary = async (engineerId: string): Promise<EngineerReportSummary> => {
+  const response = await api.get(`/engineers/${engineerId}/reports/summary`);
+  return response.data;
+};
+

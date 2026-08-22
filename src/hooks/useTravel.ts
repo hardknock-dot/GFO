@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getTravelRecords,
   getTravelRecordById,
@@ -22,6 +22,7 @@ export const useTravel = (params?: any) => {
   return useQuery({
     queryKey: ['travel', queryParams],
     queryFn: () => getTravelRecords(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };

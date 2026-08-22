@@ -3,23 +3,34 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
+from datetime import datetime
 from app.database import get_db
-from app.schemas.schedule import ScheduleResponse, ScheduleUpdate
+from app.schemas.schedule import ScheduleResponse, ScheduleUpdate, ScheduleCommentStatusUpdate
 from app.schemas.travel import TravelResponse, TravelCreate
 from app.schemas.performance import PerformanceResponse, PerformanceCreate
 from app.schemas.missed_schedule import MissedScheduleResponse, MissedScheduleCreate
 from app.services import schedule_service, travel_service, performance_service, missed_schedule_service
+from app.services.auth_service import get_current_user, get_schedule_and_verify, enforce_write_permission, enforce_delete_permission, is_engineer_user
+from app.models.user import User
+
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/schedules", tags=["schedules"])
+router = APIRouter(prefix="/schedules", tags=["schedules"], dependencies=[Depends(get_current_user)])
 
 @router.put("/{schedule_id}", response_model=ScheduleResponse)
-def update_existing_schedule(schedule_id: UUID, schedule_data: ScheduleUpdate, db: Session = Depends(get_db)):
+def update_existing_schedule(
+    schedule_id: UUID,
+    schedule_data: ScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Update an existing schedule record.
     """
     try:
+        enforce_write_permission(current_user)
+        get_schedule_and_verify(db, schedule_id, current_user)
         return schedule_service.update_schedule(db, schedule_id, schedule_data)
     except HTTPException:
         raise
@@ -31,12 +42,34 @@ def update_existing_schedule(schedule_id: UUID, schedule_data: ScheduleUpdate, d
         )
 
 @router.delete("/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_existing_schedule(schedule_id: UUID, db: Session = Depends(get_db)):
+def delete_existing_schedule(
+    schedule_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Delete an existing schedule record.
+    Delete an existing schedule record. Requires Main Admin or Manager role.
     """
     try:
+        enforce_write_permission(current_user)
+        enforce_delete_permission(current_user)
+        sch = get_schedule_and_verify(db, schedule_id, current_user)
+        from app.services.audit_service import log_audit, object_to_dict
+        old_dict = object_to_dict(sch)
+        
         schedule_service.delete_schedule(db, schedule_id)
+        
+        log_audit(
+            db=db,
+            user_id=current_user.user_id,
+            company_id=current_user.company_id,
+            action="DELETE",
+            entity_type="Schedule",
+            entity_id=schedule_id,
+            description=f"Schedule deleted ({schedule_id})",
+            old_values=old_dict,
+            new_values=None
+        )
         return
     except HTTPException:
         raise
@@ -47,12 +80,18 @@ def delete_existing_schedule(schedule_id: UUID, db: Session = Depends(get_db)):
             detail="Failed to delete schedule record from database"
         )
 
+
 @router.get("/{schedule_id}/travel", response_model=List[TravelResponse])
-def read_schedule_travel(schedule_id: UUID, db: Session = Depends(get_db)):
+def read_schedule_travel(
+    schedule_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Retrieve all travel records associated with a schedule.
     """
     try:
+        get_schedule_and_verify(db, schedule_id, current_user)
         return travel_service.get_schedule_travel(db, schedule_id)
     except HTTPException:
         raise
@@ -64,12 +103,20 @@ def read_schedule_travel(schedule_id: UUID, db: Session = Depends(get_db)):
         )
 
 @router.post("/{schedule_id}/travel", response_model=TravelResponse, status_code=status.HTTP_201_CREATED)
-def create_schedule_travel(schedule_id: UUID, travel_data: TravelCreate, db: Session = Depends(get_db)):
+def create_schedule_travel(
+    schedule_id: UUID,
+    travel_data: TravelCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Create a new travel record associated with a schedule.
     """
     try:
-        return travel_service.create_travel(db, schedule_id, travel_data)
+        enforce_write_permission(current_user)
+        get_schedule_and_verify(db, schedule_id, current_user)
+        # Derive owner_id from current_user
+        return travel_service.create_travel(db, schedule_id, travel_data, owner_id=current_user.user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -80,11 +127,16 @@ def create_schedule_travel(schedule_id: UUID, travel_data: TravelCreate, db: Ses
         )
 
 @router.get("/{schedule_id}/performance", response_model=List[PerformanceResponse])
-def read_schedule_performance(schedule_id: UUID, db: Session = Depends(get_db)):
+def read_schedule_performance(
+    schedule_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Retrieve all performance records associated with a schedule.
     """
     try:
+        get_schedule_and_verify(db, schedule_id, current_user)
         return performance_service.get_schedule_performance(db, schedule_id)
     except HTTPException:
         raise
@@ -96,12 +148,20 @@ def read_schedule_performance(schedule_id: UUID, db: Session = Depends(get_db)):
         )
 
 @router.post("/{schedule_id}/performance", response_model=PerformanceResponse, status_code=status.HTTP_201_CREATED)
-def create_schedule_performance(schedule_id: UUID, performance_data: PerformanceCreate, db: Session = Depends(get_db)):
+def create_schedule_performance(
+    schedule_id: UUID,
+    performance_data: PerformanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Create a new performance record associated with a schedule.
     """
     try:
-        return performance_service.create_performance(db, schedule_id, performance_data)
+        enforce_write_permission(current_user)
+        get_schedule_and_verify(db, schedule_id, current_user)
+        # Derive owner_id from current_user
+        return performance_service.create_performance(db, schedule_id, performance_data, owner_id=current_user.user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -112,11 +172,16 @@ def create_schedule_performance(schedule_id: UUID, performance_data: Performance
         )
 
 @router.get("/{schedule_id}/missed-schedules", response_model=List[MissedScheduleResponse])
-def read_schedule_missed_schedules(schedule_id: UUID, db: Session = Depends(get_db)):
+def read_schedule_missed_schedules(
+    schedule_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Retrieve all missed schedule records associated with a schedule.
     """
     try:
+        get_schedule_and_verify(db, schedule_id, current_user)
         return missed_schedule_service.get_schedule_missed_schedules(db, schedule_id)
     except HTTPException:
         raise
@@ -128,12 +193,19 @@ def read_schedule_missed_schedules(schedule_id: UUID, db: Session = Depends(get_
         )
 
 @router.post("/{schedule_id}/missed-schedules", response_model=MissedScheduleResponse, status_code=status.HTTP_201_CREATED)
-def create_schedule_missed_schedule(schedule_id: UUID, missed_schedule_data: MissedScheduleCreate, db: Session = Depends(get_db)):
+def create_schedule_missed_schedule(
+    schedule_id: UUID,
+    missed_schedule_data: MissedScheduleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Create a new missed schedule record associated with a schedule.
     """
     try:
-        return missed_schedule_service.create_missed_schedule(db, schedule_id, missed_schedule_data)
+        get_schedule_and_verify(db, schedule_id, current_user)
+        # Derive owner_id from current_user
+        return missed_schedule_service.create_missed_schedule(db, schedule_id, missed_schedule_data, owner_id=current_user.user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -142,3 +214,28 @@ def create_schedule_missed_schedule(schedule_id: UUID, missed_schedule_data: Mis
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create missed schedule record in database"
         )
+
+@router.patch("/{schedule_id}/comments/status", response_model=ScheduleResponse)
+def update_schedule_comment_status(
+    schedule_id: UUID,
+    payload: ScheduleCommentStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update comment status (e.g. mark as ADDRESSED). Only accessible to Managers / Admins.
+    Field Engineers are forbidden (403).
+    """
+    if is_engineer_user(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Engineers cannot mark comments as addressed."
+        )
+    enforce_write_permission(current_user)
+    sch = get_schedule_and_verify(db, schedule_id, current_user)
+    sch.comment_status = payload.comment_status
+    sch.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(sch)
+    return sch
+

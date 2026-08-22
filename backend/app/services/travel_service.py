@@ -38,7 +38,7 @@ def get_schedule_travel(db: Session, schedule_id: UUID) -> List[Travel]:
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_travel(db: Session, schedule_id: UUID, travel_data: TravelCreate) -> Travel:
+def create_travel(db: Session, schedule_id: UUID, travel_data: TravelCreate, owner_id: Optional[UUID] = None) -> Travel:
     """
     Create a new travel record associated with a schedule.
     """
@@ -54,7 +54,7 @@ def create_travel(db: Session, schedule_id: UUID, travel_data: TravelCreate) -> 
     db_travel = Travel(
         travel_id=uuid.uuid4(),
         schedule_id=schedule_id,
-        owner_id=None,  # Leave NULL since no authentication mechanism is present
+        owner_id=owner_id,
         booking_date=travel_data.booking_date,
         travel_date=travel_data.travel_date,
         purpose=travel_data.purpose,

@@ -36,7 +36,7 @@ def get_schedule_missed_schedules(db: Session, schedule_id: UUID) -> List[Missed
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_missed_schedule(db: Session, schedule_id: UUID, missed_schedule_data: MissedScheduleCreate) -> MissedSchedule:
+def create_missed_schedule(db: Session, schedule_id: UUID, missed_schedule_data: MissedScheduleCreate, owner_id: Optional[UUID] = None) -> MissedSchedule:
     """
     Create a new missed schedule record associated with a schedule.
     """
@@ -50,7 +50,7 @@ def create_missed_schedule(db: Session, schedule_id: UUID, missed_schedule_data:
     db_ms = MissedSchedule(
         missed_schedule_id=uuid.uuid4(),
         schedule_id=schedule_id,
-        owner_id=None,
+        owner_id=owner_id,
         requested_start_date=missed_schedule_data.requested_start_date,
         requested_end_date=missed_schedule_data.requested_end_date,
         actual_start_date=missed_schedule_data.actual_start_date,

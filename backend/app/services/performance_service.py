@@ -38,7 +38,7 @@ def get_schedule_performance(db: Session, schedule_id: UUID) -> List[Performance
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_performance(db: Session, schedule_id: UUID, performance_data: PerformanceCreate) -> Performance:
+def create_performance(db: Session, schedule_id: UUID, performance_data: PerformanceCreate, owner_id: Optional[UUID] = None) -> Performance:
     """
     Create a new performance record associated with a schedule.
     """
@@ -54,7 +54,7 @@ def create_performance(db: Session, schedule_id: UUID, performance_data: Perform
     db_perf = Performance(
         performance_id=uuid.uuid4(),
         schedule_id=schedule_id,
-        owner_id=None,  # Leave NULL since no authentication mechanism is present
+        owner_id=owner_id,
         actual_start_date=performance_data.actual_start_date,
         actual_end_date=performance_data.actual_end_date,
         escalation=performance_data.escalation if performance_data.escalation is not None else False,

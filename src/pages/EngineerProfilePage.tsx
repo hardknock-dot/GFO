@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useEngineerDetail } from '../hooks/useEngineers';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEngineerDetail, useUpdateEngineer } from '../hooks/useEngineers';
+import { useEngineerMe, useUpdateEngineerMeScheduleComments } from '../hooks/useEngineerSelfService';
+import { notifyScheduleCommentAdded } from '../utils/notifications';
 import { useEngineerOperationalAlerts } from '../hooks/useOperationalAlerts';
 import {
   useEngineerSkills,
@@ -14,6 +16,7 @@ import {
   useUpdateSchedule,
   useDeleteSchedule,
 } from '../hooks/useSchedule';
+import { useMissedSchedules } from '../hooks/useMissedSchedules';
 import {
   useVisa,
   useCreateVisa,
@@ -32,7 +35,11 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import { ErrorState } from '../components/common/ErrorState';
+import { ScheduleCommentsCard } from '../components/schedule/ScheduleCommentsCard';
+import { useAuth } from '../context/AuthContext';
+
 import type { Skill, Schedule, Visa, Travel, Performance, Leave } from '../types';
+import { EngineerIndividualReportView } from '../components/reports/EngineerIndividualReportView';
 import {
   User,
   Wrench,
@@ -44,23 +51,187 @@ import {
   Mail,
   Phone,
   MapPin,
-  Award,
   ArrowLeft,
-  CheckCircle2,
   Briefcase,
   Plus,
   Edit,
   Trash2,
   AlertTriangle,
+  BarChart3,
+  MessageSquare,
 } from 'lucide-react';
+
+
 
 export const EngineerProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'profile' | 'skills' | 'schedule' | 'travel' | 'visa' | 'performance' | 'leaves'>('profile');
+  const { user, canEdit } = useAuth();
 
-  const engineerId = id || 'eng-101';
-  const { data: engineer, isLoading, isError, refetch } = useEngineerDetail(engineerId);
+  const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
+  const tabParam = searchParams.get('tab') as any;
+  const initialTab = tabParam && ['profile', 'skills', 'schedule', 'travel', 'visa', 'performance', 'leaves', 'reports'].includes(tabParam)
+    ? tabParam
+    : 'profile';
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'skills' | 'schedule' | 'travel' | 'visa' | 'performance' | 'leaves' | 'reports'>(initialTab);
+
+  const { data: meEngineer } = useEngineerMe();
+
+  const engineerId = isEngineerUser && meEngineer ? meEngineer.id : (id || 'eng-101');
+  const { data: engineerData, isLoading, isError, refetch } = useEngineerDetail(engineerId);
+
+  const engineer = isEngineerUser && meEngineer ? meEngineer : engineerData;
+  const targetReportEngineerId = engineer?.id || engineerId;
+
+
+
+  // Engineer Profile Mutation & Edit Modal State
+  const updateEngineerMutation = useUpdateEngineer();
+  const [isEditEngineerModalOpen, setIsEditEngineerModalOpen] = useState(false);
+  const [engineerFormData, setEngineerFormData] = useState({
+    name: '',
+    goesBy: '',
+    customerId: '',
+    orbitId: '',
+    level: 'L2 Specialist',
+    joinDate: '',
+    primaryTool: 'Etch',
+    customerExperience: '',
+    yearsExperience: '',
+    status: 'Active',
+    email: '',
+    phoneNumber: '',
+    country: '',
+    city: '',
+  });
+  const [engineerFormErrors, setEngineerFormErrors] = useState<Record<string, string>>({});
+  const [engineerApiError, setEngineerApiError] = useState<string | null>(null);
+  const [engineerSuccessMessage, setEngineerSuccessMessage] = useState<string | null>(null);
+
+  const handleOpenEditEngineerModal = () => {
+    if (!engineer) return;
+    setEngineerFormData({
+      name: engineer.name || '',
+      goesBy: engineer.goesBy || '',
+      customerId: engineer.customerId || '',
+      orbitId: engineer.orbitId || '',
+      level: engineer.level || 'L2 Specialist',
+      joinDate: engineer.joinDate || '',
+      primaryTool: engineer.primaryTool || 'Etch',
+      customerExperience: engineer.customerExperience !== undefined ? String(engineer.customerExperience) : '',
+      yearsExperience: engineer.yearsExperience !== undefined ? String(engineer.yearsExperience) : '',
+      status: engineer.status || 'Active',
+      email: engineer.email || '',
+      phoneNumber: engineer.phoneNumber || '',
+      country: engineer.country || '',
+      city: engineer.city || '',
+    });
+    setEngineerFormErrors({});
+    setEngineerApiError(null);
+    setEngineerSuccessMessage(null);
+    setIsEditEngineerModalOpen(true);
+  };
+
+  const handleUpdateEngineerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!engineer) return;
+    setEngineerApiError(null);
+    setEngineerSuccessMessage(null);
+
+    const errors: Record<string, string> = {};
+    if (!engineerFormData.name.trim()) errors.name = 'Engineer Name is required';
+    if (!engineerFormData.orbitId.trim()) errors.orbitId = 'Orbit ID is required';
+    if (engineerFormData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(engineerFormData.email.trim())) {
+      errors.email = 'Invalid email format';
+    }
+    if (engineerFormData.phoneNumber && !/^[+\d\s().-]{3,30}$/.test(engineerFormData.phoneNumber.trim())) {
+      errors.phoneNumber = 'Phone number is invalid or too long (max 30 chars)';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEngineerFormErrors(errors);
+      return;
+    }
+
+    const payload: Partial<any> = {
+      name: engineerFormData.name,
+      goesBy: engineerFormData.goesBy,
+      customerId: engineerFormData.customerId,
+      orbitId: engineerFormData.orbitId,
+      level: engineerFormData.level,
+      joinDate: engineerFormData.joinDate,
+      primaryTool: engineerFormData.primaryTool,
+      customerExperience: engineerFormData.customerExperience ? Number(engineerFormData.customerExperience) : undefined,
+      yearsExperience: engineerFormData.yearsExperience ? Number(engineerFormData.yearsExperience) : undefined,
+      status: engineerFormData.status,
+      email: engineerFormData.email,
+      phoneNumber: engineerFormData.phoneNumber,
+      country: engineerFormData.country,
+      city: engineerFormData.city,
+    };
+
+    updateEngineerMutation.mutate(
+      { id: engineer.id, data: payload },
+      {
+        onSuccess: () => {
+          setEngineerSuccessMessage('Engineer profile updated successfully.');
+          refetch();
+          setTimeout(() => {
+            setIsEditEngineerModalOpen(false);
+            setEngineerSuccessMessage(null);
+          }, 1000);
+        },
+        onError: (err: any) => {
+          const msg = err.message || err.details?.detail || 'Failed to update engineer profile.';
+          setEngineerApiError(msg);
+        },
+      }
+    );
+  };
+
+  // Certifications & Compliance State and Handlers
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [certFormData, setCertFormData] = useState<{
+    certificationsCount: number;
+    cert1Name: string;
+    cert1Status: string;
+    cert2Name: string;
+    cert2Status: string;
+    cert3Name: string;
+    cert3Status: string;
+  }>({
+    certificationsCount: 2,
+    cert1Name: 'Semiconductor Cleanroom Class 1 Certified',
+    cert1Status: 'Valid',
+    cert2Name: 'High Voltage & Vacuum Safety Permit',
+    cert2Status: 'Valid',
+    cert3Name: 'Chemical & Gas Hazard Safety Clearance',
+    cert3Status: 'Valid',
+  });
+
+
+
+  const handleUpdateCertificationsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!engineer) return;
+
+    updateEngineerMutation.mutate(
+      {
+        id: engineer.id,
+        data: {
+          certificationsCount: Number(certFormData.certificationsCount),
+        },
+      },
+      {
+        onSuccess: () => {
+          refetch();
+          setIsCertModalOpen(false);
+        },
+      }
+    );
+  };
 
   const { data: engAlerts } = useEngineerOperationalAlerts(engineerId);
   const { data: skills } = useEngineerSkills(engineerId);
@@ -69,6 +240,14 @@ export const EngineerProfilePage: React.FC = () => {
   const { data: visaRes } = useVisa({ engineerId });
   const { data: perfRes } = usePerformance({ engineerId });
   const { data: leavesRes } = useLeaves({ engineerId });
+  const { data: missedSchedulesRes } = useMissedSchedules({ engineerId });
+  const missedScheduleIds = new Set(missedSchedulesRes?.data?.map(ms => ms.scheduleId).filter(Boolean) || []);
+
+  const currentActiveSchedule = schedulesRes?.data?.find(s => s.scheduleStatus === 'Active' || s.scheduleStatus === 'Ongoing') || schedulesRes?.data?.[0];
+  const currentScheduleSite = currentActiveSchedule
+    ? `${currentActiveSchedule.fabSite || currentActiveSchedule.siteLocation || currentActiveSchedule.country || 'Customer Site'} (${currentActiveSchedule.supportType || 'Assignment'})`
+    : (engineer?.assignedSite || 'Unassigned');
+
 
   // Skills Mutations
   const createSkillMutation = useCreateSkill();
@@ -79,6 +258,48 @@ export const EngineerProfilePage: React.FC = () => {
   const createScheduleMutation = useCreateSchedule();
   const updateScheduleMutation = useUpdateSchedule();
   const deleteScheduleMutation = useDeleteSchedule();
+  const updateScheduleCommentsMutation = useUpdateEngineerMeScheduleComments();
+
+  // Schedule Comment Modal State
+  const [isScheduleCommentModalOpen, setIsScheduleCommentModalOpen] = useState(false);
+  const [selectedScheduleForComment, setSelectedScheduleForComment] = useState<Schedule | null>(null);
+  const [scheduleRemarksInput, setScheduleRemarksInput] = useState('');
+
+  const handleOpenScheduleCommentModal = (sch: Schedule) => {
+    setSelectedScheduleForComment(sch);
+    setScheduleRemarksInput(sch.remarks || '');
+    setIsScheduleCommentModalOpen(true);
+  };
+
+  const handleSaveScheduleComment = async () => {
+    if (!selectedScheduleForComment) return;
+    try {
+      if (isEngineerUser) {
+        await updateScheduleCommentsMutation.mutateAsync({
+          scheduleId: selectedScheduleForComment.id,
+          remarks: scheduleRemarksInput,
+        });
+      } else {
+        await updateScheduleMutation.mutateAsync({
+          id: selectedScheduleForComment.id,
+          data: { remarks: scheduleRemarksInput } as any,
+        });
+      }
+      setIsScheduleCommentModalOpen(false);
+
+      notifyScheduleCommentAdded({
+        engineerName: engineer?.name || user?.name || user?.email || 'Field Engineer',
+        scheduleId: selectedScheduleForComment.id,
+        supportType: selectedScheduleForComment.supportType,
+        fabSite: selectedScheduleForComment.fabSite || selectedScheduleForComment.country,
+        remarks: scheduleRemarksInput,
+      });
+
+    } catch (err) {
+      console.error('Failed to update schedule comment:', err);
+    }
+  };
+
 
   // Visa Mutations
   const createVisaMutation = useCreateVisa();
@@ -222,16 +443,6 @@ export const EngineerProfilePage: React.FC = () => {
 
   if (isLoading) return <CardSkeleton />;
   if (isError || !engineer) return <ErrorState onRetry={refetch} message="Engineer profile could not be retrieved." />;
-
-  const tabs = [
-    { id: 'profile', label: 'Profile Details', icon: User },
-    { id: 'skills', label: 'Skills & Tools', icon: Wrench },
-    { id: 'schedule', label: 'Schedule & Fabs', icon: Calendar },
-    { id: 'travel', label: 'Travel Itineraries', icon: Plane },
-    { id: 'visa', label: 'Visas & Permits', icon: FileCheck },
-    { id: 'performance', label: 'Performance', icon: TrendingUp },
-    { id: 'leaves', label: 'Leaves & Absence', icon: Clock },
-  ];
 
   // Skill logic functions
   const handleOpenAddModal = () => {
@@ -996,13 +1207,48 @@ export const EngineerProfilePage: React.FC = () => {
     });
   };
 
+  const calculateSkillExperience = (startDateStr?: string, endDateStr?: string): string => {
+    if (!startDateStr) return 'N/A';
+    const start = new Date(startDateStr);
+    if (isNaN(start.getTime())) return 'N/A';
+
+    const end = endDateStr ? new Date(endDateStr) : new Date();
+    if (isNaN(end.getTime())) return 'N/A';
+
+    const diffTime = Math.max(0, end.getTime() - start.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 30) {
+      return `${diffDays} Day${diffDays === 1 ? '' : 's'}`;
+    }
+
+    const years = diffDays / 365.25;
+    if (years < 1) {
+      const months = Math.round(diffDays / 30.4375);
+      return `${months} Month${months === 1 ? '' : 's'} (${diffDays} Days)`;
+    }
+
+    const roundedYears = (Math.round(years * 10) / 10).toFixed(1);
+    return `${roundedYears} Year${parseFloat(roundedYears) === 1 ? '' : 's'} (${diffDays} Days)`;
+  };
+
   const skillColumns: Column<Skill>[] = [
     { key: 'toolType', header: 'Tool Type', sortable: true },
     { key: 'fab', header: 'FAB / Facility', sortable: true },
     { key: 'waferSize', header: 'Wafer Size', sortable: true },
     { key: 'role', header: 'Role', sortable: true },
     { key: 'startDate', header: 'Start Date', sortable: true },
-    { key: 'endDate', header: 'End Date', sortable: true },
+    { key: 'endDate', header: 'End Date', sortable: true, render: (s) => <span>{s.endDate || 'Ongoing'}</span> },
+    {
+      key: 'totalExperience',
+      header: 'Total Experience',
+      sortable: true,
+      render: (s) => (
+        <span className="font-semibold text-slate-800 dark:text-slate-50 px-2 py-0.5 rounded bg-sky-50 dark:bg-slate-800 border border-sky-200 dark:border-slate-700 text-xs">
+          {calculateSkillExperience(s.startDate, s.endDate)}
+        </span>
+      ),
+    },
     {
       key: 'numberOfTools',
       header: 'Tools Count',
@@ -1014,11 +1260,10 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Primary Role Ready',
       render: (s) => (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-            s.readyForPrimaryRole
-              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-              : 'bg-slate-100 text-slate-800 border-slate-200'
-          }`}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${s.readyForPrimaryRole
+            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            : 'bg-slate-100 text-slate-800 border-slate-200'
+            }`}
         >
           {s.readyForPrimaryRole ? 'Yes' : 'No'}
         </span>
@@ -1029,30 +1274,48 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (s) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditModal(s)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteModal(s)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        (canEdit || isEngineerUser) ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditModal(s)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteModal(s)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
+
   ];
 
   const scheduleColumns: Column<Schedule>[] = [
-    { key: 'supportType', header: 'Support Type', sortable: true },
+    {
+      key: 'supportType',
+      header: 'Support Type',
+      sortable: true,
+      render: (s) => {
+        const isMissed = missedScheduleIds.has(s.id);
+        return (
+          <div className="flex items-center space-x-2">
+            {isMissed && (
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 border border-yellow-500 shadow-sm flex-shrink-0 animate-pulse" title="Missed Schedule Assignment" />
+            )}
+            <span>{s.supportType}</span>
+          </div>
+        );
+      }
+    },
     { key: 'country', header: 'Country', sortable: true },
     { key: 'fabCity', header: 'FAB City', sortable: true },
     { key: 'fabSite', header: 'FAB Site / Customer', sortable: true },
@@ -1068,10 +1331,21 @@ export const EngineerProfilePage: React.FC = () => {
           Confirmed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
           Completed: 'bg-slate-100 text-slate-800 border-slate-200',
           Cancelled: 'bg-rose-100 text-rose-800 border-rose-200',
+          Ongoing: 'bg-amber-100 text-amber-800 border-amber-200',
         };
+        const getDynamicStatus = (startDate?: string, endDate?: string, dbStatus?: string) => {
+          if (dbStatus === 'Cancelled') return 'Cancelled';
+          const todayStr = new Date().toISOString().split('T')[0];
+          if (!startDate) return dbStatus || 'Upcoming';
+          if (todayStr >= startDate && (!endDate || todayStr <= endDate)) return 'Ongoing';
+          if (endDate && todayStr > endDate) return 'Completed';
+          if (todayStr < startDate) return 'Upcoming';
+          return dbStatus || 'Upcoming';
+        };
+        const displayStatus = getDynamicStatus(s.startDate, s.endDate, s.scheduleStatus);
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border ${colors[s.scheduleStatus || 'Upcoming'] || 'bg-slate-100 text-slate-800'}`}>
-            {s.scheduleStatus || 'Upcoming'}
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border ${colors[displayStatus] || 'bg-slate-100 text-slate-800'}`}>
+            {displayStatus}
           </span>
         );
       }
@@ -1081,26 +1355,43 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (s) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditScheduleModal(s)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteScheduleModal(s)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
+        <div className="flex items-center space-x-2 justify-end" onClick={(e) => e.stopPropagation()}>
+          {isEngineerUser && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenScheduleCommentModal(s)}
+              icon={<MessageSquare className="w-3.5 h-3.5 text-indigo-500" />}
+              title="Add or Edit Schedule Comment"
+            >
+              Comment
+            </Button>
+          )}
+
+          {canEdit && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenEditScheduleModal(s)}
+                icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenDeleteScheduleModal(s)}
+                icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+              >
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
+
   ];
 
   const visaColumns: Column<Visa>[] = [
@@ -1115,13 +1406,12 @@ export const EngineerProfilePage: React.FC = () => {
       sortable: true,
       render: (v) => (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
-            v.status === 'Expiring Soon'
-              ? 'bg-amber-100 text-amber-800 border-amber-200'
-              : v.status === 'Expired'
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${v.status === 'Expiring Soon'
+            ? 'bg-amber-100 text-amber-800 border-amber-200'
+            : v.status === 'Expired'
               ? 'bg-rose-100 text-rose-800 border-rose-200'
               : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-          }`}
+            }`}
         >
           {v.status}
         </span>
@@ -1132,24 +1422,26 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (v) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditVisaModal(v)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteVisaModal(v)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        canEdit ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditVisaModal(v)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteVisaModal(v)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -1166,24 +1458,26 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (t) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditTravelModal(t)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteTravelModal(t)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        canEdit ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditTravelModal(t)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteTravelModal(t)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -1209,24 +1503,26 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (p) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditPerfModal(p)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeletePerfModal(p)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        canEdit ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditPerfModal(p)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeletePerfModal(p)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -1243,13 +1539,12 @@ export const EngineerProfilePage: React.FC = () => {
         const st = l.approvalStatus || l.status || 'Pending';
         return (
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
-              st === 'Approved'
-                ? 'bg-emerald-100 text-emerald-800'
-                : st === 'Rejected'
+            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${st === 'Approved'
+              ? 'bg-emerald-100 text-emerald-800'
+              : st === 'Rejected'
                 ? 'bg-rose-100 text-rose-800'
                 : 'bg-amber-100 text-amber-800'
-            }`}
+              }`}
           >
             {st}
           </span>
@@ -1261,24 +1556,26 @@ export const EngineerProfilePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (l) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditLeaveModal(l)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteLeaveModal(l)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        canEdit ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditLeaveModal(l)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteLeaveModal(l)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -1286,80 +1583,101 @@ export const EngineerProfilePage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header Back Navigation */}
-      <div className="flex items-center space-x-3">
-        <Button size="sm" variant="outline" onClick={() => navigate('/engineers')} icon={<ArrowLeft className="w-4 h-4" />}>
-          Back to Directory
-        </Button>
-        <span className="text-xs text-slate-400 font-mono">Profile Record: {engineer.orbitId}</span>
-      </div>
+      {!isEngineerUser && (
+        <div className="flex items-center space-x-3">
+          <Button size="sm" variant="outline" onClick={() => navigate('/engineers')} icon={<ArrowLeft className="w-4 h-4" />}>
+            Back to Directory
+          </Button>
+          <span className="text-xs text-slate-400 font-mono">Profile Record: {engineer?.orbitId}</span>
+        </div>
+      )}
 
       {/* Reusable Profile Banner Header */}
-      <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start md:items-center space-x-4">
-            <img
-              src={engineer.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-              alt={engineer.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
-            />
-            <div className="space-y-1">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{engineer.name}</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  {engineer.status}
-                </span>
-              </div>
-              <p className="text-xs font-mono text-[var(--color-secondary)] font-medium">
-                {engineer.orbitId} • {engineer.customerId}
-              </p>
-              <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center space-x-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{engineer.city}, {engineer.country}</span>
-                </span>
-                <span className="flex items-center space-x-1">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{engineer.email}</span>
-                </span>
-                <span className="flex items-center space-x-1">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{engineer.phone}</span>
-                </span>
+      {engineer && (
+        <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-start md:items-center space-x-4">
+              <img
+                src={engineer.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                alt={engineer.name}
+                className="w-16 h-16 rounded-2xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
+              />
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-white">{engineer.name}</h1>
+                  <span className="text-xs text-slate-400">({engineer.goesBy})</span>
+                  <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-slate-100 dark:bg-slate-100 text-slate-700 dark:text-slate-300 font-mono">
+                    {engineer.orbitId}
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-[var(--color-secondary)] flex items-center space-x-2">
+                  <span>{engineer.level}</span>
+                  <span>•</span>
+                  <span>{engineer.primaryTool}</span>
+                </p>
+                <div className="flex items-center space-x-4 text-xs text-slate-500 pt-1">
+                  <span className="flex items-center space-x-1">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{engineer.email || 'N/A'}</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{engineer.phoneNumber || 'N/A'}</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{engineer.country}</span>
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6 text-xs">
-            <div>
-              <p className="text-slate-400">Competency Level</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{engineer.level}</p>
-            </div>
-            <div>
-              <p className="text-slate-400">Primary Chamber</p>
-              <p className="font-semibold text-[var(--color-secondary)] mt-0.5 truncate">{engineer.primaryTool}</p>
-            </div>
-            <div>
-              <p className="text-slate-400">Experience</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{engineer.yearsExperience} Years</p>
+            <div className="flex items-center space-x-3 self-end md:self-auto">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-800 text-center">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Customer Exp</p>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.customerExperience} Yrs</p>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-800 text-center">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Exp</p>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.yearsExperience} Yrs</p>
+              </div>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenEditEngineerModal}
+                  icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+                >
+                  Edit Profile
+                </Button>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Tabs Bar */}
+      {/* Profile Navigation Tabs */}
       <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-0.5">
-        {tabs.map((t) => {
+        {[
+          { id: 'profile', label: 'Overview Profile', icon: User },
+          { id: 'skills', label: 'Skill Matrix', icon: Wrench },
+          { id: 'schedule', label: 'Schedule Roster', icon: Calendar },
+          { id: 'travel', label: 'Travel Itineraries', icon: Plane },
+          { id: 'visa', label: 'Visas & Permits', icon: FileCheck },
+          { id: 'performance', label: 'Performance Evaluations', icon: TrendingUp },
+          { id: 'leaves', label: 'Leaves & Absence', icon: Clock },
+          { id: 'reports', label: 'Reports', icon: BarChart3 },
+        ].map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
           return (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center space-x-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all duration-150 whitespace-nowrap ${
-                isActive
-                  ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white bg-slate-50 dark:bg-slate-800/40 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-              }`}
+              className={`flex items-center space-x-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all duration-150 whitespace-nowrap ${isActive
+                ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white bg-slate-50 dark:bg-slate-800/40 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                }`}
             >
               <Icon className="w-4 h-4" />
               <span>{t.label}</span>
@@ -1368,90 +1686,87 @@ export const EngineerProfilePage: React.FC = () => {
         })}
       </div>
 
+
       {/* Tab Content Display */}
       <div className="space-y-6">
         {activeTab === 'profile' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-4">
+            <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-4 shadow-sm">
               <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
                 <Briefcase className="w-4 h-4 text-[var(--color-secondary)]" />
                 <span>Assignment & Site Allocation</span>
               </h3>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-400">Assigned Fab Site</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{engineer.assignedSite || 'TSMC Fab 18'}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
+                  <span className="text-slate-400 font-medium">Assigned Fab Site (Current Schedule)</span>
+                  <p className="font-bold text-slate-900 dark:text-white text-sm">
+                    {currentScheduleSite}
+                  </p>
                 </div>
-                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-400">Join Date</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{engineer.joinDate}</span>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
+                  <span className="text-slate-400 font-medium">Join Date</span>
+                  <p className="font-bold text-slate-900 dark:text-white text-sm">
+                    {engineer.joinDate || 'N/A'}
+                  </p>
                 </div>
-                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-400">Active Projects</span>
-                  <span className="font-semibold text-emerald-600">{engineer.activeProjectsCount} Projects</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-slate-400">Certifications Count</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{engineer.certificationsCount} Valid Certs</span>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
+                  <span className="text-slate-400 font-medium">Active Projects</span>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                    {engineer.activeProjectsCount} Projects
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-4">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
-                <Award className="w-4 h-4 text-slate-400 dark:text-slate-300" />
-                <span>Certifications & Compliance Status</span>
-              </h3>
-              <div className="space-y-2 text-xs">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold text-emerald-900 dark:text-emerald-200">Semiconductor Cleanroom Class 1 Certified</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-700">Valid</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800/60 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span className="font-semibold text-slate-900 dark:text-slate-200">High Voltage & Vacuum Safety Permit</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Valid</span>
-                </div>
-              </div>
+
+
+
+
+            {/* Schedule Comments & Roster Updates Card */}
+            <div className="md:col-span-2">
+              <ScheduleCommentsCard
+                engineerId={engineerId}
+                engineerName={engineer?.name}
+                hideShowMore={true}
+                hideViewProfile={true}
+              />
             </div>
+
 
             {/* Operational Intelligence & Exceptions summary for this engineer */}
-            <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-3">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <span>Operational Attention Summary</span>
-              </h3>
+            {user?.role !== 'Viewer' && (
 
-              {!engAlerts || engAlerts.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-lg">
-                  No active operational warnings or exception alerts for {engineer.name}.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  {engAlerts.map((alt) => (
-                    <div
-                      key={alt.id}
-                      className={`p-3 rounded-lg border flex items-start space-x-2.5 ${
-                        alt.severity === 'warning'
-                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200'
+              <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-3">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <span>Operational Attention Summary</span>
+                </h3>
+
+                {!engAlerts || engAlerts.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-lg">
+                    No active operational warnings or exception alerts for {engineer.name}.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {engAlerts.map((alt) => (
+                      <div
+                        key={alt.id}
+                        className={`p-3 rounded-lg border flex items-start space-x-2.5 ${alt.severity === 'warning'
+                          ? 'bg-amber-50/20 dark:bg-amber-950/10 border-amber-200/40 dark:border-amber-900/20 text-slate-950 dark:text-white'
                           : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
-                      }`}
-                    >
-                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <p className="font-semibold">{alt.title}</p>
-                        <p className="text-[11px] opacity-80">{alt.message}</p>
+                          }`}
+                      >
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <p className="font-semibold">{alt.title}</p>
+                          <p className="text-[11px] opacity-80">{alt.message}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1461,9 +1776,12 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Competency Skill-Matrix
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddModal}>
-                Add Skill
-              </Button>
+              {(canEdit || isEngineerUser) && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddModal}>
+                  Add Skill
+                </Button>
+              )}
+
             </div>
             <Table
               columns={skillColumns}
@@ -1480,13 +1798,26 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Operation Schedules
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddScheduleModal}>
-                Add Schedule
-              </Button>
+              {canEdit && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddScheduleModal}>
+                  Add Schedule
+                </Button>
+              )}
             </div>
             <Table
               columns={scheduleColumns}
               data={schedulesRes?.data || []}
+              onRowClick={(s) => {
+                if (missedScheduleIds.has(s.id)) {
+                  navigate(`/missed-schedules?search=${s.id}`);
+                }
+              }}
+              rowClassName={(s) => {
+                const hasAlert = engAlerts?.some(alt => alt.schedule_id === s.id);
+                return hasAlert
+                  ? 'bg-yellow-50/85 dark:bg-yellow-950/20 hover:bg-yellow-100/90 dark:hover:bg-yellow-900/30 border-l-4 border-yellow-400'
+                  : '';
+              }}
               emptyTitle="No Schedule Assignments"
               emptyDescription="Click Add Schedule to record deployment roster assignments for this engineer."
             />
@@ -1499,9 +1830,11 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Travel Operations
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal} disabled={!schedulesRes?.data?.length}>
-                Book Field Travel
-              </Button>
+              {canEdit && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal} disabled={!schedulesRes?.data?.length}>
+                  Book Field Travel
+                </Button>
+              )}
             </div>
             <Table
               columns={travelColumns}
@@ -1518,9 +1851,11 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Visas & Permits
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddVisaModal}>
-                Add Visa Record
-              </Button>
+              {canEdit && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddVisaModal}>
+                  Add Visa Record
+                </Button>
+              )}
             </div>
             <Table
               columns={visaColumns}
@@ -1537,9 +1872,11 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Performance Evaluation Records
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal} disabled={!schedulesRes?.data?.length}>
-                Record Performance Evaluation
-              </Button>
+              {canEdit && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal} disabled={!schedulesRes?.data?.length}>
+                  Record Performance Evaluation
+                </Button>
+              )}
             </div>
             <Table
               columns={perfColumns}
@@ -1556,9 +1893,11 @@ export const EngineerProfilePage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Leaves & Absence Records
               </h3>
-              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddLeaveModal}>
-                Request Leave
-              </Button>
+              {canEdit && (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddLeaveModal}>
+                  Request Leave
+                </Button>
+              )}
             </div>
             <Table
               columns={leaveColumns}
@@ -1568,6 +1907,11 @@ export const EngineerProfilePage: React.FC = () => {
             />
           </div>
         )}
+
+        {activeTab === 'reports' && (
+          <EngineerIndividualReportView engineerId={targetReportEngineerId} />
+        )}
+
       </div>
 
       {/* Add / Edit Skill Modal */}
@@ -2478,6 +2822,271 @@ export const EngineerProfilePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {/* Edit Engineer Profile Modal */}
+      <Modal
+        isOpen={isEditEngineerModalOpen}
+        onClose={() => {
+          setIsEditEngineerModalOpen(false);
+          setEngineerFormErrors({});
+          setEngineerApiError(null);
+          setEngineerSuccessMessage(null);
+        }}
+        title="Edit Engineer Profile"
+        subtitle="Update field engineer profile and competency attributes."
+      >
+        <form onSubmit={handleUpdateEngineerSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {engineerApiError && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs">
+              {engineerApiError}
+            </div>
+          )}
+          {engineerSuccessMessage && (
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs">
+              {engineerSuccessMessage}
+            </div>
+          )}
+
+          <TextInput
+            label="Engineer Name"
+            value={engineerFormData.name}
+            onChange={(e) => setEngineerFormData({ ...engineerFormData, name: e.target.value })}
+            error={engineerFormErrors.name}
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Goes By"
+              value={engineerFormData.goesBy}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, goesBy: e.target.value })}
+            />
+            <TextInput
+              label="Customer ID"
+              value={engineerFormData.customerId}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, customerId: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Orbit ID"
+              value={engineerFormData.orbitId}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, orbitId: e.target.value })}
+              error={engineerFormErrors.orbitId}
+              required
+            />
+            <Dropdown
+              label="Competency Level"
+              value={engineerFormData.level}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, level: e.target.value })}
+              options={['L1 Junior', 'L2 Specialist', 'L3 Senior', 'L4 Master', 'L5 Principal Expert']}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Email Address"
+              type="email"
+              value={engineerFormData.email}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, email: e.target.value })}
+              error={engineerFormErrors.email}
+            />
+            <TextInput
+              label="Phone Number"
+              value={engineerFormData.phoneNumber}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, phoneNumber: e.target.value })}
+              error={engineerFormErrors.phoneNumber}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Country Location"
+              value={engineerFormData.country}
+              disabled
+              helperText="Automatically set by latest schedule's country"
+            />
+            <TextInput
+              label="City Location"
+              value={engineerFormData.city}
+              disabled
+              helperText="Automatically set by latest schedule's city"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <DatePicker
+              label="Date of Joining"
+              value={engineerFormData.joinDate}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, joinDate: e.target.value })}
+            />
+            <Dropdown
+              label="Primary Tool / Chamber"
+              value={engineerFormData.primaryTool}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, primaryTool: e.target.value })}
+              options={['Etch', 'SENSAI', 'Kiyo', 'Purion', 'ALTUS', 'CVD', 'ALD']}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Customer Experience (Yrs)"
+              type="number"
+              step="0.1"
+              value={engineerFormData.customerExperience}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, customerExperience: e.target.value })}
+            />
+            <TextInput
+              label="Industry Experience (Yrs)"
+              type="number"
+              step="0.1"
+              value={engineerFormData.yearsExperience}
+              onChange={(e) => setEngineerFormData({ ...engineerFormData, yearsExperience: e.target.value })}
+            />
+          </div>
+
+          <Dropdown
+            label="Operational Status"
+            value={engineerFormData.status}
+            onChange={(e) => setEngineerFormData({ ...engineerFormData, status: e.target.value })}
+            options={['Active', 'Deployed', 'On Leave', 'In Transit', 'Training']}
+          />
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditEngineerModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={updateEngineerMutation.isPending}
+            >
+              {updateEngineerMutation.isPending ? 'Saving...' : 'Save Profile Changes'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Certifications & Compliance Modal */}
+      <Modal
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        title="Manage Certifications & Compliance Status"
+        subtitle={`Update certified clearances and compliance permits for ${engineer.name}.`}
+      >
+        <form onSubmit={handleUpdateCertificationsSubmit} className="space-y-4">
+          <TextInput
+            label="Valid Certifications Count"
+            type="number"
+            value={String(certFormData.certificationsCount)}
+            onChange={(e) => setCertFormData({ ...certFormData, certificationsCount: Number(e.target.value) })}
+            required
+          />
+
+          <div className="space-y-3 pt-2">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Compliance Clearance Items
+            </h4>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <TextInput
+                  label="Primary Certification Name"
+                  value={certFormData.cert1Name}
+                  onChange={(e) => setCertFormData({ ...certFormData, cert1Name: e.target.value })}
+                />
+              </div>
+              <Dropdown
+                label="Status"
+                value={certFormData.cert1Status}
+                onChange={(e) => setCertFormData({ ...certFormData, cert1Status: e.target.value })}
+                options={['Valid', 'Expiring Soon', 'Pending Renewal', 'Expired']}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <TextInput
+                  label="Secondary Certification Name"
+                  value={certFormData.cert2Name}
+                  onChange={(e) => setCertFormData({ ...certFormData, cert2Name: e.target.value })}
+                />
+              </div>
+              <Dropdown
+                label="Status"
+                value={certFormData.cert2Status}
+                onChange={(e) => setCertFormData({ ...certFormData, cert2Status: e.target.value })}
+                options={['Valid', 'Expiring Soon', 'Pending Renewal', 'Expired']}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <TextInput
+                  label="Safety Permit Name"
+                  value={certFormData.cert3Name}
+                  onChange={(e) => setCertFormData({ ...certFormData, cert3Name: e.target.value })}
+                />
+              </div>
+              <Dropdown
+                label="Status"
+                value={certFormData.cert3Status}
+                onChange={(e) => setCertFormData({ ...certFormData, cert3Status: e.target.value })}
+                options={['Valid', 'Expiring Soon', 'Pending Renewal', 'Expired']}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button type="button" variant="outline" onClick={() => setIsCertModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={updateEngineerMutation.isPending}>
+              {updateEngineerMutation.isPending ? 'Saving...' : 'Save Compliance Changes'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Schedule Comment Modal */}
+
+      <Modal
+        isOpen={isScheduleCommentModalOpen}
+        onClose={() => setIsScheduleCommentModalOpen(false)}
+        title="Schedule Remarks & Comments"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Add or edit operational comments for assignment: <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedScheduleForComment?.supportType} ({selectedScheduleForComment?.fabSite || selectedScheduleForComment?.country})</span>
+          </p>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Comments / Remarks
+            </label>
+            <textarea
+              rows={4}
+              value={scheduleRemarksInput}
+              onChange={(e) => setScheduleRemarksInput(e.target.value)}
+              placeholder="Enter schedule status updates, transit notes, or customer site comments..."
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsScheduleCommentModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSaveScheduleComment} loading={updateScheduleCommentsMutation.isPending || updateScheduleMutation.isPending}>
+              Save Comment
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
+

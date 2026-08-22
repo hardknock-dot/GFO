@@ -3,10 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, DeclarativeBase, Session
 from app.config import settings
 
-# Create engine with pool_pre_ping=True to prevent stale connections
+# Create engine with pool_pre_ping=True and increased pool_size to prevent pool exhaustion
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    pool_size=20,
+    max_overflow=30
 )
 
 # Configure session factory

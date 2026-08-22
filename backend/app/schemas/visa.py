@@ -9,6 +9,8 @@ class VisaCreate(BaseModel):
     applied_on: date | None = None
     visa_start_date: date | None = None
     visa_end_date: date | None = None
+    comments: str | None = None
+    owner_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -23,6 +25,8 @@ class VisaUpdate(BaseModel):
     applied_on: date | None = None
     visa_start_date: date | None = None
     visa_end_date: date | None = None
+    comments: str | None = None
+    owner_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -30,6 +34,12 @@ class VisaUpdate(BaseModel):
             if self.visa_end_date < self.visa_start_date:
                 raise ValueError("visa_end_date should not be earlier than visa_start_date")
         return self
+
+class VisaCommentUpdate(BaseModel):
+    comments: str
+
+class VisaCommentStatusUpdate(BaseModel):
+    comment_status: str
 
 class VisaResponse(BaseModel):
     visa_id: UUID
@@ -40,7 +50,11 @@ class VisaResponse(BaseModel):
     applied_on: date | None = None
     visa_start_date: date | None = None
     visa_end_date: date | None = None
+    comments: str | None = None
+    comment_status: str | None = "UNADDRESSED"
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+

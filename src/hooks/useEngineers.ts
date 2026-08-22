@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getEngineers,
   getEngineerById,
@@ -13,8 +13,18 @@ import { useCompany } from '../context/CompanyContext';
 
 export const useEngineers = (params?: EngineerQueryParams) => {
   const { currentCompany } = useCompany();
-  const companyId = currentCompany?.company_id || currentCompany?.id;
-  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+  const rawId = currentCompany?.company_id || currentCompany?.id;
+
+  let activeCompanyId: string | undefined = undefined;
+  if (rawId && rawId !== 'all-data') {
+    if (rawId === 'lam-research') {
+      activeCompanyId = '11b9d863-b83c-4af3-8db5-b6e773f78235';
+    } else if (rawId === 'axcelis') {
+      activeCompanyId = 'f81bd16c-2f63-4818-a653-7486fe3f45ec';
+    } else {
+      activeCompanyId = rawId;
+    }
+  }
 
   const queryParams = {
     ...params,
@@ -24,6 +34,7 @@ export const useEngineers = (params?: EngineerQueryParams) => {
   return useQuery({
     queryKey: ['engineers', queryParams],
     queryFn: () => getEngineers(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 mins
   });
 };

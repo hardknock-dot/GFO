@@ -4,3 +4,7 @@ sqlalchemy
 psycopg[binary]
 python-dotenv
 pydantic-settings
+pyjwt
+bcrypt
+openpyxl
+python-multipart

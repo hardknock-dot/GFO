@@ -1,10 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getSchedules,
   getScheduleById,
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  updateScheduleCommentStatus,
 } from '../services/schedule';
 import type { Schedule } from '../types';
 import { useCompany } from '../context/CompanyContext';
@@ -22,6 +23,7 @@ export const useSchedule = (params?: any) => {
   return useQuery({
     queryKey: ['schedules', queryParams],
     queryFn: () => getSchedules(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -59,6 +61,19 @@ export const useUpdateSchedule = () => {
   });
 };
 
+export const useUpdateScheduleCommentStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, commentStatus }: { id: string; commentStatus: string }) =>
+      updateScheduleCommentStatus(id, commentStatus),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-operational-alerts'] });
+    },
+  });
+};
+
 export const useDeleteSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -69,3 +84,4 @@ export const useDeleteSchedule = () => {
     },
   });
 };
+

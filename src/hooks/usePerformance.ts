@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getPerformanceRecords,
   getPerformanceRecordById,
@@ -22,6 +22,7 @@ export const usePerformance = (params?: any) => {
   return useQuery({
     queryKey: ['performance', queryParams],
     queryFn: () => getPerformanceRecords(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 };

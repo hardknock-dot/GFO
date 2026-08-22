@@ -31,8 +31,10 @@ export const AppLayout: React.FC = () => {
   }, [location.pathname, collapsed]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--color-bg)] transition-colors duration-200 overflow-x-hidden relative">
       <Header onToggleMobileSidebar={() => setMobileOpen(!mobileOpen)} />
+
+
       <Sidebar
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(!collapsed)}

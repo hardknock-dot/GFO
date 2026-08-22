@@ -20,6 +20,8 @@ class Engineer(Base):
     lam_experience: Mapped[Optional[float]] = mapped_column("customer_experience", Numeric(4, 1), nullable=True)
     industry_experience: Mapped[Optional[float]] = mapped_column(Numeric(4, 1), nullable=True)
     status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
@@ -36,3 +38,53 @@ class Engineer(Base):
         if self.lam_experience is not None:
             return float(self.lam_experience)
         return None
+
+    @property
+    def current_schedule(self):
+        from sqlalchemy.orm import object_session
+        from app.models.schedule import Schedule
+        from sqlalchemy import select, and_, or_
+        from datetime import date
+        
+        session = object_session(self)
+        if session is None:
+            return None
+            
+        today = date.today()
+        stmt = (
+            select(Schedule)
+            .where(
+                and_(
+                    Schedule.engineer_id == self.engineer_id,
+                    Schedule.start_date <= today,
+                    or_(
+                        Schedule.end_date >= today,
+                        Schedule.end_date.is_(None)
+                    )
+                )
+            )
+            .order_by(Schedule.start_date.desc())
+            .limit(1)
+        )
+        return session.scalars(stmt).first()
+
+    @property
+    def country(self) -> str:
+        current = self.current_schedule
+        if current and current.country:
+            return current.country
+        return "No Schedule"
+
+    @property
+    def city(self) -> str:
+        current = self.current_schedule
+        if current and current.fab_city:
+            return current.fab_city
+        return "No Schedule"
+
+    @property
+    def assigned_site(self) -> str:
+        current = self.current_schedule
+        if current and current.fab_site:
+            return current.fab_site
+        return "No Schedule"

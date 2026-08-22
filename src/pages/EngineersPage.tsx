@@ -6,6 +6,12 @@ import {
   useUpdateEngineer,
   useDeleteEngineer,
 } from '../hooks/useEngineers';
+import {
+  useEngineerDeletionRequests,
+  useRequestEngineerDeletion,
+  useApproveEngineerDeletionRequest,
+  useRejectEngineerDeletionRequest,
+} from '../hooks/useEngineerDeletionRequests';
 import type { Engineer } from '../types';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
@@ -17,14 +23,26 @@ import { TextInput } from '../components/forms/TextInput';
 import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { UserPlus, Eye, MapPin, Wrench, Edit, Trash2, Building2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { UserPlus, Eye, MapPin, Wrench, Edit, Trash2, Building2, ShieldAlert, Check, X } from 'lucide-react';
 
 export const EngineersPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
+  const { user, canEdit } = useAuth();
+  const isGlobalAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
+  const isManager = user?.role === 'Manager' || user?.role === 'Company Admin';
+  const canApproveDeletion = isGlobalAdmin || isManager;
+
   const createEngineerMutation = useCreateEngineer();
   const updateEngineerMutation = useUpdateEngineer();
   const deleteEngineerMutation = useDeleteEngineer();
+
+  const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
+  const { data: deletionRequests = [] } = useEngineerDeletionRequests(companyId);
+  const requestDeletionMutation = useRequestEngineerDeletion();
+  const approveDeletionMutation = useApproveEngineerDeletionRequest();
+  const rejectDeletionMutation = useRejectEngineerDeletionRequest();
 
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -35,6 +53,8 @@ export const EngineersPage: React.FC = () => {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+
 
   // Form state
   const [formData, setFormData] = useState({
@@ -48,6 +68,8 @@ export const EngineersPage: React.FC = () => {
     customerExperience: '',
     yearsExperience: '',
     status: 'Active',
+    email: '',
+    phoneNumber: '',
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -60,7 +82,36 @@ export const EngineersPage: React.FC = () => {
     country: countryFilter,
   });
 
-  const engineers = res?.data || [];
+  const rawEngineers = res?.data || [];
+
+  const engineers = rawEngineers.filter((eng) => {
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      const matchName = eng.name?.toLowerCase().includes(q);
+      const matchEmail = eng.email?.toLowerCase().includes(q);
+      const matchOrbit = eng.orbitId?.toLowerCase().includes(q);
+      const matchCustomer = eng.customerId?.toLowerCase().includes(q);
+      const matchTool = eng.primaryTool?.toLowerCase().includes(q);
+      const matchCountry = eng.country?.toLowerCase().includes(q);
+      if (!matchName && !matchEmail && !matchOrbit && !matchCustomer && !matchTool && !matchCountry) {
+        return false;
+      }
+    }
+
+    if (statusFilter && statusFilter !== 'All') {
+      if (eng.status?.toLowerCase() !== statusFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    if (countryFilter && countryFilter !== 'All') {
+      if (eng.country?.toLowerCase() !== countryFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   const handleOpenAddModal = () => {
     setSelectedEngineer(null);
@@ -75,6 +126,8 @@ export const EngineersPage: React.FC = () => {
       customerExperience: '',
       yearsExperience: '',
       status: 'Active',
+      email: '',
+      phoneNumber: '',
     });
     setFormErrors({});
     setApiError(null);
@@ -95,6 +148,8 @@ export const EngineersPage: React.FC = () => {
       customerExperience: engineer.customerExperience !== undefined ? String(engineer.customerExperience) : '',
       yearsExperience: engineer.yearsExperience !== undefined ? String(engineer.yearsExperience) : '',
       status: engineer.status,
+      email: engineer.email || '',
+      phoneNumber: engineer.phoneNumber || '',
     });
     setFormErrors({});
     setApiError(null);
@@ -123,6 +178,14 @@ export const EngineersPage: React.FC = () => {
       errors.yearsExperience = 'Industry Experience must be >= 0';
     }
 
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = 'Invalid email format';
+    }
+
+    if (formData.phoneNumber && !/^[+\d\s().-]{3,30}$/.test(formData.phoneNumber.trim())) {
+      errors.phoneNumber = 'Phone number is invalid or too long (max 30 chars)';
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -131,7 +194,7 @@ export const EngineersPage: React.FC = () => {
     e.preventDefault();
     setApiError(null);
     setSuccessMessage(null);
-    
+
     if (!validateForm()) return;
 
     const payload: Partial<Engineer> & { company_id?: string } = {
@@ -145,6 +208,8 @@ export const EngineersPage: React.FC = () => {
       customerExperience: formData.customerExperience ? Number(formData.customerExperience) : undefined,
       yearsExperience: formData.yearsExperience ? Number(formData.yearsExperience) : undefined,
       status: formData.status as any,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
     };
 
     if (selectedEngineer) {
@@ -187,17 +252,37 @@ export const EngineersPage: React.FC = () => {
   const handleDelete = () => {
     if (!selectedEngineer) return;
     setApiError(null);
-    deleteEngineerMutation.mutate(selectedEngineer.id, {
-      onSuccess: () => {
-        setIsDeleteModalOpen(false);
-        setSelectedEngineer(null);
-        alert('Engineer deleted successfully.');
-      },
-      onError: (err: any) => {
-        const msg = err.message || err.details?.detail || 'Failed to delete engineer.';
-        setApiError(msg);
-      },
-    });
+
+    if (isGlobalAdmin) {
+      deleteEngineerMutation.mutate(selectedEngineer.id, {
+        onSuccess: () => {
+          setIsDeleteModalOpen(false);
+          setSelectedEngineer(null);
+          setApiError(null);
+        },
+        onError: (err: any) => {
+          const msg = err.message || err.details?.detail || 'Failed to delete engineer.';
+          setApiError(msg);
+        },
+      });
+    } else {
+      requestDeletionMutation.mutate(
+        { engineerId: selectedEngineer.id, reason: deleteReason },
+        {
+          onSuccess: () => {
+            setIsDeleteModalOpen(false);
+            setSelectedEngineer(null);
+            setDeleteReason('');
+            setSuccessMessage('Engineer deletion request submitted for Global Admin review.');
+            setTimeout(() => setSuccessMessage(null), 3000);
+          },
+          onError: (err: any) => {
+            const msg = err.message || err.details?.detail || 'Failed to submit deletion request.';
+            setApiError(msg);
+          },
+        }
+      );
+    }
   };
 
   const columns: Column<Engineer>[] = [
@@ -226,7 +311,7 @@ export const EngineersPage: React.FC = () => {
       header: 'Orbit ID',
       sortable: true,
       render: (item) => (
-        <span className="font-mono text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">
+        <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
           {item.orbitId}
         </span>
       ),
@@ -243,17 +328,16 @@ export const EngineersPage: React.FC = () => {
       sortable: true,
       render: (item) => {
         const badgeColors: Record<string, string> = {
-          Deployed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200',
-          Active: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700',
-          'On Leave': 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200',
-          'In Transit': 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200',
-          Training: 'bg-slate-50 text-slate-600 dark:bg-slate-900/60 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+          Deployed: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40',
+          Active: 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700/60',
+          'On Leave': 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/40',
+          'In Transit': 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/40',
+          Training: 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
         };
         return (
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-              badgeColors[item.status] || 'bg-slate-100 text-slate-700'
-            }`}
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColors[item.status] || 'bg-slate-100 text-slate-700'
+              }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5" />
             {item.status}
@@ -277,7 +361,7 @@ export const EngineersPage: React.FC = () => {
       header: 'Competency Level',
       sortable: true,
       render: (item) => (
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           {item.level}
         </span>
       ),
@@ -297,36 +381,101 @@ export const EngineersPage: React.FC = () => {
       key: 'actions',
       header: 'Actions',
       align: 'right',
-      render: (item) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate(`/engineers/${item.id}`)}
-            icon={<Eye className="w-3.5 h-3.5 text-[var(--color-secondary)]" />}
-          >
-            View Profile
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditModal(item)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteModal(item)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
+      render: (item) => {
+        const pendingReq = deletionRequests.find((r) => r.engineerId === item.id && r.status === 'PENDING');
+        return (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/engineers/${item.id}`)}
+              icon={<Eye className="w-3.5 h-3.5 text-[var(--color-secondary)]" />}
+            >
+              View Profile
+            </Button>
+            {canEdit && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenEditModal(item)}
+                  icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+                >
+                  Edit
+                </Button>
+                {pendingReq ? (
+                  canApproveDeletion ? (
+                    <div className="flex items-center space-x-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          approveDeletionMutation.mutate(pendingReq.requestId, {
+                            onSuccess: () => {
+                              setSuccessMessage('Engineer deletion approved and record removed successfully.');
+                              setTimeout(() => setSuccessMessage(null), 3000);
+                              refetch();
+                            },
+                            onError: (err: any) => {
+                              alert(err.message || err.details?.detail || 'Failed to approve deletion request.');
+                            },
+                          });
+                        }}
+                        loading={approveDeletionMutation.isPending}
+                        icon={<Check className="w-3.5 h-3.5 text-emerald-600" />}
+                        className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
+                      >
+                        Approve Deletion
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          rejectDeletionMutation.mutate(
+                            { requestId: pendingReq.requestId },
+                            {
+                              onSuccess: () => {
+                                setSuccessMessage('Engineer deletion request rejected successfully.');
+                                setTimeout(() => setSuccessMessage(null), 3000);
+                                refetch();
+                              },
+                              onError: (err: any) => {
+                                alert(err.message || err.details?.detail || 'Failed to reject deletion request.');
+                              },
+                            }
+                          );
+                        }}
+                        loading={rejectDeletionMutation.isPending}
+                        icon={<X className="w-3.5 h-3.5 text-rose-600" />}
+                        className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                      <ShieldAlert className="w-3 h-3 mr-1 text-amber-600" />
+                      Deletion Pending Approval
+                    </span>
+                  )
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenDeleteModal(item)}
+                    icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
+
 
   return (
     <div className="space-y-6">
@@ -334,9 +483,11 @@ export const EngineersPage: React.FC = () => {
         title="Field Engineer Operations Directory"
         subtitle="Manage semiconductor equipment field engineers, competency certifications, site deployments, and profiles."
         actions={
-          <Button icon={<UserPlus className="w-4 h-4" />} onClick={handleOpenAddModal}>
-            Add New Engineer
-          </Button>
+          canEdit ? (
+            <Button icon={<UserPlus className="w-4 h-4" />} onClick={handleOpenAddModal}>
+              Add New Engineer
+            </Button>
+          ) : undefined
         }
       />
 
@@ -479,6 +630,22 @@ export const EngineersPage: React.FC = () => {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              label="Email Address"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              error={formErrors.email}
+            />
+            <TextInput
+              label="Phone Number"
+              value={formData.phoneNumber}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              error={formErrors.phoneNumber}
+            />
+          </div>
+
           <Dropdown
             label="Status"
             value={formData.status}
@@ -506,26 +673,122 @@ export const EngineersPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Global Admin Pending Deletion Requests Section */}
+      {isGlobalAdmin && deletionRequests.filter(r => r.status === 'PENDING').length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-400 dark:border-amber-700/60 rounded-2xl p-5 shadow-lg space-y-4">
+          <div className="flex items-center space-x-2 text-amber-900 dark:text-amber-200">
+            <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h3 className="text-base font-extrabold tracking-tight">
+              PENDING ENGINEER DELETION REQUESTS ({deletionRequests.filter(r => r.status === 'PENDING').length})
+            </h3>
+          </div>
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            Managers have requested engineer deletions. Global Admin approval is required. Safe-deletion checks will verify 0 child records exist before proceeding.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {deletionRequests.filter(r => r.status === 'PENDING').map((req) => (
+              <div
+                key={req.requestId}
+                className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800/80 rounded-xl p-4 shadow-sm flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">
+                      {req.engineerName} ({req.orbitId})
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      PENDING REVIEW
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Requested by: <strong>{req.requestedByName}</strong> ({req.companyName})
+                  </p>
+                  {req.reason && (
+                    <p className="text-xs italic text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                      "{req.reason}"
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    size="sm"
+                    onClick={() => approveDeletionMutation.mutate(req.requestId)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 py-1.5"
+                    loading={approveDeletionMutation.isPending}
+                    icon={<Check className="w-3.5 h-3.5" />}
+                  >
+                    Approve Delete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => rejectDeletionMutation.mutate({ requestId: req.requestId, reviewComment: 'Rejected by Global Admin' })}
+                    className="border-rose-300 text-rose-600 hover:bg-rose-50 text-xs px-3 py-1.5"
+                    loading={rejectDeletionMutation.isPending}
+                    icon={<X className="w-3.5 h-3.5" />}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation / Request Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => {
           setIsDeleteModalOpen(false);
           setApiError(null);
+          setDeleteReason('');
         }}
-        title="Delete Field Engineer"
-        subtitle="Confirm deletion of engineer record."
+        title={isGlobalAdmin ? "Delete Field Engineer" : "Request Engineer Deletion"}
+        subtitle={isGlobalAdmin ? "Confirm permanent deletion of engineer record." : "Submit deletion request for Global Admin approval."}
       >
         <div className="space-y-4">
           {apiError && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold">
               {apiError}
             </div>
           )}
 
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Are you sure you want to delete engineer <strong className="text-slate-800 dark:text-slate-100">{selectedEngineer?.name}</strong> ({selectedEngineer?.orbitId})? This action cannot be undone.
-          </p>
+          {isGlobalAdmin ? (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 space-y-2">
+              <p className="font-bold flex items-center space-x-1.5 text-amber-800 dark:text-amber-300">
+                <ShieldAlert className="w-4 h-4 text-amber-600" />
+                <span>Cascading Deletion Confirmation</span>
+              </p>
+              <p>
+                Deleting engineer <strong className="font-bold">{selectedEngineer?.name}</strong> ({selectedEngineer?.orbitId}) will permanently remove the engineer profile along with <strong>all associated child records</strong> (skills, schedules, visa details, leaves, travel arrangements, performance reviews, and linked user credentials).
+              </p>
+              <p className="font-semibold text-rose-700 dark:text-rose-400">
+                Are you sure you want to proceed with deleting this engineer and all linked child data?
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              You are requesting deletion of engineer <strong className="text-slate-800 dark:text-slate-100">{selectedEngineer?.name}</strong> ({selectedEngineer?.orbitId}). This request will be submitted for Admin review.
+            </p>
+          )}
+
+          {!isGlobalAdmin && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Reason for Deletion Request
+              </label>
+              <textarea
+                rows={3}
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. Employee offboarded or record created in error..."
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
@@ -534,6 +797,7 @@ export const EngineersPage: React.FC = () => {
               onClick={() => {
                 setIsDeleteModalOpen(false);
                 setApiError(null);
+                setDeleteReason('');
               }}
             >
               Cancel
@@ -542,9 +806,11 @@ export const EngineersPage: React.FC = () => {
               type="button"
               onClick={handleDelete}
               className="bg-rose-600 hover:bg-rose-700 text-white"
-              loading={deleteEngineerMutation.isPending}
+              loading={deleteEngineerMutation.isPending || requestDeletionMutation.isPending}
             >
-              {deleteEngineerMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteEngineerMutation.isPending || requestDeletionMutation.isPending
+                ? (isGlobalAdmin ? 'Deleting...' : 'Submitting...')
+                : (isGlobalAdmin ? 'Delete Engineer' : 'Submit Deletion Request')}
             </Button>
           </div>
         </div>
@@ -552,4 +818,5 @@ export const EngineersPage: React.FC = () => {
     </div>
   );
 };
+
 

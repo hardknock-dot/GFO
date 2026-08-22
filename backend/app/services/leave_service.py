@@ -24,7 +24,7 @@ def get_engineer_leaves(db: Session, engineer_id: UUID) -> List[Leave]:
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_leave(db: Session, engineer_id: UUID, leave_data: LeaveCreate) -> Leave:
+def create_leave(db: Session, engineer_id: UUID, leave_data: LeaveCreate, owner_id: Optional[UUID] = None) -> Leave:
     """
     Create a new leave record associated with an engineer.
     """
@@ -38,7 +38,7 @@ def create_leave(db: Session, engineer_id: UUID, leave_data: LeaveCreate) -> Lea
     db_leave = Leave(
         leave_id=uuid.uuid4(),
         engineer_id=engineer_id,
-        owner_id=None,
+        owner_id=owner_id,
         leave_type=leave_data.leave_type,
         requested_date=leave_data.requested_date,
         requested_on=leave_data.requested_on or date.today(),

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePerformance, useCreatePerformance, useUpdatePerformance, useDeletePerformance } from '../hooks/usePerformance';
 import { useSchedule } from '../hooks/useSchedule';
 import { useCompany } from '../context/CompanyContext';
+import { useAuth } from '../context/AuthContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
 import type { Column } from '../components/common/Table';
@@ -10,11 +11,13 @@ import { Button } from '../components/forms/Button';
 import { TextInput } from '../components/forms/TextInput';
 import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
+import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import type { Performance } from '../types';
 import { Star, Edit, Trash2, Plus } from 'lucide-react';
 
 export const PerformancePage: React.FC = () => {
   const { currentCompany } = useCompany();
+  const { canEdit } = useAuth();
   const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
 
   const [search, setSearch] = useState('');
@@ -215,24 +218,26 @@ export const PerformancePage: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (p) => (
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenEditModal(p)}
-            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleOpenDeleteModal(p)}
-            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-          >
-            Delete
-          </Button>
-        </div>
+        canEdit ? (
+          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditModal(p)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteModal(p)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -243,13 +248,15 @@ export const PerformancePage: React.FC = () => {
         title="Field Engineer Performance Evaluations"
         subtitle="Track customer feedback ratings, on-time installation metrics, and annual review notes."
         actions={
-          <Button
-            icon={<Plus className="w-4 h-4" />}
-            onClick={handleOpenAddModal}
-            disabled={schedulesList.length === 0}
-          >
-            Add Evaluation
-          </Button>
+          canEdit ? (
+            <Button
+              icon={<Plus className="w-4 h-4" />}
+              onClick={handleOpenAddModal}
+              disabled={schedulesList.length === 0}
+            >
+              Add Evaluation
+            </Button>
+          ) : undefined
         }
       />
 
@@ -284,27 +291,19 @@ export const PerformancePage: React.FC = () => {
           )}
 
           {!selectedPerf && (
-            <div className="w-full flex flex-col space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Schedule Assignment
-              </label>
-              <select
-                value={formData.scheduleId}
-                onChange={(e) => setFormData({ ...formData, scheduleId: e.target.value })}
-                className="w-full rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 px-3.5 py-2 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
-                required
-              >
-                <option value="" disabled>Select a schedule assignment...</option>
-                {schedulesList.map((sch) => (
-                  <option key={sch.id} value={sch.id}>
-                    {sch.engineerName} - {sch.supportType} ({sch.fabSite} - {sch.country})
-                  </option>
-                ))}
-              </select>
-              {formErrors.scheduleId && (
-                <span className="text-xs text-rose-500">{formErrors.scheduleId}</span>
-              )}
-            </div>
+            <SearchableDropdown
+              label="Schedule Assignment"
+              value={formData.scheduleId}
+              onChange={(val) => setFormData({ ...formData, scheduleId: val })}
+              options={schedulesList.map((sch) => ({
+                value: sch.id,
+                label: `${sch.engineerName} - ${sch.supportType} (${sch.fabSite || ''} - ${sch.country})`,
+              }))}
+              placeholder="Select a schedule assignment..."
+              searchPlaceholder="Search engineer name, support type..."
+              required
+              error={formErrors.scheduleId}
+            />
           )}
 
           <div className="grid grid-cols-2 gap-4">

@@ -6,6 +6,7 @@ import { login as authLogin, logout as authLogout, getCurrentUser } from '../ser
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  canEdit: boolean;
   login: (email?: string, password?: string) => Promise<void>;
   logout: () => void;
   selectCompany: (companyId: string) => void;
@@ -16,6 +17,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const { setCompany } = useCompany();
+
+  const canEdit = !!user && ['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive', 'Resource Manager'].includes(user.role);
 
   // Load user from service (which checks localStorage first) on mount
   useEffect(() => {
@@ -48,10 +51,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email?: string, password?: string) => {
     const result = await authLogin(email, password);
     setUser(result.user);
-    // If there is an active company in localStorage, use it. Otherwise, default to user's company
-    const savedCompany = localStorage.getItem('ormp_active_company') || result.user.currentCompanyId;
-    setCompany(savedCompany);
-    localStorage.setItem('ormp_active_company', savedCompany);
+    
+    let activeCompany = result.user.currentCompanyId;
+    if (result.user.role === 'Main Admin' || result.user.role === 'Global Admin') {
+      const savedCompany = localStorage.getItem('ormp_active_company');
+      if (savedCompany && result.user.accessibleCompanies.includes(savedCompany)) {
+        activeCompany = savedCompany;
+      }
+    }
+    
+    setCompany(activeCompany);
+    localStorage.setItem('ormp_active_company', activeCompany);
   };
 
   const logout = async () => {
@@ -74,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isAuthenticated: !!user,
+        canEdit,
         login,
         logout,
         selectCompany,
