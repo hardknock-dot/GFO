@@ -10,22 +10,47 @@ import {
 import type { Schedule } from '../types';
 import { useCompany } from '../context/CompanyContext';
 
+import { useEffect } from 'react';
+
 export const useSchedule = (params?: any) => {
+  const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
   const companyId = currentCompany?.company_id || currentCompany?.id;
   const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
 
+  const targetCompanyId = params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId);
+  const currentPage = params?.page || 1;
+  const pageSize = params?.pageSize || params?.page_size || 20;
+  const search = params?.search || '';
+  const status = params?.status || params?.schedule_status || '';
+
   const queryParams = {
-    ...params,
-    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+    page: currentPage,
+    page_size: pageSize,
+    search: search || undefined,
+    schedule_status: status || undefined,
+    company_id: targetCompanyId,
   };
 
-  return useQuery({
-    queryKey: ['schedules', queryParams],
+  const query = useQuery({
+    queryKey: ['schedules', targetCompanyId, currentPage, pageSize, search, status],
     queryFn: () => getSchedules(queryParams),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
+
+  useEffect(() => {
+    if (query.data && currentPage < query.data.totalPages) {
+      const nextPageParams = { ...queryParams, page: currentPage + 1 };
+      queryClient.prefetchQuery({
+        queryKey: ['schedules', targetCompanyId, currentPage + 1, pageSize, search, status],
+        queryFn: () => getSchedules(nextPageParams),
+        staleTime: 1000 * 60 * 5,
+      });
+    }
+  }, [query.data?.totalPages, currentPage, targetCompanyId, pageSize, search, status, queryClient]);
+
+  return query;
 };
 
 export const useSchedules = useSchedule;

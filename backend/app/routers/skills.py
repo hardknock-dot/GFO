@@ -11,7 +11,55 @@ from app.services.audit_service import log_audit, object_to_dict
 
 logger = logging.getLogger(__name__)
 
+from typing import Optional, List
+from fastapi import Query
+from app.schemas.pagination import PaginatedResponse
+from app.services.auth_service import enforce_company_isolation
+
 router = APIRouter(prefix="/skills", tags=["skills"], dependencies=[Depends(get_current_user)])
+
+@router.get("", response_model=PaginatedResponse[SkillResponse])
+def read_skills(
+    company_id: Optional[UUID] = Query(None),
+    company_ids: Optional[List[UUID]] = Query(None),
+    engineer_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve paginated skills with tenant isolation and optional filters.
+    """
+    try:
+        target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
+        validated_cids = enforce_company_isolation(db, current_user, target_cids)
+        res = skill_service.get_skills_paginated(
+            db=db,
+            company_id=validated_cids,
+            engineer_id=engineer_id,
+            search=search,
+            category=category,
+            page=page,
+            page_size=page_size
+        )
+        return PaginatedResponse[SkillResponse](
+            items=[SkillResponse.model_validate(item) for item in res["items"]],
+            page=res["page"],
+            page_size=res["page_size"],
+            total=res["total"],
+            total_pages=res["total_pages"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error retrieving skills: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve skills from database"
+        )
 
 @router.put("/{skill_id}", response_model=SkillResponse)
 def update_existing_skill(

@@ -1,7 +1,7 @@
 import api from './axios';
 import type { MissedSchedule } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiMissedScheduleToFrontend = (apiMs: any, engineerName?: string, orbitId?: string, engineerId?: string): MissedSchedule => {
   return {
@@ -52,35 +52,43 @@ export const getScheduleMissedSchedules = async (scheduleId: string): Promise<Mi
 
 export const getMissedSchedules = async (params?: any): Promise<PaginatedResponse<MissedSchedule>> => {
   try {
-    let list: MissedSchedule[] = [];
-    if (params?.scheduleId) {
-      list = await getScheduleMissedSchedules(params.scheduleId);
-    } else if (params?.engineerId) {
-      list = await getEngineerMissedSchedules(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const msPromises = engs.data.map(e => getEngineerMissedSchedules(e.id));
-      const nestedMs = await Promise.all(msPromises);
-      list = nestedMs.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (ms) =>
-          ms.engineerName.toLowerCase().includes(q) ||
-          ms.reasonForChange.toLowerCase().includes(q) ||
-          ms.notesAttachEvidence.toLowerCase().includes(q) ||
-          (ms.scheduleId && ms.scheduleId.toLowerCase().includes(q))
-      );
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.scheduleId) queryParams.schedule_id = params.scheduleId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.search) queryParams.search = params.search;
+
+    const res = await api.get('/missed-schedules', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((ms: any) => mapApiMissedScheduleToFrontend(ms)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((ms: any) => mapApiMissedScheduleToFrontend(ms));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global missed schedules:', err);

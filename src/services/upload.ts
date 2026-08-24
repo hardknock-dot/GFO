@@ -161,8 +161,12 @@ export const getUploadHistory = async (companyId?: string): Promise<BulkUpload[]
   try {
     const params = companyId && companyId !== 'all-data' ? { company_id: companyId } : {};
     const res = await api.get('/upload/history', { params });
-    if (res.data && Array.isArray(res.data)) {
-      return res.data.map(mapApiUploadToFrontend);
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return raw.items.map(mapApiUploadToFrontend);
+    }
+    if (Array.isArray(raw)) {
+      return raw.map(mapApiUploadToFrontend);
     }
     return [];
   } catch (err) {

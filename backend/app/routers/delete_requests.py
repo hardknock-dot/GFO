@@ -56,11 +56,15 @@ def create_delete_request(
         return target
     return DeleteRequestResponse.model_validate(req)
 
-@router.get("", response_model=List[DeleteRequestResponse])
+from app.schemas.pagination import PaginatedResponse
+
+@router.get("", response_model=PaginatedResponse[DeleteRequestResponse])
 def list_delete_requests(
     company_id: Optional[UUID] = Query(None),
     company_ids: Optional[List[UUID]] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -77,7 +81,20 @@ def list_delete_requests(
 
     target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
     validated_cids = enforce_company_isolation(db, current_user, target_cids)
-    return delete_request_service.get_delete_requests(db, company_ids=validated_cids, status_filter=status_filter)
+    res = delete_request_service.get_delete_requests_paginated(
+        db,
+        company_ids=validated_cids,
+        status_filter=status_filter,
+        page=page,
+        page_size=page_size
+    )
+    return PaginatedResponse[DeleteRequestResponse](
+        items=[DeleteRequestResponse.model_validate(item) for item in res["items"]],
+        page=res["page"],
+        page_size=res["page_size"],
+        total=res["total"],
+        total_pages=res["total_pages"]
+    )
 
 @router.post("/{request_id}/approve", response_model=DeleteRequestResponse)
 def approve_delete_request(

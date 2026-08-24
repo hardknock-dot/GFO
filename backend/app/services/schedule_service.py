@@ -1,8 +1,8 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-from typing import List, Optional
+from sqlalchemy import select, and_, or_, func
+from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
 import uuid
+import math
 from datetime import datetime
 
 from app.models.schedule import Schedule
@@ -12,6 +12,68 @@ from app.models.performance import Performance
 from app.models.missed_schedule import MissedSchedule
 from app.schemas.schedule import ScheduleCreate, ScheduleUpdate
 from fastapi import HTTPException, status
+
+def get_schedules_paginated(
+    db: Session,
+    company_id: Optional[Union[UUID, List[UUID]]] = None,
+    engineer_id: Optional[UUID] = None,
+    search: Optional[str] = None,
+    schedule_status: Optional[str] = None,
+    comment_status: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    stmt = select(Schedule).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+    
+    conditions = []
+    if company_id is not None:
+        if isinstance(company_id, (list, set, tuple)):
+            conditions.append(Engineer.company_id.in_(company_id))
+        else:
+            conditions.append(Engineer.company_id == company_id)
+
+    if engineer_id:
+        conditions.append(Schedule.engineer_id == engineer_id)
+
+    if schedule_status:
+        conditions.append(Schedule.schedule_status == schedule_status)
+
+    if comment_status:
+        conditions.append(Schedule.comment_status == comment_status)
+
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        conditions.append(
+            or_(
+                Schedule.support_type.ilike(search_pattern),
+                Schedule.country.ilike(search_pattern),
+                Schedule.fab_city.ilike(search_pattern),
+                Schedule.fab_site.ilike(search_pattern),
+                Schedule.remarks.ilike(search_pattern),
+                Engineer.engineer_name.ilike(search_pattern),
+                Engineer.orbit_id.ilike(search_pattern)
+            )
+        )
+
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = db.scalar(count_stmt) or 0
+
+    total_pages = math.ceil(total / page_size) if page_size > 0 else (1 if total > 0 else 0)
+    offset = (page - 1) * page_size
+    stmt = stmt.order_by(Schedule.start_date.desc()).offset(offset).limit(page_size)
+
+    items = list(db.scalars(stmt).all())
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    }
 
 def get_engineer_schedules(db: Session, engineer_id: UUID) -> List[Schedule]:
     """

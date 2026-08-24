@@ -20,6 +20,7 @@ export interface PaginatedResponse<T> {
   data: T[];
   total: number;
   page: number;
+  pageSize: number;
   totalPages: number;
 }
 
@@ -49,13 +50,29 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
 
 export const getEngineers = async (params?: EngineerQueryParams): Promise<PaginatedResponse<Engineer>> => {
   try {
-    const response = await api.get('/engineers', { params });
-    if (response.data && Array.isArray(response.data)) {
-      const data = response.data.map(mapApiEngineerToFrontend);
+    const queryParams: any = { ...params };
+    if (queryParams.limit) {
+      queryParams.page_size = queryParams.limit;
+      delete queryParams.limit;
+    }
+    const response = await api.get('/engineers', { params: queryParams });
+    const raw = response.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map(mapApiEngineerToFrontend),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map(mapApiEngineerToFrontend);
       return {
         data,
         total: data.length,
         page: params?.page || 1,
+        pageSize: params?.limit || 20,
         totalPages: 1,
       };
     }
@@ -63,7 +80,8 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
       data: [],
       total: 0,
       page: 1,
-      totalPages: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching engineers:', err);

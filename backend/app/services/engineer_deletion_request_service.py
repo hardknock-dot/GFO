@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 import uuid
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from fastapi import HTTPException, status
 
 from app.models.engineer_deletion_request import EngineerDeletionRequest
@@ -103,6 +103,64 @@ def create_deletion_request(
     db.refresh(req)
     return req
 
+def get_deletion_requests_paginated(
+    db: Session,
+    company_id: Optional[Union[UUID, List[UUID]]] = None,
+    status_filter: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    import math
+    stmt = select(EngineerDeletionRequest)
+    if company_id is not None:
+        if isinstance(company_id, (list, set, tuple)):
+            stmt = stmt.where(EngineerDeletionRequest.company_id.in_(company_id))
+        else:
+            stmt = stmt.where(EngineerDeletionRequest.company_id == company_id)
+    if status_filter:
+        stmt = stmt.where(EngineerDeletionRequest.status == status_filter)
+    
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = db.scalar(count_stmt) or 0
+
+    total_pages = math.ceil(total / page_size) if page_size > 0 else (1 if total > 0 else 0)
+    offset = (page - 1) * page_size
+
+    stmt = stmt.order_by(EngineerDeletionRequest.created_at.desc()).offset(offset).limit(page_size)
+    records = list(db.scalars(stmt).all())
+
+    items = []
+    for r in records:
+        eng = db.get(Engineer, r.engineer_id) if r.engineer_id else None
+        usr = db.get(User, r.requested_by)
+        comp = db.get(Company, r.company_id)
+        
+        items.append(EngineerDeletionRequestResponse(
+            request_id=r.request_id,
+            engineer_id=r.engineer_id,
+            engineer_name=eng.engineer_name if eng else "Deleted Engineer",
+            orbit_id=eng.orbit_id if eng else "N/A",
+            requested_by=r.requested_by,
+            requested_by_name=usr.full_name if usr else "Unknown User",
+            company_id=r.company_id,
+            company_name=comp.company_name if comp else "Unknown Company",
+            reason=r.reason,
+            status=r.status,
+            reviewed_by=r.reviewed_by,
+            reviewed_at=r.reviewed_at,
+            review_comment=r.review_comment,
+            created_at=r.created_at,
+            updated_at=r.updated_at
+        ))
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    }
+
 def get_deletion_requests(
     db: Session,
     company_id: Optional[UUID] = None,
@@ -200,6 +258,8 @@ def approve_deletion_request(
         del_req.status = "APPROVED"
         del_req.reviewed_by = reviewer.user_id
         del_req.reviewed_at = datetime.utcnow()
+
+    db.flush()
 
     # Delete engineer and all child records using delete_engineer helper
     from app.services.engineer_service import delete_engineer

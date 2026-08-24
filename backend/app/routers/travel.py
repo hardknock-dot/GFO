@@ -11,7 +11,55 @@ from app.services.audit_service import log_audit, object_to_dict
 
 logger = logging.getLogger(__name__)
 
+from typing import Optional, List
+from fastapi import Query
+from app.schemas.pagination import PaginatedResponse
+from app.services.auth_service import enforce_company_isolation
+
 router = APIRouter(prefix="/travel", tags=["travel"], dependencies=[Depends(get_current_user)])
+
+@router.get("", response_model=PaginatedResponse[TravelResponse])
+def read_travel_arrangements(
+    company_id: Optional[UUID] = Query(None),
+    company_ids: Optional[List[UUID]] = Query(None),
+    schedule_id: Optional[UUID] = Query(None),
+    engineer_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve paginated travel arrangement records with tenant isolation and optional filters.
+    """
+    try:
+        target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
+        validated_cids = enforce_company_isolation(db, current_user, target_cids)
+        res = travel_service.get_travel_paginated(
+            db=db,
+            company_id=validated_cids,
+            schedule_id=schedule_id,
+            engineer_id=engineer_id,
+            search=search,
+            page=page,
+            page_size=page_size
+        )
+        return PaginatedResponse[TravelResponse](
+            items=[TravelResponse.model_validate(item) for item in res["items"]],
+            page=res["page"],
+            page_size=res["page_size"],
+            total=res["total"],
+            total_pages=res["total_pages"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error retrieving travel arrangements: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve travel arrangements from database"
+        )
 
 @router.put("/{travel_id}", response_model=TravelResponse)
 def update_existing_travel(

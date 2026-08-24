@@ -19,7 +19,8 @@ export const DeleteRequestsPage: React.FC = () => {
       const params: any = {};
       if (statusFilter !== 'ALL') params.status = statusFilter;
       const res = await api.get('/delete-requests', { params });
-      setRequests(res.data);
+      const data = res.data?.items ?? (Array.isArray(res.data) ? res.data : []);
+      setRequests(data);
     } catch (err: any) {
       console.error('Failed to load delete requests:', err);
     } finally {

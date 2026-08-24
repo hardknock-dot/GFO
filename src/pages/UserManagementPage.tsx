@@ -192,7 +192,7 @@ export const UserManagementPage: React.FC = () => {
     fullName: '',
     companyId: '',
     accessibleCompanyIds: [] as string[],
-    role: 'Field Engineer',
+    role: 'Engineer',
     engineerId: '',
     password: '',
   });
@@ -285,7 +285,7 @@ export const UserManagementPage: React.FC = () => {
       fullName: '',
       companyId: dbCompanies[0]?.company_id || 'all-data',
       accessibleCompanyIds: dbCompanies.map((c) => c.company_id),
-      role: 'Field Engineer',
+      role: 'Engineer',
       engineerId: '',
       password: '',
     });
@@ -705,10 +705,6 @@ export const UserManagementPage: React.FC = () => {
                   'Ops Executive',
                   'Engineer',
                   'Viewer',
-                  'Global Admin',
-                  'Company Admin',
-                  'Resource Manager',
-                  'Field Engineer',
                 ]}
               />
             </div>
@@ -1035,10 +1031,6 @@ export const UserManagementPage: React.FC = () => {
                 'Ops Executive',
                 'Engineer',
                 'Viewer',
-                'Global Admin',
-                'Company Admin',
-                'Resource Manager',
-                'Field Engineer',
               ]}
             />
           </div>
@@ -1201,10 +1193,6 @@ export const UserManagementPage: React.FC = () => {
                 'Ops Executive',
                 'Engineer',
                 'Viewer',
-                'Global Admin',
-                'Company Admin',
-                'Resource Manager',
-                'Field Engineer',
               ]}
             />
           </div>

@@ -1,9 +1,8 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select, text, and_
-
-from typing import List, Optional, Dict, Any
+from sqlalchemy import select, text, and_, or_, func
+from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
 import uuid
+import math
 from datetime import datetime, date
 
 from app.models.engineer import Engineer
@@ -17,6 +16,71 @@ from app.schemas.engineer import EngineerCreate, EngineerUpdate
 from app.services.audit_service import log_audit, object_to_dict
 from fastapi import HTTPException, status
 
+def get_engineers_paginated(
+    db: Session,
+    company_id: Optional[Union[UUID, List[UUID]]] = None,
+    search: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    level_filter: Optional[str] = None,
+    primary_tool_filter: Optional[str] = None,
+    country_filter: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    stmt = select(Engineer)
+    
+    conditions = []
+    if company_id is not None:
+        if isinstance(company_id, (list, set, tuple)):
+            conditions.append(Engineer.company_id.in_(company_id))
+        else:
+            conditions.append(Engineer.company_id == company_id)
+
+    if status_filter:
+        conditions.append(Engineer.status == status_filter)
+    if level_filter:
+        conditions.append(Engineer.level == level_filter)
+    if primary_tool_filter:
+        conditions.append(Engineer.primary_tool_type == primary_tool_filter)
+    if country_filter:
+        conditions.append(Engineer.country == country_filter)
+
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        conditions.append(
+            or_(
+                Engineer.engineer_name.ilike(search_pattern),
+                Engineer.orbit_id.ilike(search_pattern),
+                Engineer.lam_id.ilike(search_pattern),
+                Engineer.email.ilike(search_pattern),
+                Engineer.goes_by.ilike(search_pattern),
+                Engineer.level.ilike(search_pattern),
+                Engineer.primary_tool_type.ilike(search_pattern)
+            )
+        )
+
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+
+    # Count total matching rows
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = db.scalar(count_stmt) or 0
+
+    # Paginate in PostgreSQL
+    total_pages = math.ceil(total / page_size) if page_size > 0 else (1 if total > 0 else 0)
+    offset = (page - 1) * page_size
+    stmt = stmt.order_by(Engineer.engineer_name.asc()).offset(offset).limit(page_size)
+
+    items = list(db.scalars(stmt).all())
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    }
+
 def get_engineers(db: Session, company_id: Optional[Union[UUID, List[UUID]]] = None) -> List[Engineer]:
     stmt = select(Engineer)
     if company_id is not None:
@@ -24,8 +88,7 @@ def get_engineers(db: Session, company_id: Optional[Union[UUID, List[UUID]]] = N
             stmt = stmt.where(Engineer.company_id.in_(company_id))
         else:
             stmt = stmt.where(Engineer.company_id == company_id)
-    result = db.scalars(stmt).all()
-    return list(result)
+    return list(db.scalars(stmt).all())
 
 def get_engineer_by_id(db: Session, engineer_id: UUID) -> Optional[Engineer]:
     return db.get(Engineer, engineer_id)
@@ -175,8 +238,8 @@ def delete_engineer(db: Session, engineer_id: UUID, current_user_id: Optional[UU
     db.execute(text("DELETE FROM visa_details WHERE engineer_id = :eid"), {"eid": engineer_id})
     db.execute(text("DELETE FROM leaves WHERE engineer_id = :eid"), {"eid": engineer_id})
     db.execute(text("DELETE FROM schedules WHERE engineer_id = :eid"), {"eid": engineer_id})
-    db.execute(text("DELETE FROM engineer_deletion_requests WHERE engineer_id = :eid"), {"eid": engineer_id})
-    db.execute(text("DELETE FROM delete_requests WHERE entity_type = 'Engineer' AND entity_id = :eid"), {"eid": engineer_id})
+    db.execute(text("DELETE FROM engineer_deletion_requests WHERE engineer_id = :eid AND status = 'PENDING'"), {"eid": engineer_id})
+    db.execute(text("DELETE FROM delete_requests WHERE entity_type = 'Engineer' AND entity_id = :eid AND status = 'PENDING'"), {"eid": engineer_id})
 
     if engineer_email:
         db.execute(text("DELETE FROM users WHERE email = :email AND role IN ('Field Engineer', 'Engineer')"), {"email": engineer_email})

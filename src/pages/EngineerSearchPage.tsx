@@ -29,7 +29,12 @@ export const EngineerSearchPage: React.FC = () => {
   const [minExpFilter, setMinExpFilter] = useState<number>(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
-  const { data: res, isLoading, isError, refetch } = useEngineers();
+  const { data: res, isLoading, isError, refetch } = useEngineers({
+    search: search || undefined,
+    status: statusFilter !== 'All' ? statusFilter : undefined,
+    country: countryFilter !== 'All' ? countryFilter : undefined,
+    limit: 100, // Search gallery page size
+  });
   const rawEngineers = useMemo(() => res?.data || [], [res]);
 
   // Extract dynamic filter options from raw dataset

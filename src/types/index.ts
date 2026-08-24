@@ -232,7 +232,7 @@ export interface Visa {
 
 export interface EngineerDeletionRequest {
   requestId: string;
-  engineerId: string;
+  engineerId?: string | null;
   engineerName?: string;
   orbitId?: string;
   requestedBy: string;

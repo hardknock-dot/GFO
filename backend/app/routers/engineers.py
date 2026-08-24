@@ -40,20 +40,46 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/engineers", tags=["engineers"], dependencies=[Depends(get_current_user)])
 
-@router.get("", response_model=List[EngineerResponse])
+from app.schemas.pagination import PaginatedResponse
+
+@router.get("", response_model=PaginatedResponse[EngineerResponse])
 def read_engineers(
     company_id: Optional[UUID] = Query(None),
     company_ids: Optional[List[UUID]] = Query(None),
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    level: Optional[str] = Query(None),
+    primary_tool: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve all engineers from the database, optionally filtered by company_id or company_ids.
+    Retrieve paginated engineers from the database with optional search and filters.
     """
     try:
         target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
         validated_cids = enforce_company_isolation(db, current_user, target_cids)
-        return engineer_service.get_engineers(db, company_id=validated_cids)
+        res = engineer_service.get_engineers_paginated(
+            db=db,
+            company_id=validated_cids,
+            search=search,
+            status_filter=status,
+            level_filter=level,
+            primary_tool_filter=primary_tool,
+            country_filter=country,
+            page=page,
+            page_size=page_size
+        )
+        return PaginatedResponse[EngineerResponse](
+            items=[EngineerResponse.model_validate(item) for item in res["items"]],
+            page=res["page"],
+            page_size=res["page_size"],
+            total=res["total"],
+            total_pages=res["total_pages"]
+        )
     except HTTPException:
         raise
     except Exception as e:

@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Travel } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiTravelToFrontend = (apiTrv: any, engineerName?: string, orbitId?: string, engineerId?: string): Travel => {
   return {
@@ -55,35 +55,43 @@ export const getScheduleTravel = async (scheduleId: string): Promise<Travel[]> =
 
 export const getTravelRecords = async (params?: any): Promise<PaginatedResponse<Travel>> => {
   try {
-    let list: Travel[] = [];
-    if (params?.engineerId) {
-      list = await getEngineerTravel(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const travelPromises = engs.data.map(e => getEngineerTravel(e.id));
-      const nestedTravel = await Promise.all(travelPromises);
-      list = nestedTravel.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (t) =>
-          t.engineerName.toLowerCase().includes(q) ||
-          t.destinationCountry.toLowerCase().includes(q) ||
-          t.purpose.toLowerCase().includes(q)
-      );
-    }
-    if (params?.status && params.status !== 'All') {
-      list = list.filter((t) => t.status.toLowerCase().includes(params.status.toLowerCase()));
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.scheduleId) queryParams.schedule_id = params.scheduleId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.search) queryParams.search = params.search;
+
+    const res = await api.get('/travel', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((t: any) => mapApiTravelToFrontend(t)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((t: any) => mapApiTravelToFrontend(t));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global travel:', err);

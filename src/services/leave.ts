@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Leave } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiLeaveToFrontend = (apiLeave: any, engineerName?: string, engineerId?: string): Leave => {
   return {
@@ -37,35 +37,42 @@ export const getEngineerLeaves = async (engineerId: string): Promise<Leave[]> =>
 
 export const getLeaves = async (params?: any): Promise<PaginatedResponse<Leave>> => {
   try {
-    let list: Leave[] = [];
-    if (params?.engineerId) {
-      list = await getEngineerLeaves(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const leavesPromises = engs.data.map(e => getEngineerLeaves(e.id));
-      const nestedLeaves = await Promise.all(leavesPromises);
-      list = nestedLeaves.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (l) =>
-          l.engineerName.toLowerCase().includes(q) ||
-          l.type.toLowerCase().includes(q) ||
-          l.reason.toLowerCase().includes(q)
-      );
-    }
-    if (params?.status && params.status !== 'All') {
-      list = list.filter((l) => l.status === params.status || l.approvalStatus === params.status);
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.status && params.status !== 'All') queryParams.status = params.status;
+
+    const res = await api.get('/leaves', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((l: any) => mapApiLeaveToFrontend(l)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((l: any) => mapApiLeaveToFrontend(l));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global leaves:', err);

@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Visa } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: string): Visa => {
   const expiryStr = apiVisa.visa_end_date || '';
@@ -65,35 +65,42 @@ export const getEngineerVisas = async (engineerId: string): Promise<Visa[]> => {
 
 export const getVisaRecords = async (params?: any): Promise<PaginatedResponse<Visa>> => {
   try {
-    let list: Visa[] = [];
-    if (params?.engineerId) {
-      list = await getEngineerVisas(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const visasPromises = engs.data.map(e => getEngineerVisas(e.id));
-      const nestedVisas = await Promise.all(visasPromises);
-      list = nestedVisas.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (v) =>
-          v.engineerName.toLowerCase().includes(q) ||
-          v.country.toLowerCase().includes(q) ||
-          v.visaType.toLowerCase().includes(q)
-      );
-    }
-    if (params?.status && params.status !== 'All') {
-      list = list.filter((v) => v.status.toLowerCase().includes(params.status.toLowerCase()));
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.search) queryParams.search = params.search;
+
+    const res = await api.get('/visa', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((v: any) => mapApiVisaToFrontend(v)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((v: any) => mapApiVisaToFrontend(v));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global visas:', err);

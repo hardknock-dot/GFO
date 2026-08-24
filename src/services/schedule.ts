@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Schedule } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: string): Schedule => {
   return {
@@ -52,40 +52,43 @@ export const getEngineerSchedules = async (engineerId: string): Promise<Schedule
 
 export const getSchedules = async (params?: any): Promise<PaginatedResponse<Schedule>> => {
   try {
-    let list: Schedule[] = [];
-    if (params?.engineerId) {
-      list = await getEngineerSchedules(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const schedulesPromises = engs.data.map(e => getEngineerSchedules(e.id));
-      const nestedSchedules = await Promise.all(schedulesPromises);
-      list = nestedSchedules.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.engineerName.toLowerCase().includes(q) ||
-          s.customerName.toLowerCase().includes(q) ||
-          s.projectCode.toLowerCase().includes(q) ||
-          (s.supportType && s.supportType.toLowerCase().includes(q)) ||
-          (s.fabSite && s.fabSite.toLowerCase().includes(q))
-      );
-    }
-    if (params?.status && params.status !== 'All') {
-      list = list.filter((s) => 
-        s.status.toLowerCase().includes(params.status.toLowerCase()) ||
-        (s.scheduleStatus && s.scheduleStatus.toLowerCase().includes(params.status.toLowerCase()))
-      );
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.search) queryParams.search = params.search;
+    if (params?.status && params.status !== 'All') queryParams.schedule_status = params.status;
+
+    const res = await api.get('/schedules', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((s: any) => mapApiScheduleToFrontend(s)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((s: any) => mapApiScheduleToFrontend(s));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global schedules:', err);

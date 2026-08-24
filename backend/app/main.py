@@ -18,6 +18,17 @@ try:
         conn.execute(text("ALTER TABLE schedules ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE visa_details ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE engineer_deletion_requests ALTER COLUMN engineer_id DROP NOT NULL;"))
+        
+        # Add performance indexes
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_engineers_company_id ON engineers(company_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_engineers_orbit_id ON engineers(orbit_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_schedules_engineer_id ON schedules(engineer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_skills_engineer_id ON skills(engineer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_visa_details_engineer_id ON visa_details(engineer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_leaves_engineer_id ON leaves(engineer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_travel_arrangements_schedule_id ON travel_arrangements(schedule_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_performances_schedule_id ON performances(schedule_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_missed_schedules_schedule_id ON missed_schedules(schedule_id);"))
         conn.commit()
 except Exception as err:
     logger.warning("Startup DB table initialization notice: %s", err)

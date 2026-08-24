@@ -211,8 +211,8 @@ export const ReportsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {reportData.items.map((fb: any) => (
-                      <tr key={fb.id} className="hover:bg-slate-50/80">
+                    {(reportData.items || []).map((fb: any) => (
+                      <tr key={fb.id || fb.schedule_id} className="hover:bg-slate-50/80">
                         <td className="px-5 py-4 font-bold text-slate-900">{fb.engineer_name}</td>
                         <td className="px-5 py-4 text-slate-600">{fb.company_name}</td>
                         <td className="px-5 py-4 font-bold text-amber-500">★ {fb.score || fb.rating}</td>
@@ -235,7 +235,7 @@ export const ReportsPage: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                   <span className="text-xs font-semibold text-slate-400">Total Escalation Incidents</span>
-                  <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.total_escalations}</p>
+                  <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.total_escalations || 0}</p>
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                   <span className="text-xs font-semibold text-slate-400">Engineers Escalated</span>
@@ -263,8 +263,8 @@ export const ReportsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {reportData.items.map((esc: any) => (
-                      <tr key={esc.id} className="hover:bg-slate-50/80">
+                    {(reportData.items || []).map((esc: any) => (
+                      <tr key={esc.id || esc.schedule_id} className="hover:bg-slate-50/80">
                         <td className="px-5 py-4 font-bold text-slate-900">{esc.engineer_name}</td>
                         <td className="px-5 py-4 text-slate-600">{esc.company_name}</td>
                         <td className="px-5 py-4 font-bold text-rose-700">{esc.escalation_reason}</td>
@@ -298,14 +298,14 @@ export const ReportsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {reportData.countries.map((c: any) => (
+                    {(reportData.countries || reportData.items || []).map((c: any) => (
                       <tr key={c.country} className="hover:bg-slate-50/80">
                         <td className="px-5 py-4 font-bold text-slate-900">{c.country}</td>
-                        <td className="px-5 py-4 font-bold text-indigo-600">{c.deployment_count}</td>
-                        <td className="px-5 py-4 font-semibold text-slate-800">{c.unique_engineers_count}</td>
-                        <td className="px-5 py-4 text-emerald-600 font-semibold">{c.active_deployments}</td>
-                        <td className="px-5 py-4 text-amber-600 font-semibold">{c.upcoming_deployments}</td>
-                        <td className="px-5 py-4 text-slate-500 font-semibold">{c.completed_deployments}</td>
+                        <td className="px-5 py-4 font-bold text-indigo-600">{c.deployment_count ?? 0}</td>
+                        <td className="px-5 py-4 font-semibold text-slate-800">{c.unique_engineers_count ?? 0}</td>
+                        <td className="px-5 py-4 text-emerald-600 font-semibold">{c.current_deployments ?? c.active_deployments ?? 0}</td>
+                        <td className="px-5 py-4 text-amber-600 font-semibold">{c.upcoming_deployments ?? 0}</td>
+                        <td className="px-5 py-4 text-slate-500 font-semibold">{c.completed_deployments ?? 0}</td>
                       </tr>
                     ))}
                   </tbody>

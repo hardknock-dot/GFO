@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 
 from app.models.delete_request import DeleteRequest
 from app.models.user import User
@@ -115,11 +115,14 @@ def create_delete_request(
     )
     return req
 
-def get_delete_requests(
+def get_delete_requests_paginated(
     db: Session,
     company_ids: Optional[List[UUID]] = None,
-    status_filter: Optional[str] = None
-) -> List[dict]:
+    status_filter: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    import math
     # Auto-sync legacy/un-synced EngineerDeletionRequest entries into DeleteRequest table
     try:
         from app.models.engineer_deletion_request import EngineerDeletionRequest
@@ -152,7 +155,7 @@ def get_delete_requests(
         logger.error(f"Error auto-syncing EngineerDeletionRequest: {e}")
         db.rollback()
 
-    query = select(DeleteRequest).order_by(desc(DeleteRequest.created_at))
+    query = select(DeleteRequest)
     conditions = []
     if company_ids is not None:
         conditions.append(DeleteRequest.company_id.in_(company_ids))
@@ -162,15 +165,22 @@ def get_delete_requests(
     if conditions:
         query = query.where(and_(*conditions))
     
+    count_stmt = select(func.count()).select_from(query.subquery())
+    total = db.scalar(count_stmt) or 0
+
+    total_pages = math.ceil(total / page_size) if page_size > 0 else (1 if total > 0 else 0)
+    offset = (page - 1) * page_size
+
+    query = query.order_by(desc(DeleteRequest.created_at)).offset(offset).limit(page_size)
     requests = db.scalars(query).all()
-    results = []
-    
+
+    items = []
+    from app.models.company import Company
     for r in requests:
         req_user = db.get(User, r.requested_by)
         rev_user = db.get(User, r.reviewed_by) if r.reviewed_by else None
         comp = db.get(Company, r.company_id) if r.company_id else None
 
-        # Resolve entity name summary
         entity_name = f"{r.entity_type} {str(r.entity_id)[:8]}"
         if r.entity_type == "Engineer":
             from app.models.engineer import Engineer
@@ -183,7 +193,7 @@ def get_delete_requests(
             if sk:
                 entity_name = f"{sk.tool_type or 'Skill'} ({sk.role or ''})"
 
-        results.append({
+        items.append({
             "request_id": r.request_id,
             "requested_by": r.requested_by,
             "requested_by_name": req_user.full_name if req_user else "Unknown User",
@@ -200,7 +210,22 @@ def get_delete_requests(
             "review_comment": r.review_comment,
             "created_at": r.created_at
         })
-    return results
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    }
+
+def get_delete_requests(
+    db: Session,
+    company_ids: Optional[List[UUID]] = None,
+    status_filter: Optional[str] = None
+) -> List[dict]:
+    res = get_delete_requests_paginated(db, company_ids=company_ids, status_filter=status_filter, page=1, page_size=1000)
+    return res["items"]
 
 def approve_delete_request(db: Session, request_id: UUID, reviewer: User) -> dict:
     req = db.get(DeleteRequest, request_id)

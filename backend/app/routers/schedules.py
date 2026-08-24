@@ -16,7 +16,57 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
+from typing import Optional
+from fastapi import Query
+from app.schemas.pagination import PaginatedResponse
+from app.services.auth_service import enforce_company_isolation
+
 router = APIRouter(prefix="/schedules", tags=["schedules"], dependencies=[Depends(get_current_user)])
+
+@router.get("", response_model=PaginatedResponse[ScheduleResponse])
+def read_schedules(
+    company_id: Optional[UUID] = Query(None),
+    company_ids: Optional[List[UUID]] = Query(None),
+    engineer_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None),
+    schedule_status: Optional[str] = Query(None),
+    comment_status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve paginated schedule records with tenant isolation and optional filters.
+    """
+    try:
+        target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
+        validated_cids = enforce_company_isolation(db, current_user, target_cids)
+        res = schedule_service.get_schedules_paginated(
+            db=db,
+            company_id=validated_cids,
+            engineer_id=engineer_id,
+            search=search,
+            schedule_status=schedule_status,
+            comment_status=comment_status,
+            page=page,
+            page_size=page_size
+        )
+        return PaginatedResponse[ScheduleResponse](
+            items=[ScheduleResponse.model_validate(item) for item in res["items"]],
+            page=res["page"],
+            page_size=res["page_size"],
+            total=res["total"],
+            total_pages=res["total_pages"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error retrieving schedules: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve schedules from database"
+        )
 
 @router.put("/{schedule_id}", response_model=ScheduleResponse)
 def update_existing_schedule(

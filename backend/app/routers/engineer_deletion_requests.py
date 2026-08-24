@@ -52,19 +52,37 @@ def request_engineer_deletion(
         return target
     return EngineerDeletionRequestResponse.model_validate(req)
 
-@router.get("", response_model=List[EngineerDeletionRequestResponse])
+from app.schemas.pagination import PaginatedResponse
+
+@router.get("", response_model=PaginatedResponse[EngineerDeletionRequestResponse])
 def list_engineer_deletion_requests(
     company_id: Optional[UUID] = Query(None),
+    company_ids: Optional[List[UUID]] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     List engineer deletion requests. Scoped by company isolation.
     """
-    validated_cids = enforce_company_isolation(db, current_user, [company_id] if company_id else None)
-    comp_id_param = validated_cids[0] if (isinstance(validated_cids, list) and len(validated_cids) > 0) else (validated_cids if isinstance(validated_cids, UUID) else None)
-    return engineer_deletion_request_service.get_deletion_requests(db, company_id=comp_id_param, status_filter=status_filter)
+    target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
+    validated_cids = enforce_company_isolation(db, current_user, target_cids)
+    res = engineer_deletion_request_service.get_deletion_requests_paginated(
+        db,
+        company_id=validated_cids,
+        status_filter=status_filter,
+        page=page,
+        page_size=page_size
+    )
+    return PaginatedResponse[EngineerDeletionRequestResponse](
+        items=res["items"],
+        page=res["page"],
+        page_size=res["page_size"],
+        total=res["total"],
+        total_pages=res["total_pages"]
+    )
 
 @router.post("/{request_id}/approve", response_model=EngineerDeletionRequestResponse)
 def approve_deletion_request(

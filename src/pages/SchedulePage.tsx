@@ -38,13 +38,20 @@ export const SchedulePage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   // Query schedules with active company filter
   const { data: res, isLoading, isError, refetch } = useSchedule({
     search,
     status: statusFilter,
     companyId,
+    page,
+    pageSize,
   });
   const schedules = res?.data || [];
+  const totalItems = res?.total || 0;
+  const totalPages = res?.totalPages || 1;
 
   // Query company-filtered engineer list for creation dropdown
   const { data: engineersRes } = useEngineers(
@@ -551,6 +558,56 @@ export const SchedulePage: React.FC = () => {
         onRowClick={(sch) => navigate(`/engineers/${sch.engineerId}`)}
         emptyTitle="No Schedules Found"
       />
+
+      {/* Pagination Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm">
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{schedules.length > 0 ? (page - 1) * pageSize + 1 : 0}</span> to <span className="font-semibold text-slate-700 dark:text-slate-200">{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</span> schedules
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <span>Per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-700 dark:text-slate-200 focus:outline-none"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+
+            <span className="px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Page {page} of {totalPages}
+            </span>
+
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Add / Edit Schedule Modal */}
       <Modal

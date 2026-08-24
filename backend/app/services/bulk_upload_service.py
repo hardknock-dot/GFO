@@ -86,6 +86,35 @@ def update_bulk_upload(
 def get_bulk_upload_by_id(db: Session, upload_id: UUID) -> Optional[BulkUpload]:
     return db.get(BulkUpload, upload_id)
 
+def get_bulk_uploads_history_paginated(
+    db: Session,
+    company_id: Optional[UUID] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> dict:
+    import math
+    from sqlalchemy import func
+    stmt = select(BulkUpload)
+    if company_id is not None:
+        stmt = stmt.where(BulkUpload.company_id == company_id)
+    
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = db.scalar(count_stmt) or 0
+
+    total_pages = math.ceil(total / page_size) if page_size > 0 else (1 if total > 0 else 0)
+    offset = (page - 1) * page_size
+    stmt = stmt.order_by(BulkUpload.created_at.desc()).offset(offset).limit(page_size)
+
+    items = list(db.scalars(stmt).all())
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    }
+
 def get_bulk_uploads_history(
     db: Session,
     company_id: Optional[UUID] = None

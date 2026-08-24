@@ -12,7 +12,7 @@ class EngineerDeletionRequestReview(BaseModel):
 
 class EngineerDeletionRequestResponse(BaseModel):
     request_id: UUID
-    engineer_id: UUID
+    engineer_id: Optional[UUID] = None
     engineer_name: Optional[str] = None
     orbit_id: Optional[str] = None
     requested_by: UUID

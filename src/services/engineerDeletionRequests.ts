@@ -4,8 +4,8 @@ import type { EngineerDeletionRequest } from '../types';
 const mapApiDeletionRequestToFrontend = (item: any): EngineerDeletionRequest => {
   return {
     requestId: item.request_id,
-    engineerId: item.engineer_id,
-    engineerName: item.engineer_name || 'Engineer',
+    engineerId: item.engineer_id ?? null,
+    engineerName: item.engineer_name || 'Deleted Engineer',
     orbitId: item.orbit_id || 'N/A',
     requestedBy: item.requested_by,
     requestedByName: item.requested_by_name || 'User',
@@ -26,7 +26,14 @@ export const getEngineerDeletionRequests = async (companyId?: string, status?: s
   if (companyId) params.company_id = companyId;
   if (status) params.status = status;
   const res = await api.get('/engineer-deletion-requests', { params });
-  return (res.data || []).map(mapApiDeletionRequestToFrontend);
+  const raw = res.data;
+  if (raw && Array.isArray(raw.items)) {
+    return raw.items.map(mapApiDeletionRequestToFrontend);
+  }
+  if (Array.isArray(raw)) {
+    return raw.map(mapApiDeletionRequestToFrontend);
+  }
+  return [];
 };
 
 export const requestEngineerDeletion = async (engineerId: string, reason?: string): Promise<EngineerDeletionRequest> => {

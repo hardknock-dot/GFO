@@ -11,7 +11,10 @@ import type { Engineer } from '../types';
 
 import { useCompany } from '../context/CompanyContext';
 
+import { useEffect } from 'react';
+
 export const useEngineers = (params?: EngineerQueryParams) => {
+  const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
   const rawId = currentCompany?.company_id || currentCompany?.id;
 
@@ -26,17 +29,41 @@ export const useEngineers = (params?: EngineerQueryParams) => {
     }
   }
 
+  const companyId = params?.company_id !== undefined ? params.company_id : activeCompanyId;
+  const currentPage = params?.page || 1;
+  const limit = params?.limit || 20;
+  const search = params?.search || '';
+  const status = params?.status || '';
+  const country = params?.country || '';
+
   const queryParams = {
-    ...params,
-    company_id: params?.company_id !== undefined ? params.company_id : activeCompanyId,
+    page: currentPage,
+    limit,
+    search: search || undefined,
+    status: status || undefined,
+    country: country || undefined,
+    company_id: companyId,
   };
 
-  return useQuery({
-    queryKey: ['engineers', queryParams],
+  const query = useQuery({
+    queryKey: ['engineers', companyId, currentPage, limit, search, status, country],
     queryFn: () => getEngineers(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 5 mins
+    staleTime: 1000 * 60 * 5,
   });
+
+  useEffect(() => {
+    if (query.data && currentPage < query.data.totalPages) {
+      const nextPageParams = { ...queryParams, page: currentPage + 1 };
+      queryClient.prefetchQuery({
+        queryKey: ['engineers', companyId, currentPage + 1, limit, search, status, country],
+        queryFn: () => getEngineers(nextPageParams),
+        staleTime: 1000 * 60 * 5,
+      });
+    }
+  }, [query.data?.totalPages, currentPage, companyId, limit, search, status, country, queryClient]);
+
+  return query;
 };
 
 export const useEngineerDetail = (id: string) => {

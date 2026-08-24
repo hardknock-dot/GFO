@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Performance } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineers, getEngineerById } from './engineers';
+import { getEngineerById } from './engineers';
 
 const mapApiPerformanceToFrontend = (apiPerf: any, engineerName?: string, orbitId?: string, engineerId?: string): Performance => {
   return {
@@ -57,31 +57,43 @@ export const getSchedulePerformance = async (scheduleId: string): Promise<Perfor
 
 export const getPerformanceRecords = async (params?: any): Promise<PaginatedResponse<Performance>> => {
   try {
-    let list: Performance[] = [];
-    if (params?.engineerId) {
-      list = await getEngineerPerformance(params.engineerId);
-    } else {
-      const activeCompId = params?.companyId || params?.company_id;
-      const engs = await getEngineers(activeCompId ? { company_id: activeCompId } : undefined);
-      const perfPromises = engs.data.map(e => getEngineerPerformance(e.id));
-      const nestedPerf = await Promise.all(perfPromises);
-      list = nestedPerf.flat();
-    }
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.engineerName.toLowerCase().includes(q) ||
-          p.reviewer.toLowerCase().includes(q)
-      );
-    }
-
-    return {
-      data: list,
-      total: list.length,
+    const queryParams: any = {
       page: params?.page || 1,
-      totalPages: 1,
+      page_size: params?.pageSize || params?.page_size || 20,
+    };
+    const compId = params?.companyId || params?.company_id;
+    if (compId && compId !== 'all-data') queryParams.company_id = compId;
+    if (params?.scheduleId) queryParams.schedule_id = params.scheduleId;
+    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.search) queryParams.search = params.search;
+
+    const res = await api.get('/performance', { params: queryParams });
+    const raw = res.data;
+    if (raw && Array.isArray(raw.items)) {
+      return {
+        data: raw.items.map((p: any) => mapApiPerformanceToFrontend(p)),
+        total: raw.total,
+        page: raw.page,
+        pageSize: raw.page_size,
+        totalPages: raw.total_pages,
+      };
+    }
+    if (Array.isArray(raw)) {
+      const data = raw.map((p: any) => mapApiPerformanceToFrontend(p));
+      return {
+        data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length || 20,
+        totalPages: 1,
+      };
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
     };
   } catch (err) {
     console.error('Error fetching global performance:', err);
