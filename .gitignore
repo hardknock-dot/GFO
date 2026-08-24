@@ -54,3 +54,6 @@ backend/app/generated/
 backend/app/uploads/
 .vercel
 .env*
+
+# Accidental/generated nested backend directory
+backend/backend/
