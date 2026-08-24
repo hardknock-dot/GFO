@@ -52,3 +52,5 @@ backend/generated/
 backend/app/temp_reports/
 backend/app/generated/
 backend/app/uploads/
+.vercel
+.env*
