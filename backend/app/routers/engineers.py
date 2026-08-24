@@ -30,7 +30,8 @@ from app.services.auth_service import (
     enforce_write_permission,
     enforce_delete_permission,
     is_main_admin,
-    is_manager
+    is_manager,
+    is_engineer_user
 )
 from app.models.user import User
 from datetime import date
@@ -160,14 +161,25 @@ def update_existing_engineer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update an existing engineer record.
+    Update an existing engineer record. Engineers can update their own profile (email and phone).
     """
     try:
         enforce_write_permission(current_user)
+        if is_engineer_user(current_user) and current_user.engineer_id != engineer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Engineers can only update their own profile record."
+            )
         get_engineer_and_verify(db, engineer_id, current_user)
         if engineer_data.company_id:
             enforce_company_isolation(current_user, engineer_data.company_id)
-        return engineer_service.update_engineer(db, engineer_id, engineer_data, current_user_id=current_user.user_id)
+        updated = engineer_service.update_engineer(db, engineer_id, engineer_data, current_user_id=current_user.user_id)
+        if engineer_data.email:
+            linked_user = db.query(User).filter(User.engineer_id == engineer_id).first()
+            if linked_user:
+                linked_user.email = engineer_data.email
+                db.commit()
+        return updated
     except HTTPException:
         raise
     except Exception as e:

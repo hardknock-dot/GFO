@@ -12,6 +12,7 @@ from app.models.engineer import Engineer
 from app.models.schedule import Schedule
 from app.models.skill import Skill
 from app.models.visa import Visa
+from app.models.performance import Performance
 from app.schemas.engineer import EngineerResponse
 from app.schemas.schedule import ScheduleResponse, ScheduleCommentUpdate
 from app.schemas.skill import SkillResponse, SkillCreate, SkillUpdate

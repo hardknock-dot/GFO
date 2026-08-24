@@ -1641,7 +1641,7 @@ export const EngineerProfilePage: React.FC = () => {
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Exp</p>
                 <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.yearsExperience} Yrs</p>
               </div>
-              {canEdit && (
+              {(canEdit || isEngineerUser) && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -1688,8 +1688,8 @@ export const EngineerProfilePage: React.FC = () => {
 
 
       {/* Tab Content Display */}
-      <div className="space-y-6">
-        {activeTab === 'profile' && (
+      {activeTab === 'profile' && (
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-4 shadow-sm">
               <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
@@ -1723,18 +1723,20 @@ export const EngineerProfilePage: React.FC = () => {
 
 
             {/* Schedule Comments & Roster Updates Card */}
-            <div className="md:col-span-2">
-              <ScheduleCommentsCard
-                engineerId={engineerId}
-                engineerName={engineer?.name}
-                hideShowMore={true}
-                hideViewProfile={true}
-              />
-            </div>
+            {!isEngineerUser && (
+              <div className="md:col-span-2">
+                <ScheduleCommentsCard
+                  engineerId={engineerId}
+                  engineerName={engineer?.name}
+                  hideShowMore={true}
+                  hideViewProfile={true}
+                />
+              </div>
+            )}
 
 
             {/* Operational Intelligence & Exceptions summary for this engineer */}
-            {user?.role !== 'Viewer' && (
+            {!isEngineerUser && user?.role !== 'Viewer' && (
 
               <div className="md:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-3">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
@@ -1768,7 +1770,8 @@ export const EngineerProfilePage: React.FC = () => {
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
         {activeTab === 'skills' && (
           <div className="space-y-4">
@@ -1911,8 +1914,6 @@ export const EngineerProfilePage: React.FC = () => {
         {activeTab === 'reports' && (
           <EngineerIndividualReportView engineerId={targetReportEngineerId} />
         )}
-
-      </div>
 
       {/* Add / Edit Skill Modal */}
       <Modal
@@ -2851,6 +2852,7 @@ export const EngineerProfilePage: React.FC = () => {
             value={engineerFormData.name}
             onChange={(e) => setEngineerFormData({ ...engineerFormData, name: e.target.value })}
             error={engineerFormErrors.name}
+            disabled={isEngineerUser}
             required
           />
 
@@ -2859,11 +2861,13 @@ export const EngineerProfilePage: React.FC = () => {
               label="Goes By"
               value={engineerFormData.goesBy}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, goesBy: e.target.value })}
+              disabled={isEngineerUser}
             />
             <TextInput
               label="Customer ID"
               value={engineerFormData.customerId}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, customerId: e.target.value })}
+              disabled={isEngineerUser}
             />
           </div>
 
@@ -2873,6 +2877,7 @@ export const EngineerProfilePage: React.FC = () => {
               value={engineerFormData.orbitId}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, orbitId: e.target.value })}
               error={engineerFormErrors.orbitId}
+              disabled={isEngineerUser}
               required
             />
             <Dropdown
@@ -2880,22 +2885,25 @@ export const EngineerProfilePage: React.FC = () => {
               value={engineerFormData.level}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, level: e.target.value })}
               options={['L1 Junior', 'L2 Specialist', 'L3 Senior', 'L4 Master', 'L5 Principal Expert']}
+              disabled={isEngineerUser}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
             <TextInput
               label="Email Address"
               type="email"
               value={engineerFormData.email}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, email: e.target.value })}
               error={engineerFormErrors.email}
+              helperText={isEngineerUser ? "You can update your personal contact email" : undefined}
             />
             <TextInput
               label="Phone Number"
               value={engineerFormData.phoneNumber}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, phoneNumber: e.target.value })}
               error={engineerFormErrors.phoneNumber}
+              helperText={isEngineerUser ? "You can update your personal contact phone" : undefined}
             />
           </div>
 
@@ -2919,12 +2927,14 @@ export const EngineerProfilePage: React.FC = () => {
               label="Date of Joining"
               value={engineerFormData.joinDate}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, joinDate: e.target.value })}
+              disabled={isEngineerUser}
             />
             <Dropdown
               label="Primary Tool / Chamber"
               value={engineerFormData.primaryTool}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, primaryTool: e.target.value })}
               options={['Etch', 'SENSAI', 'Kiyo', 'Purion', 'ALTUS', 'CVD', 'ALD']}
+              disabled={isEngineerUser}
             />
           </div>
 
@@ -2935,6 +2945,7 @@ export const EngineerProfilePage: React.FC = () => {
               step="0.1"
               value={engineerFormData.customerExperience}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, customerExperience: e.target.value })}
+              disabled={isEngineerUser}
             />
             <TextInput
               label="Industry Experience (Yrs)"
@@ -2942,6 +2953,7 @@ export const EngineerProfilePage: React.FC = () => {
               step="0.1"
               value={engineerFormData.yearsExperience}
               onChange={(e) => setEngineerFormData({ ...engineerFormData, yearsExperience: e.target.value })}
+              disabled={isEngineerUser}
             />
           </div>
 
@@ -2950,6 +2962,7 @@ export const EngineerProfilePage: React.FC = () => {
             value={engineerFormData.status}
             onChange={(e) => setEngineerFormData({ ...engineerFormData, status: e.target.value })}
             options={['Active', 'Deployed', 'On Leave', 'In Transit', 'Training']}
+            disabled={isEngineerUser}
           />
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">

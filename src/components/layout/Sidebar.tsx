@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Bell,
   User,
-  Wrench,
   CheckSquare,
   ShieldAlert
 } from 'lucide-react';
@@ -47,11 +46,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ? [
         { label: 'Dashboard', path: '/engineer/dashboard', icon: LayoutDashboard },
         { label: 'My Profile', path: '/engineer/profile', icon: User },
-        { label: 'My Skills', path: '/engineer/profile?tab=skills', icon: Wrench },
-        { label: 'My Schedule', path: '/engineer/profile?tab=schedule', icon: Calendar },
-        { label: 'My Visa', path: '/engineer/profile?tab=visa', icon: FileCheck },
-        { label: 'My Performance', path: '/engineer/profile?tab=performance', icon: TrendingUp },
-        { label: 'My Reports', path: '/engineer/profile?tab=reports', icon: BarChart3 },
       ]
     : [
         { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
