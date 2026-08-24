@@ -25,7 +25,7 @@ export const UploadPage: React.FC = () => {
     report_url?: string;
   } | null>(null);
 
-  const [selectedTab, setSelectedTab] = useState<'engineers' | 'skills' | 'schedules'>('engineers');
+  const [selectedTab, setSelectedTab] = useState<'engineers' | 'skills' | 'schedules' | 'visas'>('engineers');
 
   const { currentCompany, companies, setCompany } = useCompany();
   const { user } = useAuth();
@@ -70,6 +70,9 @@ export const UploadPage: React.FC = () => {
     setSummaryResult(result);
 
     queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
+    if (selectedCard.id === 'up-visa') {
+      queryClient.invalidateQueries({ queryKey: ['visa'] });
+    }
 
     // Update card status
     setCards((prev) =>
@@ -158,6 +161,16 @@ export const UploadPage: React.FC = () => {
         >
           Schedules
         </button>
+        <button
+          onClick={() => setSelectedTab('visas')}
+          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+            selectedTab === 'visas'
+              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Visas & Permits
+        </button>
       </div>
 
       {/* Grid of Upload Cards */}
@@ -166,7 +179,9 @@ export const UploadPage: React.FC = () => {
           .filter((card) => {
             if (selectedTab === 'engineers') return card.id === 'up-engineers';
             if (selectedTab === 'skills') return card.id === 'up-skills';
-            return card.id === 'up-schedule';
+            if (selectedTab === 'schedules') return card.id === 'up-schedule';
+            if (selectedTab === 'visas') return card.id === 'up-visa';
+            return true;
           })
           .map((card) => (
           <div

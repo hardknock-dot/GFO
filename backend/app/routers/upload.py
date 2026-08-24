@@ -18,6 +18,7 @@ from app.models.company import Company
 from app.models.engineer import Engineer
 from app.models.skill import Skill
 from app.models.schedule import Schedule
+from app.models.visa import Visa
 from app.services.auth_service import get_current_user, enforce_company_isolation, enforce_write_permission
 from app.services.audit_service import log_audit
 from app.services import bulk_upload_service
@@ -160,6 +161,24 @@ SCHEDULE_HEADER_MAP = {
     "remarks": "remarks"
 }
 
+VISA_HEADER_MAP = {
+    "orbitid": "orbit_id",
+    "country": "country",
+    "visatype": "visa_type",
+    "type": "visa_type",
+    "appliedon": "applied_on",
+    "applieddate": "applied_on",
+    "startdate": "visa_start_date",
+    "visastartdate": "visa_start_date",
+    "issuedate": "visa_start_date",
+    "enddate": "visa_end_date",
+    "visaenddate": "visa_end_date",
+    "expirydate": "visa_end_date",
+    "expirationdate": "visa_end_date",
+    "comments": "comments",
+    "remarks": "comments"
+}
+
 @router.post("")
 async def bulk_upload(
     file: UploadFile = File(...),
@@ -216,6 +235,8 @@ async def bulk_upload(
         upload_type = "skills"
     elif module_id == "up-schedule":
         upload_type = "schedules"
+    elif module_id == "up-visa":
+        upload_type = "visas"
     elif module_id != "up-engineers":
         upload_type = module_id
 
@@ -240,8 +261,8 @@ async def bulk_upload(
     )
 
     try:
-        # If it is not engineers roster, and not up-skills, and not up-schedule, return default message
-        if module_id != "up-engineers" and module_id != "up-skills" and module_id != "up-schedule":
+        # If it is not engineers roster, and not up-skills, up-schedule, or up-visa, return default message
+        if module_id != "up-engineers" and module_id != "up-skills" and module_id != "up-schedule" and module_id != "up-visa":
             bulk_upload_service.update_bulk_upload(
                 db,
                 upload_id=upload_id,
@@ -1267,6 +1288,500 @@ async def bulk_upload(
 
             ingested_msg = f"Ingested {len(valid_rows_to_insert)} valid records successfully."
             if errors_list or duplicates_list or existing_list:
+                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+
+            return {
+                "success": True,
+                "rowsProcessed": total_rows,
+                "errorsCount": len(errors_list),
+                "message": ingested_msg,
+                "report_url": f"/api/upload/download-report/{report_filename}"
+            }
+
+        if module_id == "up-visa":
+            import time
+            start_time = time.perf_counter()
+
+            try:
+                contents = await file.read()
+                wb = openpyxl.load_workbook(io.BytesIO(contents))
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to parse Excel file. Please ensure it is a valid .xlsx file."
+                )
+
+            # Case-insensitive detection of the "Visa" sheet
+            visa_sheet_name = None
+            for name in wb.sheetnames:
+                norm_name = name.strip().lower()
+                if norm_name in ("visa", "visas", "visa details", "visa matrix"):
+                    visa_sheet_name = name
+                    break
+
+            if not visa_sheet_name:
+                if len(wb.sheetnames) == 1:
+                    visa_sheet_name = wb.sheetnames[0]
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Excel workbook must contain a 'Visa' or 'Visas' sheet."
+                    )
+
+            sheet = wb[visa_sheet_name]
+            
+            # Map headers
+            first_row = [sheet.cell(row=1, column=c).value for c in range(1, sheet.max_column + 1)]
+            col_indices = {}
+            for idx, val in enumerate(first_row):
+                if val is not None:
+                    norm = normalize_header(val)
+                    mapped_field = VISA_HEADER_MAP.get(norm)
+                    if mapped_field:
+                        col_indices[mapped_field] = idx + 1
+
+            # Check required columns: orbit_id and country
+            missing_cols = []
+            if "orbit_id" not in col_indices:
+                missing_cols.append("Orbit ID")
+            if "country" not in col_indices:
+                missing_cols.append("Country")
+            
+            if missing_cols:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Required header(s) missing from Excel sheet: {', '.join(missing_cols)}."
+                )
+
+            # Gather all non-blank rows
+            raw_rows = []
+            for r in range(2, sheet.max_row + 1):
+                is_blank = True
+                for c in range(1, sheet.max_column + 1):
+                    val = sheet.cell(row=r, column=c).value
+                    if val is not None and str(val).strip() != "":
+                        is_blank = False
+                        break
+                if is_blank:
+                    continue
+
+                row_dict = {"excel_row": r}
+                
+                # Retrieve original engineer name if present
+                original_engineer_name = None
+                for idx, val in enumerate(first_row):
+                    if val is not None:
+                        norm = normalize_header(val)
+                        if norm in ("engineername", "name"):
+                            original_engineer_name = clean_val(sheet.cell(row=r, column=idx + 1).value)
+                            break
+                row_dict["original_engineer_name"] = original_engineer_name
+
+                # Load fields from mapped headers
+                for field, col_idx in col_indices.items():
+                    row_dict[field] = clean_val(sheet.cell(row=r, column=col_idx).value)
+
+                # Fill missing columns
+                for field in set(VISA_HEADER_MAP.values()):
+                    if field not in row_dict:
+                        row_dict[field] = None
+
+                raw_rows.append(row_dict)
+
+            if not raw_rows:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The Visa sheet is empty or contains no rows."
+                )
+
+            t_excel = time.perf_counter()
+
+            # Bulk Engineer Resolution
+            unique_orbit_ids = {
+                str(row.get("orbit_id")).strip()
+                for row in raw_rows
+                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+            }
+
+            db_engineers = []
+            if unique_orbit_ids:
+                db_engineers = db.scalars(
+                    select(Engineer).where(
+                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        Engineer.company_id == target_company_id
+                    )
+                ).all()
+
+            orbit_to_engineer = {
+                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                for eng in db_engineers
+            }
+            t_engineer = time.perf_counter()
+
+            # Bulk Existing Visa Check for Upsert
+            resolved_engineer_ids = {
+                val[0] for val in orbit_to_engineer.values()
+            }
+
+            db_visas = []
+            if resolved_engineer_ids:
+                db_visas = db.scalars(
+                    select(Visa).where(
+                        Visa.engineer_id.in_(list(resolved_engineer_ids))
+                    )
+                ).all()
+
+            # Map existing visas by (engineer_id, country_lower, visa_type_lower)
+            existing_visa_map = {}
+            for v in db_visas:
+                c_key = (v.country or "").strip().lower()
+                vt_key = (v.visa_type or "").strip().lower()
+                existing_visa_map[(v.engineer_id, c_key, vt_key)] = v
+
+            t_existing_lookup = time.perf_counter()
+
+            errors_list = []
+            duplicates_list = []
+            existing_list = []
+            valid_rows_to_insert = []
+            seen_keys = set()
+
+            total_rows = len(raw_rows)
+
+            for row_dict in raw_rows:
+                row_errors = []
+                
+                # 1. Validate required fields: orbit_id
+                orbit_id = row_dict.get("orbit_id")
+                if not orbit_id:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": "",
+                        "error": "Orbit ID is required."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 2. Resolve engineer using bulk lookup
+                eng_info = orbit_to_engineer.get(orbit_id)
+                if not eng_info:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": orbit_id,
+                        "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                engineer_id, resolved_engineer_name = eng_info
+                row_dict["engineer_id"] = engineer_id
+                row_dict["resolved_engineer_name"] = resolved_engineer_name
+
+                # 3. Validate required fields: country
+                country = row_dict.get("country")
+                if not country:
+                    row_errors.append({
+                        "field": "Country",
+                        "value": "",
+                        "error": "Country is required."
+                    })
+
+                # 4. Parse and validate dates
+                applied_on = None
+                applied_on_val = row_dict.get("applied_on")
+                if applied_on_val is not None:
+                    try:
+                        applied_on = parse_date(applied_on_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Applied On",
+                            "value": str(applied_on_val),
+                            "error": "Invalid applied date format."
+                        })
+
+                visa_start_date = None
+                start_date_val = row_dict.get("visa_start_date")
+                if start_date_val is not None:
+                    try:
+                        visa_start_date = parse_date(start_date_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Start Date",
+                            "value": str(start_date_val),
+                            "error": "Invalid start date format."
+                        })
+
+                visa_end_date = None
+                end_date_val = row_dict.get("visa_end_date")
+                if end_date_val is not None:
+                    try:
+                        visa_end_date = parse_date(end_date_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "End Date / Expiry Date",
+                            "value": str(end_date_val),
+                            "error": "Invalid end date format."
+                        })
+
+                if visa_start_date and visa_end_date and visa_end_date < visa_start_date:
+                    row_errors.append({
+                        "field": "End Date / Expiry Date",
+                        "value": str(end_date_val),
+                        "error": "visa_end_date should not be earlier than visa_start_date"
+                    })
+
+                if row_errors:
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                row_dict["applied_on"] = applied_on
+                row_dict["visa_start_date"] = visa_start_date
+                row_dict["visa_end_date"] = visa_end_date
+
+                # 5. Duplicate row detection in Excel sheet
+                visa_type = row_dict.get("visa_type") or ""
+                country_clean = (country or "").strip().lower()
+                visa_type_clean = (visa_type or "").strip().lower()
+
+                row_key = (engineer_id, country_clean, visa_type_clean)
+
+                if row_key in seen_keys:
+                    row_dict["duplicate_key"] = f"EngineerID: {engineer_id}, Country: {country}, Type: {visa_type}"
+                    duplicates_list.append(row_dict)
+                    continue
+                seen_keys.add(row_key)
+
+                # 6. Upsert check: existing DB record vs new record
+                existing_visa_record = existing_visa_map.get(row_key)
+                if existing_visa_record:
+                    row_dict["existing_visa"] = existing_visa_record
+                    existing_list.append(row_dict)
+                else:
+                    valid_rows_to_insert.append(row_dict)
+
+            t_validation = time.perf_counter()
+
+            # Update BulkUpload stats
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                total_rows=total_rows,
+                valid_rows=len(valid_rows_to_insert),
+                error_rows=len(errors_list),
+                duplicate_rows=len(duplicates_list),
+                existing_rows=len(existing_list),
+                warning_rows=0,
+                status="READY"
+            )
+
+            # Transition to IMPORTING
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status="IMPORTING"
+            )
+
+            imported_count = 0
+            updated_count = 0
+            failed_count = 0
+            try:
+                # 1. Bulk Insert New Visas
+                visas_to_add = []
+                for item in valid_rows_to_insert:
+                    db_v = Visa(
+                        visa_id=uuid_pkg.uuid4(),
+                        engineer_id=item["engineer_id"],
+                        country=item["country"],
+                        visa_type=item["visa_type"],
+                        applied_on=item["applied_on"],
+                        visa_start_date=item["visa_start_date"],
+                        visa_end_date=item["visa_end_date"],
+                        comments=item["comments"],
+                        comment_status="UNADDRESSED",
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    visas_to_add.append(db_v)
+                if visas_to_add:
+                    db.add_all(visas_to_add)
+
+                # 2. Update Existing Visas
+                for item in existing_list:
+                    ev = item["existing_visa"]
+                    if item.get("country"):
+                        ev.country = item["country"]
+                    if item.get("visa_type") is not None:
+                        ev.visa_type = item["visa_type"]
+                    if item.get("applied_on") is not None:
+                        ev.applied_on = item["applied_on"]
+                    if item.get("visa_start_date") is not None:
+                        ev.visa_start_date = item["visa_start_date"]
+                    if item.get("visa_end_date") is not None:
+                        ev.visa_end_date = item["visa_end_date"]
+                    if item.get("comments") is not None:
+                        ev.comments = item["comments"]
+                    ev.updated_at = datetime.utcnow()
+
+                db.commit()
+                imported_count = len(valid_rows_to_insert)
+                updated_count = len(existing_list)
+            except Exception as insert_err:
+                db.rollback()
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
+                bulk_upload_service.update_bulk_upload(
+                    db,
+                    upload_id=upload_id,
+                    status="FAILED",
+                    failed_rows=failed_count
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Database ingestion failed: {str(insert_err)}"
+                )
+            t_insert = time.perf_counter()
+
+            # 8. Generate report workbook
+            report_wb = openpyxl.Workbook()
+            ws_summary = report_wb.active
+            ws_summary.title = "Summary"
+            ws_summary.append(["ORMP Visa Bulk Ingestion Report"])
+            ws_summary.append([])
+            ws_summary.append(["File Name", file.filename])
+            ws_summary.append(["Upload Type", "visas"])
+            ws_summary.append(["Uploaded By", current_user.full_name])
+            ws_summary.append(["Upload Date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            ws_summary.append(["Target Company", company.company_name])
+            ws_summary.append(["Company UUID", str(company.company_id)])
+            ws_summary.append([])
+            ws_summary.append(["Metric", "Count"])
+            ws_summary.append(["Total Rows", total_rows])
+            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
+            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Error Rows", len(errors_list)])
+            ws_summary.append(["Duplicate Rows", len(duplicates_list)])
+            ws_summary.append(["Warning Rows", 0])
+            
+            for col in ws_summary.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            headers_valid = [
+                "Excel Row", "Orbit ID", "Engineer Name", "Country", "Visa Type", 
+                "Applied On", "Start Date", "End Date", "Comments", "Status"
+            ]
+
+            # Valid Records Sheet (Inserted)
+            ws_valid = report_wb.create_sheet(title="Valid Records")
+            ws_valid.append(headers_valid)
+            for r in valid_rows_to_insert:
+                ws_valid.append([
+                    r["excel_row"],
+                    r.get("orbit_id"),
+                    r.get("resolved_engineer_name"),
+                    r.get("country"),
+                    r.get("visa_type"),
+                    str(r.get("applied_on")) if r.get("applied_on") else "",
+                    str(r.get("visa_start_date")) if r.get("visa_start_date") else "",
+                    str(r.get("visa_end_date")) if r.get("visa_end_date") else "",
+                    r.get("comments"),
+                    "INSERTED"
+                ])
+
+            # Errors Sheet
+            ws_errors = report_wb.create_sheet(title="Errors")
+            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
+            for r in errors_list:
+                for err in r.get("errors", []):
+                    ws_errors.append([
+                        r["excel_row"],
+                        r.get("orbit_id") or "",
+                        err.get("field") or "",
+                        err.get("value") or "",
+                        err.get("error") or ""
+                    ])
+
+            # Duplicates Sheet
+            ws_dups = report_wb.create_sheet(title="Duplicates")
+            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
+            for r in duplicates_list:
+                ws_dups.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("duplicate_key") or "",
+                    "Duplicate Visa row within Excel sheet"
+                ])
+
+            # Existing Records Sheet (Updated)
+            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist.append(headers_valid)
+            for r in existing_list:
+                ws_exist.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    r.get("country"),
+                    r.get("visa_type"),
+                    str(r.get("applied_on")) if r.get("applied_on") else "",
+                    str(r.get("visa_start_date")) if r.get("visa_start_date") else "",
+                    str(r.get("visa_end_date")) if r.get("visa_end_date") else "",
+                    r.get("comments"),
+                    "UPDATED"
+                ])
+
+            # Warnings Sheet
+            ws_warn = report_wb.create_sheet(title="Warnings")
+            ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
+
+            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+                for col in sheet_obj.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            os.makedirs(TEMP_REPORTS_DIR, exist_ok=True)
+            report_filename = f"validation_report_{uuid_pkg.uuid4()}.xlsx"
+            report_path = os.path.join(TEMP_REPORTS_DIR, report_filename)
+            report_wb.save(report_path)
+            t_report = time.perf_counter()
+
+            final_status = "COMPLETED"
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
+                final_status = "COMPLETED_WITH_ERRORS"
+
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status=final_status,
+                report_file=report_filename,
+                imported_rows=imported_count + updated_count,
+                failed_rows=failed_count
+            )
+
+            total_time = time.perf_counter() - start_time
+            logger.info(
+                "\nVisa upload:\n"
+                "Rows detected: %d\n"
+                "Excel parsing: %.4fs\n"
+                "Engineer lookup: %.4fs\n"
+                "Existing visa lookup: %.4fs\n"
+                "Validation & Duplicate detection: %.4fs\n"
+                "Database upsert & commit: %.4fs\n"
+                "Report generation: %.4fs\n"
+                "Total: %.4fs",
+                total_rows,
+                t_excel - start_time,
+                t_engineer - t_excel,
+                t_existing_lookup - t_engineer,
+                t_validation - t_existing_lookup,
+                t_insert - t_validation,
+                t_report - t_insert,
+                total_time
+            )
+
+            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new visa records and updated {updated_count} existing visa records."
+            if errors_list or duplicates_list:
                 ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
 
             return {
