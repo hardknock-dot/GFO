@@ -28,4 +28,27 @@ venv/
 backend/venv/
 __pycache__/
 *.pyc
+# Python virtual environments
+.venv/
+**/.venv/
 
+# Python cache
+**/__pycache__/
+*.pyo
+
+# Environment files
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# Generated reports/uploads
+backend/uploads/
+backend/reports/
+backend/generated/
+
+# Generated backend files
+backend/app/temp_reports/
+backend/app/generated/
+backend/app/uploads/
