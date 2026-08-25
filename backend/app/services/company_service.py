@@ -66,35 +66,43 @@ def delete_company(db: Session, company_id: UUID) -> None:
 
     cid_param = {"cid": company_id}
 
+    # Drop NOT NULL constraint on users.company_id if present
+    try:
+        db.execute(text("ALTER TABLE users ALTER COLUMN company_id DROP NOT NULL;"))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     # Safe cascade deletion queries in dependency order:
     cascade_queries = [
         # 1. Performance evaluations & missed schedules
-        "DELETE FROM performance_evaluations WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid) OR engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
-        "DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid)",
+        ("DELETE FROM performance_evaluations WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid) OR engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
+        ("DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid)", cid_param),
         
         # 2. Engineer skills
-        "DELETE FROM engineer_skills WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
+        ("DELETE FROM engineer_skills WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
         
         # 3. Operational entities by company_id
-        "DELETE FROM schedules WHERE company_id = :cid",
-        "DELETE FROM visa_details WHERE company_id = :cid",
-        "DELETE FROM travel_details WHERE company_id = :cid",
-        "DELETE FROM leaves WHERE company_id = :cid",
-        "DELETE FROM bulk_uploads WHERE company_id = :cid",
-        "DELETE FROM general_delete_requests WHERE company_id = :cid",
-        "DELETE FROM user_company_access WHERE company_id = :cid",
+        ("DELETE FROM schedules WHERE company_id = :cid", cid_param),
+        ("DELETE FROM visa_details WHERE company_id = :cid", cid_param),
+        ("DELETE FROM travel_details WHERE company_id = :cid", cid_param),
+        ("DELETE FROM leaves WHERE company_id = :cid", cid_param),
+        ("DELETE FROM bulk_uploads WHERE company_id = :cid", cid_param),
+        ("DELETE FROM general_delete_requests WHERE company_id = :cid", cid_param),
+        ("DELETE FROM user_company_access WHERE company_id = :cid", cid_param),
         
         # 4. Engineers
-        "UPDATE users SET engineer_id = NULL WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
-        "DELETE FROM engineers WHERE company_id = :cid",
+        ("UPDATE users SET engineer_id = NULL WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
+        ("DELETE FROM engineers WHERE company_id = :cid", cid_param),
         
-        # 5. Users associated with company
-        "UPDATE users SET company_id = NULL WHERE company_id = :cid",
+        # 5. Users associated with company (Delete non-admins, set company_id=NULL for admins)
+        ("DELETE FROM users WHERE company_id = :cid AND role NOT IN ('Main Admin', 'Global Admin')", cid_param),
+        ("UPDATE users SET company_id = NULL WHERE company_id = :cid", cid_param),
     ]
 
-    for stmt in cascade_queries:
+    for stmt, params in cascade_queries:
         try:
-            db.execute(text(stmt), cid_param)
+            db.execute(text(stmt), params)
             db.commit()
         except Exception:
             db.rollback()

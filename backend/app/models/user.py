@@ -9,7 +9,7 @@ class User(Base):
     __tablename__ = "users"
 
     user_id: Mapped[UUID] = mapped_column(SQLAlchemyUUID, primary_key=True)
-    company_id: Mapped[UUID] = mapped_column(SQLAlchemyUUID, nullable=False)
+    company_id: Mapped[Optional[UUID]] = mapped_column(SQLAlchemyUUID, nullable=True)
     engineer_id: Mapped[Optional[UUID]] = mapped_column(SQLAlchemyUUID, ForeignKey("engineers.engineer_id"), nullable=True)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
