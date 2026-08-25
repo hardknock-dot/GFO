@@ -253,9 +253,8 @@ export const PerformancePage: React.FC = () => {
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={handleOpenAddModal}
-              disabled={schedulesList.length === 0}
             >
-              Add Evaluation
+              Add Performance Evaluation
             </Button>
           ) : undefined
         }

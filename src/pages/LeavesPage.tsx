@@ -291,7 +291,6 @@ export const LeavesPage: React.FC = () => {
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={handleOpenAddModal}
-              disabled={engineersList.length === 0}
             >
               Request Leave
             </Button>

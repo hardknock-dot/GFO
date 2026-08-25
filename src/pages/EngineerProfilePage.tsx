@@ -1834,7 +1834,7 @@ export const EngineerProfilePage: React.FC = () => {
                 Travel Operations
               </h3>
               {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal} disabled={!schedulesRes?.data?.length}>
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal}>
                   Book Field Travel
                 </Button>
               )}
@@ -1876,7 +1876,7 @@ export const EngineerProfilePage: React.FC = () => {
                 Performance Evaluation Records
               </h3>
               {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal} disabled={!schedulesRes?.data?.length}>
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal}>
                   Record Performance Evaluation
                 </Button>
               )}

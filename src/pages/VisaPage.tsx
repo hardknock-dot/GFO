@@ -328,7 +328,6 @@ export const VisaPage: React.FC = () => {
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={handleOpenAddModal}
-              disabled={engineersList.length === 0}
             >
               Register New Visa
             </Button>

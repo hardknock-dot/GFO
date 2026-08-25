@@ -537,7 +537,6 @@ export const SchedulePage: React.FC = () => {
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={handleOpenAddModal}
-              disabled={engineersList.length === 0}
             >
               Create Schedule Assignment
             </Button>

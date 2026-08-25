@@ -225,7 +225,6 @@ export const TravelPage: React.FC = () => {
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={handleOpenAddModal}
-              disabled={schedulesList.length === 0}
             >
               Book Field Travel
             </Button>
