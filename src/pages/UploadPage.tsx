@@ -393,7 +393,12 @@ export const UploadPage: React.FC = () => {
         ) : !historyList || historyList.filter((item) => {
           if (selectedTab === 'engineers') return item.uploadType === 'engineers';
           if (selectedTab === 'skills') return item.uploadType === 'skills';
-          return item.uploadType === 'schedules';
+          if (selectedTab === 'schedules') return item.uploadType === 'schedules';
+          if (selectedTab === 'visas') return item.uploadType === 'visas' || item.uploadType === 'visa';
+          if (selectedTab === 'travel') return item.uploadType === 'travel';
+          if (selectedTab === 'performance') return item.uploadType === 'performance';
+          if (selectedTab === 'leaves') return item.uploadType === 'leaves' || item.uploadType === 'leave';
+          return true;
         }).length === 0 ? (
           <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
             <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -423,7 +428,12 @@ export const UploadPage: React.FC = () => {
                   .filter((item) => {
                     if (selectedTab === 'engineers') return item.uploadType === 'engineers';
                     if (selectedTab === 'skills') return item.uploadType === 'skills';
-                    return item.uploadType === 'schedules';
+                    if (selectedTab === 'schedules') return item.uploadType === 'schedules';
+                    if (selectedTab === 'visas') return item.uploadType === 'visas' || item.uploadType === 'visa';
+                    if (selectedTab === 'travel') return item.uploadType === 'travel';
+                    if (selectedTab === 'performance') return item.uploadType === 'performance';
+                    if (selectedTab === 'leaves') return item.uploadType === 'leaves' || item.uploadType === 'leave';
+                    return true;
                   })
                   .map((item) => (
                   <tr key={item.uploadId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
