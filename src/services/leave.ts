@@ -1,13 +1,16 @@
 import api from './axios';
 import type { Leave } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName } from './engineers';
 
 const mapApiLeaveToFrontend = (apiLeave: any, engineerName?: string, engineerId?: string): Leave => {
+  const engId = engineerId || apiLeave.engineer_id;
+  const resolvedName = resolveEngineerName(engId, apiLeave.orbit_id, engineerName || apiLeave.engineer_name);
+
   return {
     id: apiLeave.leave_id,
-    engineerId: engineerId || apiLeave.engineer_id || 'eng-e150',
-    engineerName: engineerName || apiLeave.engineer_name || 'N/A',
+    engineerId: engId || 'eng-e150',
+    engineerName: resolvedName,
     startDate: apiLeave.requested_date || '',
     endDate: apiLeave.requested_date || '',
     type: (apiLeave.leave_type as any) || 'Annual Leave',

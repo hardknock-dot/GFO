@@ -1,7 +1,7 @@
 import api from './axios';
 import type { Visa } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName, resolveEngineerOrbitId } from './engineers';
 
 const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: string): Visa => {
   const expiryStr = apiVisa.visa_end_date || '';
@@ -21,11 +21,15 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
     }
   }
 
+  const engId = apiVisa.engineer_id;
+  const resolvedName = resolveEngineerName(engId, orbitId || apiVisa.orbit_id, engineerName || apiVisa.engineer_name);
+  const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiVisa.orbit_id);
+
   return {
     id: apiVisa.visa_id,
-    engineerId: apiVisa.engineer_id,
-    engineerName: engineerName || apiVisa.engineer_name || 'N/A',
-    engineerOrbitId: orbitId || 'ORB001',
+    engineerId: engId,
+    engineerName: resolvedName,
+    engineerOrbitId: resolvedOrbit,
     country: apiVisa.country || 'Taiwan',
     visaType: apiVisa.visa_type || 'Specialist Work Visa',
     passportNumber: 'N/A',
@@ -38,8 +42,9 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
     visaEndDate: apiVisa.visa_end_date || '',
     comments: apiVisa.comments || '',
     commentStatus: apiVisa.comment_status || 'UNADDRESSED',
-    ownerId: apiVisa.owner_id,
-    owner_id: apiVisa.owner_id,
+    ownerId: apiVisa.owner_id || (apiVisa.owner ? apiVisa.owner.id : undefined),
+    owner_id: apiVisa.owner_id || (apiVisa.owner ? apiVisa.owner.id : undefined),
+    owner: apiVisa.owner ? { id: apiVisa.owner.id, name: apiVisa.owner.name, email: apiVisa.owner.email } : null,
   };
 };
 
@@ -72,6 +77,7 @@ export const getVisaRecords = async (params?: any): Promise<PaginatedResponse<Vi
     const compId = params?.companyId || params?.company_id;
     if (compId && compId !== 'all-data') queryParams.company_id = compId;
     if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+    if (params?.ownerId || params?.owner_id) queryParams.owner_id = params.ownerId || params.owner_id;
     if (params?.search) queryParams.search = params.search;
 
     const res = await api.get('/visa', { params: queryParams });
@@ -114,25 +120,31 @@ export const getVisaRecordById = async (id: string): Promise<Visa | null> => {
 };
 
 export const createVisaRecord = async (engineerId: string, data: Partial<Visa>): Promise<Visa> => {
-  const payload = {
+  const payload: any = {
     country: data.country,
     visa_type: data.visaType || null,
     applied_on: data.appliedOn || null,
     visa_start_date: data.issueDate || null,
     visa_end_date: data.expiryDate || null,
   };
+  if (data.ownerId !== undefined || data.owner_id !== undefined) {
+    payload.owner_id = data.ownerId !== undefined ? data.ownerId : data.owner_id;
+  }
   const res = await api.post(`/engineers/${engineerId}/visa`, payload);
   return mapApiVisaToFrontend(res.data);
 };
 
 export const updateVisaRecord = async (id: string, data: Partial<Visa>): Promise<Visa> => {
-  const payload = {
+  const payload: any = {
     country: data.country,
     visa_type: data.visaType || null,
     applied_on: data.appliedOn || null,
     visa_start_date: data.issueDate || null,
     visa_end_date: data.expiryDate || null,
   };
+  if (data.ownerId !== undefined || data.owner_id !== undefined) {
+    payload.owner_id = data.ownerId !== undefined ? data.ownerId : data.owner_id;
+  }
   const res = await api.put(`/visa/${id}`, payload);
   return mapApiVisaToFrontend(res.data);
 };

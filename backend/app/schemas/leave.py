@@ -32,6 +32,8 @@ class LeaveUpdate(BaseModel):
 class LeaveResponse(BaseModel):
     leave_id: UUID
     engineer_id: UUID
+    engineer_name: str | None = None
+    orbit_id: str | None = None
     owner_id: UUID | None = None
     leave_type: str | None = None
     requested_date: date | None = None

@@ -18,7 +18,7 @@ def get_leaves_paginated(
     page: int = 1,
     page_size: int = 20
 ) -> Dict[str, Any]:
-    stmt = select(Leave).join(Engineer, Leave.engineer_id == Engineer.engineer_id)
+    stmt = select(Leave, Engineer.engineer_name, Engineer.orbit_id).join(Engineer, Leave.engineer_id == Engineer.engineer_id)
     
     conditions = []
     if company_id is not None:
@@ -43,7 +43,12 @@ def get_leaves_paginated(
     offset = (page - 1) * page_size
     stmt = stmt.order_by(Leave.created_at.desc()).offset(offset).limit(page_size)
 
-    items = list(db.scalars(stmt).all())
+    rows = db.execute(stmt).all()
+    items = []
+    for l, eng_name, orb_id in rows:
+        l.engineer_name = eng_name
+        l.orbit_id = orb_id
+        items.append(l)
 
     return {
         "items": items,

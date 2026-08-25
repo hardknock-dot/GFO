@@ -1,14 +1,18 @@
 import api from './axios';
 import type { MissedSchedule } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName, resolveEngineerOrbitId } from './engineers';
 
 const mapApiMissedScheduleToFrontend = (apiMs: any, engineerName?: string, orbitId?: string, engineerId?: string): MissedSchedule => {
+  const engId = engineerId || apiMs.engineer_id;
+  const resolvedName = resolveEngineerName(engId, orbitId || apiMs.orbit_id, engineerName || apiMs.engineer_name);
+  const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiMs.orbit_id);
+
   return {
     id: apiMs.missed_schedule_id,
-    engineerId: engineerId || apiMs.engineer_id || 'eng-e150',
-    engineerName: engineerName || apiMs.engineer_name || 'N/A',
-    engineerOrbitId: orbitId || 'ORB001',
+    engineerId: engId || 'eng-e150',
+    engineerName: resolvedName,
+    engineerOrbitId: resolvedOrbit,
     requestedStartDate: apiMs.requested_start_date || '',
     requestedEndDate: apiMs.requested_end_date || '',
     actualStartDate: apiMs.actual_start_date || '',

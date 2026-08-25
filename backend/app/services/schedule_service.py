@@ -23,7 +23,7 @@ def get_schedules_paginated(
     page: int = 1,
     page_size: int = 20
 ) -> Dict[str, Any]:
-    stmt = select(Schedule).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+    stmt = select(Schedule, Engineer.engineer_name, Engineer.orbit_id).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
     
     conditions = []
     if company_id is not None:
@@ -65,7 +65,12 @@ def get_schedules_paginated(
     offset = (page - 1) * page_size
     stmt = stmt.order_by(Schedule.start_date.desc()).offset(offset).limit(page_size)
 
-    items = list(db.scalars(stmt).all())
+    rows = db.execute(stmt).all()
+    items = []
+    for sch, eng_name, orb_id in rows:
+        sch.engineer_name = eng_name
+        sch.orbit_id = orb_id
+        items.append(sch)
 
     return {
         "items": items,

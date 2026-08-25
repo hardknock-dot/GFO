@@ -1,14 +1,18 @@
 import api from './axios';
 import type { Performance } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName, resolveEngineerOrbitId } from './engineers';
 
 const mapApiPerformanceToFrontend = (apiPerf: any, engineerName?: string, orbitId?: string, engineerId?: string): Performance => {
+  const engId = engineerId || apiPerf.engineer_id;
+  const resolvedName = resolveEngineerName(engId, orbitId || apiPerf.orbit_id, engineerName || apiPerf.engineer_name);
+  const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiPerf.orbit_id);
+
   return {
     id: apiPerf.performance_id,
-    engineerId: engineerId || apiPerf.engineer_id || 'eng-e150',
-    engineerName: engineerName || apiPerf.engineer_name || 'N/A',
-    engineerOrbitId: orbitId || 'ORB001',
+    engineerId: engId || 'eng-e150',
+    engineerName: resolvedName,
+    engineerOrbitId: resolvedOrbit,
     rating: Number(apiPerf.score) || 5.0,
     projectsCompleted: 1,
     customerFeedbackScore: 95,

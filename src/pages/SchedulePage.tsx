@@ -23,7 +23,7 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import type { Schedule, MissedSchedule } from '../types';
-import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info } from 'lucide-react';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
 
 
@@ -427,7 +427,7 @@ export const SchedulePage: React.FC = () => {
       header: 'Operational Readiness',
       render: (s) => {
         const engLeaves = leavesRes?.data?.filter((l) => l.engineerId === s.engineerId) || [];
-        const hasLeaveConflict = engLeaves.some((l) => {
+        const ptoOverlap = engLeaves.find((l) => {
           if (!l.requestedDate || !s.startDate) return false;
           return l.requestedDate >= s.startDate && (!s.endDate || l.requestedDate <= s.endDate);
         });
@@ -439,10 +439,13 @@ export const SchedulePage: React.FC = () => {
 
         return (
           <div className="flex flex-wrap gap-1">
-            {hasLeaveConflict && (
-              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 flex items-center space-x-1">
-                <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0" />
-                <span>Leave Conflict</span>
+            {ptoOverlap && (
+              <span
+                title={`PTO scheduled on ${ptoOverlap.requestedDate} during deployment`}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-100 text-sky-800 border border-sky-200 flex items-center space-x-1"
+              >
+                <Info className="w-3 h-3 text-sky-600 flex-shrink-0" />
+                <span>PTO During Deployment ({ptoOverlap.requestedDate})</span>
               </span>
             )}
             {hasVisa ? (

@@ -21,7 +21,7 @@ def get_missed_schedules_paginated(
     page_size: int = 20
 ) -> Dict[str, Any]:
     stmt = (
-        select(MissedSchedule)
+        select(MissedSchedule, Engineer.engineer_id, Engineer.engineer_name, Engineer.orbit_id)
         .join(Schedule, MissedSchedule.schedule_id == Schedule.schedule_id)
         .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
     )
@@ -60,7 +60,13 @@ def get_missed_schedules_paginated(
     offset = (page - 1) * page_size
     stmt = stmt.order_by(MissedSchedule.created_at.desc()).offset(offset).limit(page_size)
 
-    items = list(db.scalars(stmt).all())
+    rows = db.execute(stmt).all()
+    items = []
+    for ms, eng_id, eng_name, orb_id in rows:
+        ms.engineer_id = eng_id
+        ms.engineer_name = eng_name
+        ms.orbit_id = orb_id
+        items.append(ms)
 
     return {
         "items": items,

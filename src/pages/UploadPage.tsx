@@ -5,7 +5,7 @@ import { Button } from '../components/forms/Button';
 import { Modal } from '../components/forms/Modal';
 import { UPLOAD_CARDS_INITIAL, uploadModuleFile } from '../services/upload';
 import type { UploadCardItem, BulkUpload } from '../types';
-import { Upload, CheckCircle2, FileSpreadsheet, Download, RefreshCw, Building2, Eye } from 'lucide-react';
+import { Upload, CheckCircle2, FileSpreadsheet, Download, RefreshCw, Eye } from 'lucide-react';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/axios';
@@ -29,7 +29,6 @@ export const UploadPage: React.FC = () => {
 
   const { currentCompany, companies, setCompany } = useCompany();
   const { user } = useAuth();
-  const isGlobalAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
 
   const queryClient = useQueryClient();
   const { data: historyList, isLoading: isLoadingHistory } = useUploadHistory();
@@ -112,106 +111,99 @@ export const UploadPage: React.FC = () => {
       />
 
       {/* Target Company Scope Block */}
-      <div className="p-5 bg-sky-100/40 dark:bg-slate-900 border border-sky-200 dark:border-slate-800 rounded-2xl space-y-4 max-w-md shadow-sm">
+      <div className="p-5 bg-sky-50/70 dark:bg-slate-900 border border-sky-200/80 dark:border-slate-800 rounded-2xl space-y-3 w-full max-w-xl shadow-sm">
         <div>
-          <h3 className="text-sm font-bold text-blue-950 dark:text-white mb-1">Target Company</h3>
-          <p className="text-xs text-blue-800 dark:text-slate-400">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Target Company Tenant</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Every engineer uploaded through this bulk-upload workflow will automatically receive this company tenant assignment.
           </p>
         </div>
 
-        {isGlobalAdmin ? (
-          <div className="w-full">
-            <select
-              value={currentCompany.company_id || currentCompany.id}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 text-blue-950 dark:text-slate-200 font-semibold border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer text-sm"
-            >
-              {companies
-                .filter((c) => c.id !== 'all-data' && c.company_id !== 'all-data')
-                .map((c) => (
-                  <option key={c.id || c.company_id} value={c.company_id || c.id}>
-                    {c.company_name || c.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2 px-3.5 py-2.5 rounded-xl border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-blue-950 dark:text-slate-200 font-semibold">
-            <Building2 className="w-4 h-4 text-sky-500" />
-            <span>{currentCompany.company_name || currentCompany.name}</span>
-          </div>
-        )}
+        <div className="w-full">
+          <select
+            value={currentCompany.company_id || currentCompany.id}
+            onChange={(e) => setCompany(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer text-sm shadow-sm"
+          >
+            {companies
+              .filter((c) => c.id !== 'all-data' && c.company_id !== 'all-data')
+              .map((c) => (
+                <option key={c.id || c.company_id} value={c.company_id || c.id}>
+                  {c.company_name || c.name} ({c.code || c.short_name || 'Tenant'})
+                </option>
+              ))}
+          </select>
+        </div>
       </div>
 
       {/* Data Type Selector Tabs */}
-      <div className="flex space-x-1 p-1 bg-slate-100/80 dark:bg-slate-800 rounded-xl max-w-sm mb-2 shadow-sm border border-slate-200/40 dark:border-slate-700">
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl w-full shadow-sm border border-slate-200/60 dark:border-slate-700/60 mb-4">
         <button
           onClick={() => setSelectedTab('engineers')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'engineers'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
-          Engineers
+          Engineers Roster
         </button>
         <button
           onClick={() => setSelectedTab('skills')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'skills'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
-          Skills
+          Skills & Certifications
         </button>
         <button
           onClick={() => setSelectedTab('schedules')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'schedules'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
-          Schedules
+          Field Schedules
         </button>
         <button
           onClick={() => setSelectedTab('visas')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'visas'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
           Visas & Permits
         </button>
         <button
           onClick={() => setSelectedTab('travel')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'travel'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
           Travel & Mobility
         </button>
         <button
           onClick={() => setSelectedTab('performance')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'performance'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
           Performance & Reviews
         </button>
         <button
           onClick={() => setSelectedTab('leaves')}
-          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
             selectedTab === 'leaves'
-              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
           }`}
         >
           Leaves & Absences

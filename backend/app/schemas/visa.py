@@ -35,6 +35,13 @@ class VisaUpdate(BaseModel):
                 raise ValueError("visa_end_date should not be earlier than visa_start_date")
         return self
 
+class UserOwnerSummary(BaseModel):
+    id: UUID
+    name: str
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
+
 class VisaCommentUpdate(BaseModel):
     comments: str
 
@@ -44,7 +51,10 @@ class VisaCommentStatusUpdate(BaseModel):
 class VisaResponse(BaseModel):
     visa_id: UUID
     engineer_id: UUID
+    engineer_name: str | None = None
+    orbit_id: str | None = None
     owner_id: UUID | None = None
+    owner: UserOwnerSummary | None = None
     country: str
     visa_type: str | None = None
     applied_on: date | None = None

@@ -1,14 +1,18 @@
 import api from './axios';
 import type { Schedule } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName, resolveEngineerOrbitId } from './engineers';
 
 const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: string): Schedule => {
+  const engId = apiSch.engineer_id;
+  const resolvedName = resolveEngineerName(engId, orbitId || apiSch.orbit_id, engineerName || apiSch.engineer_name);
+  const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiSch.orbit_id);
+
   return {
     id: apiSch.schedule_id,
-    engineerId: apiSch.engineer_id,
-    engineerName: engineerName || apiSch.engineer_name || 'N/A',
-    engineerOrbitId: orbitId || 'ORB001',
+    engineerId: engId,
+    engineerName: resolvedName,
+    engineerOrbitId: resolvedOrbit,
     country: apiSch.country || '',
     
     // Core DB fields:

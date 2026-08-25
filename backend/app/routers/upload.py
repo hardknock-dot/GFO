@@ -179,7 +179,10 @@ VISA_HEADER_MAP = {
     "expirydate": "visa_end_date",
     "expirationdate": "visa_end_date",
     "comments": "comments",
-    "remarks": "comments"
+    "remarks": "comments",
+    "owner": "owner",
+    "owneremail": "owner",
+    "ownername": "owner"
 }
 
 TRAVEL_HEADER_MAP = {
@@ -1487,6 +1490,14 @@ async def bulk_upload(
             }
             t_engineer = time.perf_counter()
 
+            # Bulk Company User Lookup for Owner Resolution
+            company_users = db.scalars(
+                select(User).where(User.company_id == target_company_id)
+            ).all()
+            user_by_email = {u.email.lower(): u.user_id for u in company_users if u.email}
+            user_by_name = {u.full_name.lower(): u.user_id for u in company_users if u.full_name}
+            user_by_id = {str(u.user_id): u.user_id for u in company_users}
+
             # Bulk Existing Visa Check for Upsert
             resolved_engineer_ids = {
                 val[0] for val in orbit_to_engineer.values()
@@ -1557,7 +1568,21 @@ async def bulk_upload(
                         "error": "Country is required."
                     })
 
-                # 4. Parse and validate dates
+                # 4. Resolve optional Owner if provided in Excel
+                owner_raw = row_dict.get("owner")
+                resolved_owner_id = None
+                if owner_raw is not None and str(owner_raw).strip() != "":
+                    clean_owner = str(owner_raw).strip().lower()
+                    resolved_owner_id = user_by_email.get(clean_owner) or user_by_name.get(clean_owner) or user_by_id.get(str(owner_raw).strip())
+                    if not resolved_owner_id:
+                        row_errors.append({
+                            "field": "Owner",
+                            "value": str(owner_raw),
+                            "error": f"Owner '{owner_raw}' not found or does not belong to the target company."
+                        })
+                row_dict["owner_id"] = resolved_owner_id
+
+                # 5. Parse and validate dates
                 applied_on = None
                 applied_on_val = row_dict.get("applied_on")
                 if applied_on_val is not None:
@@ -1610,7 +1635,7 @@ async def bulk_upload(
                 row_dict["visa_start_date"] = visa_start_date
                 row_dict["visa_end_date"] = visa_end_date
 
-                # 5. Duplicate row detection in Excel sheet
+                # 6. Duplicate row detection in Excel sheet
                 visa_type = row_dict.get("visa_type") or ""
                 country_clean = (country or "").strip().lower()
                 visa_type_clean = (visa_type or "").strip().lower()
@@ -1623,7 +1648,7 @@ async def bulk_upload(
                     continue
                 seen_keys.add(row_key)
 
-                # 6. Upsert check: existing DB record vs new record
+                # 7. Upsert check: existing DB record vs new record
                 existing_visa_record = existing_visa_map.get(row_key)
                 if existing_visa_record:
                     row_dict["existing_visa"] = existing_visa_record
@@ -1663,6 +1688,7 @@ async def bulk_upload(
                     db_v = Visa(
                         visa_id=uuid_pkg.uuid4(),
                         engineer_id=item["engineer_id"],
+                        owner_id=item.get("owner_id"),
                         country=item["country"],
                         visa_type=item["visa_type"],
                         applied_on=item["applied_on"],
@@ -1692,6 +1718,9 @@ async def bulk_upload(
                         ev.visa_end_date = item["visa_end_date"]
                     if item.get("comments") is not None:
                         ev.comments = item["comments"]
+                    if item.get("owner_id") is not None:
+                        ev.owner_id = item["owner_id"]
+                    ev.updated_at = datetime.utcnow()
                     ev.updated_at = datetime.utcnow()
 
                 db.commit()

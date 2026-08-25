@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 from sqlalchemy import String, Date, DateTime, Text, ForeignKey, UUID as SQLAlchemyUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 class Visa(Base):
@@ -11,6 +11,8 @@ class Visa(Base):
     visa_id: Mapped[UUID] = mapped_column(SQLAlchemyUUID, primary_key=True)
     engineer_id: Mapped[UUID] = mapped_column(SQLAlchemyUUID, nullable=False)
     owner_id: Mapped[Optional[UUID]] = mapped_column(SQLAlchemyUUID, ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
+
+    owner_user = relationship("User", foreign_keys=[owner_id], lazy="selectin")
 
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     visa_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

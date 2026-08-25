@@ -42,6 +42,9 @@ class PerformanceUpdate(BaseModel):
 class PerformanceResponse(BaseModel):
     performance_id: UUID
     schedule_id: UUID
+    engineer_id: UUID | None = None
+    engineer_name: str | None = None
+    orbit_id: str | None = None
     owner_id: UUID | None = None
     actual_start_date: date | None = None
     actual_end_date: date | None = None

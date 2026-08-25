@@ -1,14 +1,18 @@
 import api from './axios';
 import type { Travel } from '../types';
 import type { PaginatedResponse } from './engineers';
-import { getEngineerById } from './engineers';
+import { getEngineerById, resolveEngineerName, resolveEngineerOrbitId } from './engineers';
 
 const mapApiTravelToFrontend = (apiTrv: any, engineerName?: string, orbitId?: string, engineerId?: string): Travel => {
+  const engId = engineerId || apiTrv.engineer_id;
+  const resolvedName = resolveEngineerName(engId, orbitId || apiTrv.orbit_id, engineerName || apiTrv.engineer_name);
+  const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiTrv.orbit_id);
+
   return {
     id: apiTrv.travel_id,
-    engineerId: engineerId || apiTrv.engineer_id || 'eng-e150',
-    engineerName: engineerName || apiTrv.engineer_name || 'N/A',
-    engineerOrbitId: orbitId || 'ORB001',
+    engineerId: engId || 'eng-e150',
+    engineerName: resolvedName,
+    engineerOrbitId: resolvedOrbit,
     originCountry: 'USA',
     destinationCountry: 'Taiwan',
     departureDate: apiTrv.travel_date || '',

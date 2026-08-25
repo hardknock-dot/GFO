@@ -22,7 +22,7 @@ def get_performance_paginated(
     page_size: int = 20
 ) -> Dict[str, Any]:
     stmt = (
-        select(Performance)
+        select(Performance, Engineer.engineer_id, Engineer.engineer_name, Engineer.orbit_id)
         .join(Schedule, Performance.schedule_id == Schedule.schedule_id)
         .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
     )
@@ -64,7 +64,13 @@ def get_performance_paginated(
     offset = (page - 1) * page_size
     stmt = stmt.order_by(Performance.created_at.desc()).offset(offset).limit(page_size)
 
-    items = list(db.scalars(stmt).all())
+    rows = db.execute(stmt).all()
+    items = []
+    for perf, eng_id, eng_name, orb_id in rows:
+        perf.engineer_id = eng_id
+        perf.engineer_name = eng_name
+        perf.orbit_id = orb_id
+        items.append(perf)
 
     return {
         "items": items,

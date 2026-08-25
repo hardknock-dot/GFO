@@ -228,6 +228,7 @@ export interface Visa {
   commentStatus?: string;
   ownerId?: string;
   owner_id?: string;
+  owner?: { id: string; name: string; email: string } | null;
 }
 
 export interface EngineerDeletionRequest {

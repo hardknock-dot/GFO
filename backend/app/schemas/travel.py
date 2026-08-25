@@ -32,6 +32,9 @@ class TravelUpdate(BaseModel):
 class TravelResponse(BaseModel):
     travel_id: UUID
     schedule_id: UUID
+    engineer_id: UUID | None = None
+    engineer_name: str | None = None
+    orbit_id: str | None = None
     owner_id: UUID | None = None
     booking_date: date | None = None
     travel_date: date | None = None

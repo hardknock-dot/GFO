@@ -29,10 +29,11 @@ export const PerformancePage: React.FC = () => {
   });
   const perfList = res?.data || [];
 
-  // Query company-filtered schedules list for creation dropdown
-  const { data: schedulesRes } = useSchedule(
-    companyId ? { companyId } : undefined
-  );
+  // Query company-filtered schedules list for creation dropdown (up to 200 schedules)
+  const { data: schedulesRes } = useSchedule({
+    companyId: companyId || undefined,
+    pageSize: 200,
+  });
   const schedulesList = schedulesRes?.data || [];
 
   // Mutations
@@ -295,10 +296,13 @@ export const PerformancePage: React.FC = () => {
               label="Schedule Assignment"
               value={formData.scheduleId}
               onChange={(val) => setFormData({ ...formData, scheduleId: val })}
-              options={schedulesList.map((sch) => ({
-                value: sch.id,
-                label: `${sch.engineerName} - ${sch.supportType} (${sch.fabSite || ''} - ${sch.country})`,
-              }))}
+              options={schedulesList.map((sch) => {
+                const fabInfo = [sch.fabCity, sch.fabSite || sch.country].filter(Boolean).join(', ');
+                return {
+                  value: sch.id,
+                  label: `${sch.engineerName} | ${sch.supportType} - ${fabInfo} (Start Date: ${sch.startDate || 'N/A'})`,
+                };
+              })}
               placeholder="Select a schedule assignment..."
               searchPlaceholder="Search engineer name, support type..."
               required

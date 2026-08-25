@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.models.visa import Visa
 from app.models.engineer import Engineer
+from app.models.user import User
 from app.schemas.visa import VisaCreate, VisaUpdate
 from fastapi import HTTPException, status
 
@@ -14,12 +15,13 @@ def get_visa_paginated(
     db: Session,
     company_id: Optional[Union[UUID, List[UUID]]] = None,
     engineer_id: Optional[UUID] = None,
+    owner_id: Optional[UUID] = None,
     search: Optional[str] = None,
     comment_status: Optional[str] = None,
     page: int = 1,
     page_size: int = 20
 ) -> Dict[str, Any]:
-    stmt = select(Visa).join(Engineer, Visa.engineer_id == Engineer.engineer_id)
+    stmt = select(Visa, Engineer.engineer_name, Engineer.orbit_id).join(Engineer, Visa.engineer_id == Engineer.engineer_id)
     
     conditions = []
     if company_id is not None:
@@ -30,6 +32,9 @@ def get_visa_paginated(
 
     if engineer_id:
         conditions.append(Visa.engineer_id == engineer_id)
+
+    if owner_id:
+        conditions.append(Visa.owner_id == owner_id)
 
     if comment_status:
         conditions.append(Visa.comment_status == comment_status)
@@ -56,7 +61,20 @@ def get_visa_paginated(
     offset = (page - 1) * page_size
     stmt = stmt.order_by(Visa.created_at.desc()).offset(offset).limit(page_size)
 
-    items = list(db.scalars(stmt).all())
+    rows = db.execute(stmt).all()
+    items = []
+    for v, eng_name, orb_id in rows:
+        v.engineer_name = eng_name
+        v.orbit_id = orb_id
+        if getattr(v, "owner_user", None):
+            v.owner = {
+                "id": v.owner_user.user_id,
+                "name": v.owner_user.full_name,
+                "email": v.owner_user.email
+            }
+        else:
+            v.owner = None
+        items.append(v)
 
     return {
         "items": items,
@@ -72,6 +90,15 @@ def get_engineer_visa(db: Session, engineer_id: UUID) -> List[Visa]:
     """
     stmt = select(Visa).where(Visa.engineer_id == engineer_id)
     result = db.scalars(stmt).all()
+    for v in result:
+        if getattr(v, "owner_user", None):
+            v.owner = {
+                "id": v.owner_user.user_id,
+                "name": v.owner_user.full_name,
+                "email": v.owner_user.email
+            }
+        else:
+            v.owner = None
     return list(result)
 
 def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate, owner_id: Optional[UUID] = None) -> Visa:
@@ -86,22 +113,46 @@ def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate, owner_id:
             detail="Engineer not found"
         )
 
-    # 2. Create Visa
+    # 2. Determine effective owner_id & validate company isolation
+    target_owner_id = visa_data.owner_id if visa_data.owner_id is not None else owner_id
+    if target_owner_id is not None:
+        owner_user = db.get(User, target_owner_id)
+        if owner_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Owner user not found"
+            )
+        if owner_user.company_id != engineer.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Cross-company owner assignment is not allowed. Owner must belong to the same company."
+            )
+
+    # 3. Create Visa
     db_visa = Visa(
         visa_id=uuid.uuid4(),
         engineer_id=engineer_id,
-        owner_id=owner_id,
+        owner_id=target_owner_id,
         country=visa_data.country,
         visa_type=visa_data.visa_type,
         applied_on=visa_data.applied_on,
         visa_start_date=visa_data.visa_start_date,
         visa_end_date=visa_data.visa_end_date,
+        comments=visa_data.comments,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
     db.add(db_visa)
     db.commit()
     db.refresh(db_visa)
+    if getattr(db_visa, "owner_user", None):
+        db_visa.owner = {
+            "id": db_visa.owner_user.user_id,
+            "name": db_visa.owner_user.full_name,
+            "email": db_visa.owner_user.email
+        }
+    else:
+        db_visa.owner = None
     return db_visa
 
 def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
@@ -126,7 +177,26 @@ def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
                 detail="visa_end_date should not be earlier than visa_start_date"
             )
 
-    # 3. Update fields
+    # 3. Validate and update owner if provided in request
+    if "owner_id" in visa_data.model_fields_set:
+        if visa_data.owner_id is None:
+            db_visa.owner_id = None
+        else:
+            owner_user = db.get(User, visa_data.owner_id)
+            if owner_user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Owner user not found"
+                )
+            engineer = db.get(Engineer, db_visa.engineer_id)
+            if engineer and owner_user.company_id != engineer.company_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Cross-company owner assignment is not allowed. Owner must belong to the same company."
+                )
+            db_visa.owner_id = visa_data.owner_id
+
+    # 4. Update other fields
     if visa_data.country is not None:
         db_visa.country = visa_data.country
     if visa_data.visa_type is not None:
@@ -137,10 +207,20 @@ def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
         db_visa.visa_start_date = visa_data.visa_start_date
     if visa_data.visa_end_date is not None:
         db_visa.visa_end_date = visa_data.visa_end_date
+    if visa_data.comments is not None:
+        db_visa.comments = visa_data.comments
 
     db_visa.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_visa)
+    if getattr(db_visa, "owner_user", None):
+        db_visa.owner = {
+            "id": db_visa.owner_user.user_id,
+            "name": db_visa.owner_user.full_name,
+            "email": db_visa.owner_user.email
+        }
+    else:
+        db_visa.owner = None
     return db_visa
 
 def delete_visa(db: Session, visa_id: UUID) -> None:

@@ -48,6 +48,42 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
   };
 };
 
+const engineersCacheById = new Map<string, Engineer>();
+const engineersCacheByOrbitId = new Map<string, Engineer>();
+
+export const cacheEngineers = (engineers: Engineer[]) => {
+  engineers.forEach((eng) => {
+    if (eng.id) engineersCacheById.set(eng.id, eng);
+    if (eng.orbitId) engineersCacheByOrbitId.set(eng.orbitId.trim().toLowerCase(), eng);
+  });
+};
+
+export const resolveEngineerName = (engineerId?: string, orbitId?: string, apiName?: string): string => {
+  if (apiName && apiName !== 'N/A' && apiName !== 'Field Engineer') {
+    return apiName;
+  }
+  if (engineerId && engineersCacheById.has(engineerId)) {
+    return engineersCacheById.get(engineerId)!.name;
+  }
+  if (orbitId) {
+    const cleanOrbit = orbitId.trim().toLowerCase();
+    if (engineersCacheByOrbitId.has(cleanOrbit)) {
+      return engineersCacheByOrbitId.get(cleanOrbit)!.name;
+    }
+  }
+  return apiName || orbitId || 'N/A';
+};
+
+export const resolveEngineerOrbitId = (engineerId?: string, apiOrbitId?: string): string => {
+  if (apiOrbitId && apiOrbitId !== 'ORB001' && apiOrbitId !== 'N/A') {
+    return apiOrbitId;
+  }
+  if (engineerId && engineersCacheById.has(engineerId)) {
+    return engineersCacheById.get(engineerId)!.orbitId;
+  }
+  return apiOrbitId || 'N/A';
+};
+
 export const getEngineers = async (params?: EngineerQueryParams): Promise<PaginatedResponse<Engineer>> => {
   try {
     const queryParams: any = { ...params };
@@ -58,8 +94,10 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
     const response = await api.get('/engineers', { params: queryParams });
     const raw = response.data;
     if (raw && Array.isArray(raw.items)) {
+      const data = raw.items.map(mapApiEngineerToFrontend);
+      cacheEngineers(data);
       return {
-        data: raw.items.map(mapApiEngineerToFrontend),
+        data,
         total: raw.total,
         page: raw.page,
         pageSize: raw.page_size,
@@ -68,6 +106,7 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
     }
     if (Array.isArray(raw)) {
       const data = raw.map(mapApiEngineerToFrontend);
+      cacheEngineers(data);
       return {
         data,
         total: data.length,

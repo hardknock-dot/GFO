@@ -48,6 +48,8 @@ class ScheduleCommentStatusUpdate(BaseModel):
 class ScheduleResponse(BaseModel):
     schedule_id: UUID
     engineer_id: UUID
+    engineer_name: str | None = None
+    orbit_id: str | None = None
     owner_id: UUID | None = None
     support_type: str
     country: str

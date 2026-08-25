@@ -86,7 +86,7 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
             return None, None
         return str(eng.company_id), comp_map.get(eng.company_id)
 
-    # 1. Schedule vs Leave Overlap
+    # 1. Schedule vs Leave Overlap (Notice alert for PTO during active deployment)
     for s in schedules:
         eng_leaves = [l for l in leaves if l.engineer_id == s.engineer_id]
         for l in eng_leaves:
@@ -99,16 +99,16 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                     alerts.append(OperationalAlert(
                         id=f"alert-leave-{s.schedule_id}-{l.leave_id}",
                         type="leave",
-                        severity="warning",
-                        title="Schedule / Leave overlap",
-                        message=f"Schedule for {eng_name} ({s.start_date} to {s.end_date or 'ongoing'}) overlaps with requested leave on {l.requested_date}.",
+                        severity="info",
+                        title="PTO Requested During Active Deployment",
+                        message=f"PTO requested on {l.requested_date} for {eng_name} during active deployment ({s.start_date} to {s.end_date or 'ongoing'}).",
                         engineer_id=str(s.engineer_id),
                         schedule_id=str(s.schedule_id),
                         company_id=c_id,
                         company_name=c_name
                     ))
 
-    # 2. Schedule vs Schedule Overlap per Engineer
+    # 2. Schedule vs Schedule Overlap per Engineer (Excluding PTO which can occur during deployment)
     eng_schedules_map: dict[UUID, List[Schedule]] = {}
     for s in schedules:
         eng_schedules_map.setdefault(s.engineer_id, []).append(s)
@@ -120,6 +120,13 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
             for i in range(len(sorted_sch)):
                 for j in range(i + 1, len(sorted_sch)):
                     s1, s2 = sorted_sch[i], sorted_sch[j]
+                    
+                    # PTO can come in between a deployment schedule, so skip generic overlap warning for PTO
+                    s1_type = (s1.support_type or '').strip().upper()
+                    s2_type = (s2.support_type or '').strip().upper()
+                    if s1_type in ('PTO', 'LEAVE', 'ANNUAL PTO') or s2_type in ('PTO', 'LEAVE', 'ANNUAL PTO'):
+                        continue
+
                     # s1 is earlier or same day as s2
                     is_overlap = False
                     if s1.start_date == s2.start_date:

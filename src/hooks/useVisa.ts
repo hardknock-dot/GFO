@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getVisaRecords,
   getVisaRecordById,
@@ -27,6 +27,33 @@ export const useVisa = (params?: any) => {
     queryKey: ['visas', queryParams],
     queryFn: () => getVisaRecords(queryParams),
     placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useProgressiveVisa = (params?: any) => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.company_id || currentCompany?.id;
+  const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
+
+  const queryParams = {
+    ...params,
+    companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
+  };
+
+  return useInfiniteQuery({
+    queryKey: ['progressive-visas', queryParams],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await getVisaRecords({ ...queryParams, page: pageParam, pageSize: 20 });
+      return res;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.page < lastPage.totalPages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
     staleTime: 1000 * 60 * 5,
   });
 };
