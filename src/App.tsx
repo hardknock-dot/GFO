@@ -109,8 +109,8 @@ export const App: React.FC = () => {
                             <Route path="/reports" element={<ReportsPage />} />
                           </Route>
 
-                          {/* Delete Requests: Accessible to Ops Executive (Creation), Manager & Main Admin (Review) */}
-                          <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive']} />}>
+                          {/* Delete Requests: Accessible to Manager & Main Admin */}
+                          <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin']} />}>
                             <Route path="/delete-requests" element={<DeleteRequestsPage />} />
                           </Route>
 

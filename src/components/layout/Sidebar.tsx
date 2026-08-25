@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     : [
         { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        ...((isMainAdmin || isManager || isOpsExec) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
+        ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
         { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
         { label: 'Engineers', path: '/engineers', icon: Users },
         { label: 'Schedule', path: '/schedule', icon: Calendar },
@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { label: 'Reports', path: '/reports', icon: BarChart3 },
         ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
         ...(user?.role !== 'Viewer' ? [{ label: 'Data Upload', path: '/upload', icon: Upload }] : []),
-        ...(user?.role !== 'Viewer' ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
+        ...((user?.role !== 'Viewer' && !isOpsExec) ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
       ];
 
   return (
