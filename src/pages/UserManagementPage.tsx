@@ -1502,6 +1502,14 @@ export const UserManagementPage: React.FC = () => {
             </div>
           )}
 
+          <TextInput
+            label="Change Password (Optional)"
+            type="password"
+            value={editForm.newPassword}
+            onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+            placeholder="Enter new password to reset (leave blank to keep current)..."
+          />
+
           <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
             <input
               type="checkbox"
