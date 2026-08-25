@@ -13,6 +13,7 @@ import {
   FileText
 } from 'lucide-react';
 import api from '../services/axios';
+import { createCompany, updateCompany, deleteCompany } from '../services/company';
 import type { AuditLog } from '../types';
 
 interface OverviewStats {
@@ -73,6 +74,13 @@ export const MainAdminPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Create & Edit Company Modal
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<any>(null);
+  const [companyNameInput, setCompanyNameInput] = useState('');
+  const [companyCodeInput, setCompanyCodeInput] = useState('');
+  const [companyModalError, setCompanyModalError] = useState<string | null>(null);
+
   // Create User Modal
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -82,6 +90,63 @@ export const MainAdminPage: React.FC = () => {
     company_id: '',
     password: '',
   });
+
+  const handleOpenCreateCompany = () => {
+    setEditingCompany(null);
+    setCompanyNameInput('');
+    setCompanyCodeInput('');
+    setCompanyModalError(null);
+    setShowCreateCompany(true);
+  };
+
+  const handleOpenEditCompany = (c: any) => {
+    setEditingCompany(c);
+    setCompanyNameInput(c.company_name || '');
+    setCompanyCodeInput(c.short_name || c.code || '');
+    setCompanyModalError(null);
+    setShowCreateCompany(true);
+  };
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCompanyModalError(null);
+    if (!companyNameInput.trim()) {
+      setCompanyModalError('Company name is required');
+      return;
+    }
+    if (!companyCodeInput.trim()) {
+      setCompanyModalError('Company short code is required');
+      return;
+    }
+
+    try {
+      if (editingCompany) {
+        await updateCompany(editingCompany.company_id, {
+          company_name: companyNameInput,
+          short_name: companyCodeInput,
+        });
+      } else {
+        await createCompany({
+          company_name: companyNameInput,
+          short_name: companyCodeInput,
+        });
+      }
+      setShowCreateCompany(false);
+      fetchOverview();
+    } catch (err: any) {
+      setCompanyModalError(err.message || err.details?.detail || 'Failed to save company record.');
+    }
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
+    if (!window.confirm('Are you sure you want to delete this company tenant?')) return;
+    try {
+      await deleteCompany(companyId);
+      fetchOverview();
+    } catch (err: any) {
+      alert(`Failed to delete company: ${err.message || 'Error occurred.'}`);
+    }
+  };
 
   const fetchOverview = async () => {
     try {
@@ -342,6 +407,13 @@ export const MainAdminPage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-800">Semiconductor Equipment Companies</h3>
               <p className="text-xs text-slate-500">Multi-tenant partner organizational hierarchy</p>
             </div>
+            <button
+              onClick={handleOpenCreateCompany}
+              className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Register New Company</span>
+            </button>
           </div>
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
@@ -352,21 +424,38 @@ export const MainAdminPage: React.FC = () => {
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Engineers Count</th>
                 <th className="px-5 py-3.5">Users Count</th>
+                <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {stats?.companies.map((c) => (
                 <tr key={c.company_id} className="hover:bg-slate-50/80">
                   <td className="px-5 py-4 font-bold text-slate-900">{c.company_name}</td>
-                  <td className="px-5 py-4">{c.region}</td>
-                  <td className="px-5 py-4">{c.country}</td>
+                  <td className="px-5 py-4">{c.region || 'Global'}</td>
+                  <td className="px-5 py-4">{c.country || 'N/A'}</td>
                   <td className="px-5 py-4">
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      {c.status}
+                      {c.status || 'Active'}
                     </span>
                   </td>
                   <td className="px-5 py-4 font-bold text-slate-800">{c.engineers_count}</td>
                   <td className="px-5 py-4 font-bold text-slate-800">{c.users_count}</td>
+                  <td className="px-5 py-4 text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => handleOpenEditCompany(c)}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCompany(c.company_id)}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -854,6 +943,59 @@ export const MainAdminPage: React.FC = () => {
             <div className="flex justify-end pt-2">
               <button onClick={() => setSelectedAudit(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs">Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE / EDIT COMPANY MODAL */}
+      {showCreateCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-900">
+              {editingCompany ? 'Edit Enterprise Company' : 'Register New Enterprise Company'}
+            </h3>
+            {companyModalError && (
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-lg text-xs">{companyModalError}</div>
+            )}
+            <form onSubmit={handleSaveCompany} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Company Name</label>
+                <input
+                  type="text"
+                  value={companyNameInput}
+                  onChange={(e) => setCompanyNameInput(e.target.value)}
+                  placeholder="e.g. Lam Research Corp"
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Short Code / Tenant ID</label>
+                <input
+                  type="text"
+                  value={companyCodeInput}
+                  onChange={(e) => setCompanyCodeInput(e.target.value)}
+                  placeholder="e.g. LAM"
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCompany(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-xs"
+                >
+                  {editingCompany ? 'Save Changes' : 'Register Company'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

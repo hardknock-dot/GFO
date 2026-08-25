@@ -2,6 +2,18 @@ from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+class CompanyCreate(BaseModel):
+    company_name: str
+    short_name: str
+    logo: str | None = None
+    is_active: bool = True
+
+class CompanyUpdate(BaseModel):
+    company_name: str | None = None
+    short_name: str | None = None
+    logo: str | None = None
+    is_active: bool | None = None
+
 class CompanyResponse(BaseModel):
     company_id: UUID
     company_name: str

@@ -26,8 +26,8 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
     endDate: apiSch.end_date || '',
 
     // Compatibility fields:
-    customerName: apiSch.fab_site || 'TSMC',
-    siteLocation: apiSch.fab_city ? `${apiSch.fab_city}, ${apiSch.country || ''}` : (apiSch.fab_site || 'Fab 18'),
+    customerName: apiSch.fab_site || '',
+    siteLocation: apiSch.fab_city ? `${apiSch.fab_city}${apiSch.country ? ', ' + apiSch.country : ''}` : (apiSch.fab_site || ''),
     projectCode: apiSch.support_type || 'PRJ-001',
     status: (apiSch.schedule_status || 'Active Assignment') as any,
     shiftType: 'Day Shift',

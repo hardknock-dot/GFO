@@ -20,6 +20,7 @@ const mapApiCompanyToFrontend = (apiComp: any): Company => {
     company_name: apiComp.company_name,
     short_name: apiComp.short_name,
     logo: apiComp.logo ? (apiComp.logo.startsWith('http') ? apiComp.logo : preset.logo) : preset.logo,
+    is_active: apiComp.is_active !== undefined ? apiComp.is_active : true,
   };
 };
 
@@ -50,13 +51,25 @@ export const getCompany = async (id: string): Promise<Company | null> => {
 };
 
 export const createCompany = async (data: Partial<Company>): Promise<Company> => {
-  const res = await api.post('/companies', data);
-  return res.data;
+  const payload = {
+    company_name: data.company_name || data.name,
+    short_name: data.short_name || data.code || 'TENANT',
+    logo: data.logo || null,
+    is_active: data.is_active !== undefined ? data.is_active : true,
+  };
+  const res = await api.post('/companies', payload);
+  return mapApiCompanyToFrontend(res.data);
 };
 
 export const updateCompany = async (id: string, data: Partial<Company>): Promise<Company> => {
-  const res = await api.put(`/companies/${id}`, data);
-  return res.data;
+  const payload: any = {};
+  if (data.company_name || data.name) payload.company_name = data.company_name || data.name;
+  if (data.short_name || data.code) payload.short_name = data.short_name || data.code;
+  if (data.logo !== undefined) payload.logo = data.logo;
+  if (data.is_active !== undefined) payload.is_active = data.is_active;
+
+  const res = await api.put(`/companies/${id}`, payload);
+  return mapApiCompanyToFrontend(res.data);
 };
 
 export const deleteCompany = async (id: string): Promise<{ success: boolean }> => {

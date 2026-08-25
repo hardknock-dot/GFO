@@ -83,6 +83,7 @@ export interface Company {
   company_name: string;
   short_name: string;
   logo: string;
+  is_active?: boolean;
   tagline: string;
   primaryColor: string;
   primaryHover: string;

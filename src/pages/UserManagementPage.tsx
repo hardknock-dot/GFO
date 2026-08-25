@@ -16,7 +16,7 @@ import {
   deleteUserAccount,
   type ManagedUser,
 } from '../services/auth';
-import { getCompanies } from '../services/company';
+import { getCompanies, createCompany, updateCompany, deleteCompany } from '../services/company';
 import { getEngineers } from '../services/engineers';
 import type { Company, Engineer, AuditLog } from '../types';
 import {
@@ -163,7 +163,7 @@ const MultiSelectCompanyPicker: React.FC<{
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'audit'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'companies' | 'audit'>('users');
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [dbCompanies, setDbCompanies] = useState<Company[]>([]);
@@ -172,6 +172,20 @@ export const UserManagementPage: React.FC = () => {
   const [isError, setIsError] = useState<boolean>(false);
   const [search, setSearch] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
+
+  // Company management states
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [isCompanyDeleteModalOpen, setIsCompanyDeleteModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companySearch, setCompanySearch] = useState('');
+  const [companyForm, setCompanyForm] = useState({
+    name: '',
+    code: '',
+    logo: '',
+    is_active: true,
+  });
+  const [companyError, setCompanyError] = useState<string | null>(null);
+  const [companySuccess, setCompanySuccess] = useState<string | null>(null);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -265,6 +279,96 @@ export const UserManagementPage: React.FC = () => {
       console.error('Failed to load audit logs:', err);
     } finally {
       setAuditLoading(false);
+    }
+  };
+
+  const handleOpenAddCompanyModal = () => {
+    setSelectedCompany(null);
+    setCompanyForm({
+      name: '',
+      code: '',
+      logo: '',
+      is_active: true,
+    });
+    setCompanyError(null);
+    setCompanySuccess(null);
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleOpenEditCompanyModal = (c: Company) => {
+    setSelectedCompany(c);
+    setCompanyForm({
+      name: c.company_name || c.name || '',
+      code: c.short_name || c.code || '',
+      logo: c.logo || '',
+      is_active: c.is_active !== false,
+    });
+    setCompanyError(null);
+    setCompanySuccess(null);
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleOpenDeleteCompanyModal = (c: Company) => {
+    setSelectedCompany(c);
+    setCompanyError(null);
+    setIsCompanyDeleteModalOpen(true);
+  };
+
+  const handleCompanySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCompanyError(null);
+    setCompanySuccess(null);
+    if (!companyForm.name.trim()) {
+      setCompanyError('Company name is required');
+      return;
+    }
+    if (!companyForm.code.trim()) {
+      setCompanyError('Company short code is required');
+      return;
+    }
+
+    try {
+      if (selectedCompany) {
+        await updateCompany(selectedCompany.company_id || selectedCompany.id, {
+          company_name: companyForm.name,
+          short_name: companyForm.code,
+          logo: companyForm.logo || undefined,
+          is_active: companyForm.is_active,
+        });
+        setCompanySuccess('Company updated successfully.');
+        setTimeout(() => {
+          setIsCompanyModalOpen(false);
+          setCompanySuccess(null);
+          loadData();
+        }, 1000);
+      } else {
+        await createCompany({
+          company_name: companyForm.name,
+          short_name: companyForm.code,
+          logo: companyForm.logo || undefined,
+          is_active: companyForm.is_active,
+        });
+        setCompanySuccess('Company registered successfully.');
+        setTimeout(() => {
+          setIsCompanyModalOpen(false);
+          setCompanySuccess(null);
+          loadData();
+        }, 1000);
+      }
+    } catch (err: any) {
+      setCompanyError(err.message || err.details?.detail || 'Failed to save company record.');
+    }
+  };
+
+  const handleCompanyDelete = async () => {
+    if (!selectedCompany) return;
+    try {
+      await deleteCompany(selectedCompany.company_id || selectedCompany.id);
+      setIsCompanyDeleteModalOpen(false);
+      setSelectedCompany(null);
+      loadData();
+    } catch (err: any) {
+      setCompanyError(err.message || err.details?.detail || 'Failed to delete company.');
     }
   };
 
@@ -635,15 +739,96 @@ export const UserManagementPage: React.FC = () => {
     },
   ];
 
+  const companyColumns: Column<Company>[] = [
+    {
+      key: 'name',
+      header: 'Company Name',
+      sortable: true,
+      render: (c) => (
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{c.company_name || c.name}</span>
+            <div className="text-[10px] text-slate-400 font-mono">ID: {c.company_id || c.id}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'code',
+      header: 'Tenant Short Code',
+      sortable: true,
+      render: (c) => (
+        <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          {c.short_name || c.code || 'TENANT'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Tenant Status',
+      sortable: true,
+      render: (c) => (
+        <span
+          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+            c.is_active !== false
+              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
+              : 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950 dark:text-rose-300'
+          }`}
+        >
+          {c.is_active !== false ? 'Active Tenant' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      render: (c) => (
+        <div className="flex items-center space-x-2 justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenEditCompanyModal(c)}
+            icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+          >
+            Edit Company
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenDeleteCompanyModal(c)}
+            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const filteredCompanies = dbCompanies.filter((c) => {
+    const term = companySearch.toLowerCase();
+    const nameStr = (c.company_name || c.name || '').toLowerCase();
+    const codeStr = (c.short_name || c.code || '').toLowerCase();
+    return nameStr.includes(term) || codeStr.includes(term);
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="User Accounts & System Audit Management"
-        subtitle="Provision accounts, manage multi-tenant access, configure roles, and inspect complete system audit trails."
+        title="User Accounts, Enterprise Companies & Audit Management"
+        subtitle="Provision accounts, manage enterprise company tenants, configure roles, and inspect system audit trails."
         actions={
           activeTab === 'users' ? (
             <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenCreateModal}>
               Add New User Account
+            </Button>
+          ) : activeTab === 'companies' ? (
+            <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddCompanyModal}>
+              Register New Company
             </Button>
           ) : (
             <Button
@@ -659,7 +844,7 @@ export const UserManagementPage: React.FC = () => {
       />
 
       {/* Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('users')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
@@ -669,7 +854,19 @@ export const UserManagementPage: React.FC = () => {
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>User Accounts & Permissions</span>
+          <span>User Accounts & Permissions ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('companies')}
+          className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            activeTab === 'companies'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Enterprise Companies ({dbCompanies.length})</span>
         </button>
 
         <button
@@ -722,7 +919,29 @@ export const UserManagementPage: React.FC = () => {
         </>
       )}
 
-      {/* TAB 2: SYSTEM AUDIT TRAIL */}
+      {/* TAB 2: ENTERPRISE COMPANIES */}
+      {activeTab === 'companies' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <GlobalSearch onSearch={(q) => setCompanySearch(q)} placeholder="Search enterprise company name or tenant short code..." />
+            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Showing {filteredCompanies.length} of {dbCompanies.length} Enterprise Companies
+            </div>
+          </div>
+
+          <Table
+            columns={companyColumns as any}
+            data={filteredCompanies.map((c) => ({ ...c, id: c.company_id || c.id }))}
+            isLoading={isLoading}
+            isError={isError}
+            onRetry={loadData}
+            emptyTitle="No Enterprise Companies Found"
+            emptyDescription="No company records match your search filter."
+          />
+        </div>
+      )}
+
+      {/* TAB 3: SYSTEM AUDIT TRAIL */}
       {activeTab === 'audit' && (
         <div className="space-y-4">
           {/* Audit Filters */}
@@ -1324,6 +1543,94 @@ export const UserManagementPage: React.FC = () => {
             </Button>
             <Button variant="danger" onClick={handleDeleteSubmit} loading={isSubmitting}>
               Delete User
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add / Edit Company Modal */}
+      <Modal
+        isOpen={isCompanyModalOpen}
+        onClose={() => setIsCompanyModalOpen(false)}
+        title={selectedCompany ? 'Edit Enterprise Company' : 'Register New Enterprise Company'}
+        subtitle={selectedCompany ? 'Modify tenant company details.' : 'Register a new enterprise partner tenant.'}
+      >
+        <form onSubmit={handleCompanySubmit} className="space-y-4">
+          {companyError && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs">
+              {companyError}
+            </div>
+          )}
+          {companySuccess && (
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs">
+              {companySuccess}
+            </div>
+          )}
+
+          <TextInput
+            label="Company Name"
+            value={companyForm.name}
+            onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+            placeholder="e.g. Lam Research Corp"
+            required
+          />
+
+          <TextInput
+            label="Tenant Short Code"
+            value={companyForm.code}
+            onChange={(e) => setCompanyForm({ ...companyForm, code: e.target.value })}
+            placeholder="e.g. LAM"
+            required
+          />
+
+          <TextInput
+            label="Company Logo URL (Optional)"
+            value={companyForm.logo}
+            onChange={(e) => setCompanyForm({ ...companyForm, logo: e.target.value })}
+            placeholder="https://example.com/logo.png"
+          />
+
+          <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+            <input
+              type="checkbox"
+              id="companyIsActive"
+              checked={companyForm.is_active}
+              onChange={(e) => setCompanyForm({ ...companyForm, is_active: e.target.checked })}
+              className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+            />
+            <label htmlFor="companyIsActive" className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+              Active Company Tenant (Uncheck to deactivate company access)
+            </label>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button type="button" variant="outline" onClick={() => setIsCompanyModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {selectedCompany ? 'Save Changes' : 'Register Company'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Company Confirmation Modal */}
+      <Modal
+        isOpen={isCompanyDeleteModalOpen}
+        onClose={() => setIsCompanyDeleteModalOpen(false)}
+        title="Delete Enterprise Company"
+        subtitle={`Are you sure you want to delete ${selectedCompany?.company_name || selectedCompany?.name}?`}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            Deleting this company will remove its tenant record. Make sure all engineers and users have been re-assigned to prevent orphan records.
+          </p>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button variant="outline" onClick={() => setIsCompanyDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleCompanyDelete}>
+              Delete Company
             </Button>
           </div>
         </div>
