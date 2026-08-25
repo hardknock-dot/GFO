@@ -65,37 +65,43 @@ export const UploadPage: React.FC = () => {
   const handleStartUpload = async () => {
     if (!selectedCard || !selectedFile) return;
     setUploading(true);
-    const result = await uploadModuleFile(selectedCard.id, selectedFile);
-    setUploading(false);
-    setSummaryResult(result);
+    try {
+      const result = await uploadModuleFile(selectedCard.id, selectedFile);
+      setSummaryResult(result);
 
-    queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
-    if (selectedCard.id === 'up-visa') {
-      queryClient.invalidateQueries({ queryKey: ['visa'] });
-    }
-    if (selectedCard.id === 'up-travel') {
-      queryClient.invalidateQueries({ queryKey: ['travel'] });
-    }
-    if (selectedCard.id === 'up-performance') {
-      queryClient.invalidateQueries({ queryKey: ['performance'] });
-    }
-    if (selectedCard.id === 'up-leave') {
-      queryClient.invalidateQueries({ queryKey: ['leave'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
+      if (selectedCard.id === 'up-visa') {
+        queryClient.invalidateQueries({ queryKey: ['visa'] });
+      }
+      if (selectedCard.id === 'up-travel') {
+        queryClient.invalidateQueries({ queryKey: ['travel'] });
+      }
+      if (selectedCard.id === 'up-performance') {
+        queryClient.invalidateQueries({ queryKey: ['performance'] });
+      }
+      if (selectedCard.id === 'up-leave') {
+        queryClient.invalidateQueries({ queryKey: ['leave'] });
+      }
 
-    // Update card status
-    setCards((prev) =>
-      prev.map((c) =>
-        c.id === selectedCard.id
-          ? {
-              ...c,
-              status: 'Success',
-              lastUploaded: new Date().toISOString().replace('T', ' ').substring(0, 16),
-              lastUploadedBy: user?.name || 'Admin User',
-            }
-          : c
-      )
-    );
+      // Update card status
+      setCards((prev) =>
+        prev.map((c) =>
+          c.id === selectedCard.id
+            ? {
+                ...c,
+                status: 'Success',
+                lastUploaded: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                lastUploadedBy: user?.name || 'Admin User',
+              }
+            : c
+        )
+      );
+    } catch (err: any) {
+      console.error('Failed to execute bulk upload:', err);
+      alert(`Upload failed: ${err.message || 'Server error occurred during processing.'}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

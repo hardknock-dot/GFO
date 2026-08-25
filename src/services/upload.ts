@@ -89,25 +89,19 @@ export const getUploadById = async (id: string): Promise<UploadCardItem | null> 
 export const uploadModuleFile = async (
   cardId: string,
   file: File
-): Promise<{ success: boolean; rowsProcessed: number; errorsCount: number; message: string }> => {
+): Promise<{ success: boolean; rowsProcessed: number; errorsCount: number; message: string; report_url?: string }> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('module_id', cardId);
 
   try {
     const res = await api.post('/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     });
     return res.data;
-  } catch (_err) {
-    // Simulated upload response matching FastAPI return structure
-    await new Promise((res) => setTimeout(res, 1200));
-    return {
-      success: true,
-      rowsProcessed: Math.floor(25 + Math.random() * 80),
-      errorsCount: 0,
-      message: `Successfully validated and processed ${file.name} for enterprise sync.`,
-    };
+  } catch (err: any) {
+    console.error('Upload failed:', err);
+    throw err;
   }
 };
 
