@@ -64,7 +64,7 @@ export const AllDataPage: React.FC = () => {
   const engineerColumns: Column<Engineer>[] = [
     {
       key: 'name',
-      header: 'Field Engineer',
+      header: 'Engineer Name',
       sortable: true,
       render: (item) => (
         <div className="flex items-center space-x-3">

@@ -136,7 +136,7 @@ export const ScheduleCommentsPage: React.FC = () => {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center space-x-1">
-                        <span>{sch.engineerName || 'Field Engineer'}</span>
+                        <span>{sch.engineerName || 'N/A'}</span>
                       </h4>
                       <p className="text-[11px] text-slate-400 flex items-center space-x-1">
                         <Building2 className="w-3 h-3 inline" />

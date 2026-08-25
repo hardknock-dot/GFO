@@ -7,7 +7,7 @@ const mapApiLeaveToFrontend = (apiLeave: any, engineerName?: string, engineerId?
   return {
     id: apiLeave.leave_id,
     engineerId: engineerId || apiLeave.engineer_id || 'eng-e150',
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiLeave.engineer_name || 'N/A',
     startDate: apiLeave.requested_date || '',
     endDate: apiLeave.requested_date || '',
     type: (apiLeave.leave_type as any) || 'Annual Leave',

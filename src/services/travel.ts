@@ -7,7 +7,7 @@ const mapApiTravelToFrontend = (apiTrv: any, engineerName?: string, orbitId?: st
   return {
     id: apiTrv.travel_id,
     engineerId: engineerId || apiTrv.engineer_id || 'eng-e150',
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiTrv.engineer_name || 'N/A',
     engineerOrbitId: orbitId || 'ORB001',
     originCountry: 'USA',
     destinationCountry: 'Taiwan',

@@ -217,7 +217,7 @@ export const EngineerSearchPage: React.FC = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Name, Orbit ID, Fab site..."
+                placeholder="Engineer Name, Orbit ID, Fab site..."
                 className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
               />
               {search && (

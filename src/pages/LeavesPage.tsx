@@ -98,7 +98,7 @@ export const LeavesPage: React.FC = () => {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!selectedLeave && !formData.engineerId) errors.engineerId = 'Field Engineer is required';
+    if (!selectedLeave && !formData.engineerId) errors.engineerId = 'Engineer Name is required';
     if (!formData.requestedDate) errors.requestedDate = 'Requested Date is required';
 
     if (formData.requestedOn && formData.requestedDate) {
@@ -181,7 +181,7 @@ export const LeavesPage: React.FC = () => {
   const columns: Column<Leave>[] = [
     {
       key: 'engineerName',
-      header: 'Field Engineer',
+      header: 'Engineer Name',
       sortable: true,
       render: (l) => (
         <div className="flex items-center space-x-2">
@@ -346,7 +346,7 @@ export const LeavesPage: React.FC = () => {
 
           {!selectedLeave && (
             <SearchableDropdown
-              label="Field Engineer"
+              label="Engineer Name"
               value={formData.engineerId}
               onChange={(val) => setFormData({ ...formData, engineerId: val })}
               options={engineersList.map((eng) => ({

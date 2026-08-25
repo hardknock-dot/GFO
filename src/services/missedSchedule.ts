@@ -7,7 +7,7 @@ const mapApiMissedScheduleToFrontend = (apiMs: any, engineerName?: string, orbit
   return {
     id: apiMs.missed_schedule_id,
     engineerId: engineerId || apiMs.engineer_id || 'eng-e150',
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiMs.engineer_name || 'N/A',
     engineerOrbitId: orbitId || 'ORB001',
     requestedStartDate: apiMs.requested_start_date || '',
     requestedEndDate: apiMs.requested_end_date || '',

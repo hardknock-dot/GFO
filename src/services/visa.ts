@@ -24,7 +24,7 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
   return {
     id: apiVisa.visa_id,
     engineerId: apiVisa.engineer_id,
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiVisa.engineer_name || 'N/A',
     engineerOrbitId: orbitId || 'ORB001',
     country: apiVisa.country || 'Taiwan',
     visaType: apiVisa.visa_type || 'Specialist Work Visa',

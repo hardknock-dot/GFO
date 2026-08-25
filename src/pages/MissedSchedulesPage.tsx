@@ -194,7 +194,7 @@ export const MissedSchedulesPage: React.FC = () => {
   const columns: Column<MissedSchedule>[] = [
     {
       key: 'engineerName',
-      header: 'Field Engineer',
+      header: 'Engineer Name',
       sortable: true,
       render: (ms) => (
         <div className="flex items-center space-x-2">

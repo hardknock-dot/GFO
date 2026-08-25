@@ -7,7 +7,7 @@ const mapApiPerformanceToFrontend = (apiPerf: any, engineerName?: string, orbitI
   return {
     id: apiPerf.performance_id,
     engineerId: engineerId || apiPerf.engineer_id || 'eng-e150',
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiPerf.engineer_name || 'N/A',
     engineerOrbitId: orbitId || 'ORB001',
     rating: Number(apiPerf.score) || 5.0,
     projectsCompleted: 1,

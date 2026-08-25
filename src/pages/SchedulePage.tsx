@@ -160,7 +160,7 @@ export const SchedulePage: React.FC = () => {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!selectedSchedule && !formData.engineerId) errors.engineerId = 'Field Engineer is required';
+    if (!selectedSchedule && !formData.engineerId) errors.engineerId = 'Engineer Name is required';
     if (!formData.supportType.trim()) errors.supportType = 'Support Type is required';
     if (!formData.country.trim()) errors.country = 'Country is required';
     if (!formData.startDate) errors.startDate = 'Start Date is required';
@@ -269,7 +269,7 @@ export const SchedulePage: React.FC = () => {
         onSuccess: () => {
           setIsCommentModalOpen(false);
           notifyScheduleCommentAdded({
-            engineerName: selectedScheduleForComment.engineerName || 'Field Engineer',
+            engineerName: selectedScheduleForComment.engineerName || 'N/A',
             scheduleId: selectedScheduleForComment.id,
             supportType: selectedScheduleForComment.supportType,
             fabSite: selectedScheduleForComment.siteLocation || selectedScheduleForComment.customerName,
@@ -388,7 +388,7 @@ export const SchedulePage: React.FC = () => {
 
   const columns: Column<Schedule>[] = [
     { key: 'projectCode', header: 'Project Code', sortable: true, render: (s) => <span className="font-mono text-xs font-semibold text-[var(--color-secondary)]">{s.projectCode}</span> },
-    { key: 'engineerName', header: 'Field Engineer', sortable: true, render: (s) => <span className="font-semibold text-slate-800 dark:text-slate-200">{s.engineerName}</span> },
+    { key: 'engineerName', header: 'Engineer Name', sortable: true, render: (s) => <span className="font-semibold text-slate-800 dark:text-slate-200">{s.engineerName}</span> },
     { key: 'customerName', header: 'Customer Fab', sortable: true, render: (s) => <div className="flex items-center space-x-1.5"><Building2 className="w-3.5 h-3.5 text-slate-400" /><span>{s.customerName}</span></div> },
     { key: 'siteLocation', header: 'Site Location', sortable: true, render: (s) => <div className="flex items-center space-x-1 text-xs text-slate-600 dark:text-slate-400"><MapPin className="w-3.5 h-3.5 text-slate-400" /><span>{s.siteLocation}</span></div> },
     { key: 'startDate', header: 'Start Date', sortable: true },
@@ -635,7 +635,7 @@ export const SchedulePage: React.FC = () => {
 
           {!selectedSchedule && (
             <SearchableDropdown
-              label="Field Engineer"
+              label="Engineer Name"
               value={formData.engineerId}
               onChange={(val) => setFormData({ ...formData, engineerId: val })}
               options={engineersList.map((eng) => ({

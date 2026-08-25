@@ -7,7 +7,7 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   return {
     id: apiSch.schedule_id,
     engineerId: apiSch.engineer_id,
-    engineerName: engineerName || 'Field Engineer',
+    engineerName: engineerName || apiSch.engineer_name || 'N/A',
     engineerOrbitId: orbitId || 'ORB001',
     country: apiSch.country || '',
     

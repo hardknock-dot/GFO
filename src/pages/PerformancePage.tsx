@@ -197,7 +197,7 @@ export const PerformancePage: React.FC = () => {
   };
 
   const columns: Column<Performance>[] = [
-    { key: 'engineerName', header: 'Field Engineer', sortable: true, render: (p) => <span className="font-semibold text-slate-800 dark:text-slate-200">{p.engineerName}</span> },
+    { key: 'engineerName', header: 'Engineer Name', sortable: true, render: (p) => <span className="font-semibold text-slate-800 dark:text-slate-200">{p.engineerName}</span> },
     { key: 'rating', header: 'Performance Rating', sortable: true, render: (p) => <span className="font-bold text-amber-500 flex items-center"><Star className="w-3.5 h-3.5 fill-current mr-1" />{p.rating} / 5.0</span> },
     { key: 'actualStartDate', header: 'Actual Start', sortable: true, render: (p) => <span>{p.actualStartDate || 'N/A'}</span> },
     { key: 'actualEndDate', header: 'Actual End', sortable: true, render: (p) => <span>{p.actualEndDate || 'N/A'}</span> },

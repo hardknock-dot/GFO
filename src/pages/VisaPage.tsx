@@ -103,7 +103,7 @@ export const VisaPage: React.FC = () => {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!selectedVisa && !formData.engineerId) errors.engineerId = 'Field Engineer is required';
+    if (!selectedVisa && !formData.engineerId) errors.engineerId = 'Engineer Name is required';
     if (!formData.country.trim()) errors.country = 'Country is required';
 
     if (formData.issueDate && formData.expiryDate) {
@@ -185,7 +185,7 @@ export const VisaPage: React.FC = () => {
   };
 
   const columns: Column<Visa>[] = [
-    { key: 'engineerName', header: 'Field Engineer', sortable: true, render: (v) => <span className="font-semibold text-slate-800 dark:text-slate-200">{v.engineerName}</span> },
+    { key: 'engineerName', header: 'Engineer Name', sortable: true, render: (v) => <span className="font-semibold text-slate-800 dark:text-slate-200">{v.engineerName}</span> },
     { key: 'country', header: 'Jurisdiction / Country', sortable: true, render: (v) => <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{v.country}</span> },
     { key: 'visaType', header: 'Work Permit / Visa Class', sortable: true, render: (v) => <span className="text-xs font-mono text-slate-600 dark:text-slate-400">{v.visaType}</span> },
     { key: 'passportNumber', header: 'Passport No.', render: (v) => <span className="font-mono text-xs text-slate-500">{v.passportNumber}</span> },
@@ -309,7 +309,7 @@ export const VisaPage: React.FC = () => {
 
           {!selectedVisa && (
             <SearchableDropdown
-              label="Field Engineer"
+              label="Engineer Name"
               value={formData.engineerId}
               onChange={(val) => setFormData({ ...formData, engineerId: val })}
               options={engineersList.map((eng) => ({
