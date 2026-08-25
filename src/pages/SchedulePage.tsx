@@ -23,8 +23,9 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import type { Schedule, MissedSchedule } from '../types';
-import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info } from 'lucide-react';
+import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info, Star } from 'lucide-react';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
+import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
 
 
 export const SchedulePage: React.FC = () => {
@@ -113,6 +114,15 @@ export const SchedulePage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Performance Modal State
+  const [isAddPerfModalOpen, setIsAddPerfModalOpen] = useState(false);
+  const [selectedScheduleForPerf, setSelectedScheduleForPerf] = useState<Schedule | null>(null);
+
+  const handleOpenAddPerfModal = (sch: Schedule) => {
+    setSelectedScheduleForPerf(sch);
+    setIsAddPerfModalOpen(true);
+  };
 
   const handleOpenAddModal = () => {
     setSelectedSchedule(null);
@@ -495,6 +505,15 @@ export const SchedulePage: React.FC = () => {
 
           {canEdit && (
             <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenAddPerfModal(s)}
+                icon={<Star className="w-3.5 h-3.5 text-amber-500" />}
+                title="Add Performance Evaluation"
+              >
+                Add Performance
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -961,6 +980,15 @@ export const SchedulePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Add Performance Modal */}
+      <AddPerformanceModal
+        isOpen={isAddPerfModalOpen}
+        onClose={() => setIsAddPerfModalOpen(false)}
+        schedule={selectedScheduleForPerf}
+        onSuccess={() => refetch()}
+        onEditExisting={() => navigate('/performance')}
+      />
     </div>
   );
 };

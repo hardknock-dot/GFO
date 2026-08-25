@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Self
 
 class PerformanceCreate(BaseModel):
+    schedule_id: UUID | None = None
+    orbit_id: str | None = None
     actual_start_date: date | None = None
     actual_end_date: date | None = None
     escalation: bool | None = None

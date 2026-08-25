@@ -40,6 +40,7 @@ import { useAuth } from '../context/AuthContext';
 
 import type { Skill, Schedule, Visa, Travel, Performance, Leave } from '../types';
 import { EngineerIndividualReportView } from '../components/reports/EngineerIndividualReportView';
+import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
 import {
   User,
   Wrench,
@@ -954,23 +955,11 @@ export const EngineerProfilePage: React.FC = () => {
     });
   };
 
+  const [isAddPerfModalOpen, setIsAddPerfModalOpen] = useState(false);
+
   // Performance logic functions
   const handleOpenAddPerfModal = () => {
-    setSelectedPerf(null);
-    setPerfFormData({
-      scheduleId: schedulesRes?.data?.[0]?.id || '',
-      actualStartDate: '',
-      actualEndDate: '',
-      escalation: false,
-      escalationReason: '',
-      feedback: '',
-      score: '5.0',
-      attachment: '',
-    });
-    setPerfFormErrors({});
-    setPerfApiError(null);
-    setPerfSuccessMessage(null);
-    setIsPerfModalOpen(true);
+    setIsAddPerfModalOpen(true);
   };
 
   const handleOpenEditPerfModal = (p: Performance) => {
@@ -3099,6 +3088,17 @@ export const EngineerProfilePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Add Performance Modal */}
+      <AddPerformanceModal
+        isOpen={isAddPerfModalOpen}
+        onClose={() => setIsAddPerfModalOpen(false)}
+        schedulesList={schedulesRes?.data || []}
+        engineerName={engineer?.name}
+        orbitId={engineer?.orbitId}
+        onSuccess={() => refetch()}
+        onEditExisting={() => navigate('/performance')}
+      />
     </div>
   );
 };

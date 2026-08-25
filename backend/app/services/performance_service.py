@@ -108,7 +108,13 @@ def get_schedule_performance(db: Session, schedule_id: UUID) -> List[Performance
     result = db.scalars(stmt).all()
     return list(result)
 
-def create_performance(db: Session, schedule_id: UUID, performance_data: PerformanceCreate, owner_id: Optional[UUID] = None) -> Performance:
+def create_performance(
+    db: Session,
+    schedule_id: UUID,
+    performance_data: PerformanceCreate,
+    owner_id: Optional[UUID] = None,
+    orbit_id: Optional[str] = None
+) -> Performance:
     """
     Create a new performance record associated with a schedule.
     """
@@ -117,17 +123,76 @@ def create_performance(db: Session, schedule_id: UUID, performance_data: Perform
     if sch is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Schedule not found"
+            detail=f"Schedule {schedule_id} was not found."
         )
 
-    # 2. Create Performance
+    # 2. Verify schedule has a valid engineer
+    if not sch.engineer_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Schedule {schedule_id} has no assigned engineer."
+        )
+    eng = db.get(Engineer, sch.engineer_id)
+    if eng is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engineer assigned to schedule {schedule_id} was not found."
+        )
+
+    # 3. If Orbit ID is supplied, verify it matches the schedule's engineer's Orbit ID
+    supplied_orbit_id = orbit_id or performance_data.orbit_id
+    if supplied_orbit_id and supplied_orbit_id.strip():
+        if supplied_orbit_id.strip() != eng.orbit_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Orbit ID {supplied_orbit_id.strip()} does not match Schedule {schedule_id}, which belongs to Orbit ID {eng.orbit_id}."
+            )
+
+    # 4. Validate dates
+    if performance_data.actual_start_date is not None and performance_data.actual_end_date is not None:
+        if performance_data.actual_end_date < performance_data.actual_start_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="actual_end_date should not be earlier than actual_start_date"
+            )
+
+    # 5. Validate score range 1.0 to 5.0
+    if performance_data.score is not None:
+        if performance_data.score < 1.0 or performance_data.score > 5.0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Performance rating score must be between 1.0 and 5.0"
+            )
+
+    # 6. Validate escalation reason
+    esc = performance_data.escalation if performance_data.escalation is not None else False
+    if esc is True and not (performance_data.escalation_reason and performance_data.escalation_reason.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Escalation reason is required when escalation is enabled."
+        )
+
+    # 7. Check natural key duplicate (schedule_id, actual_start_date)
+    existing_stmt = select(Performance).where(
+        Performance.schedule_id == schedule_id,
+        Performance.actual_start_date == performance_data.actual_start_date
+    )
+    existing_perf = db.scalars(existing_stmt).first()
+    if existing_perf:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A Performance record already exists for this schedule and start date.",
+            headers={"X-Existing-Performance-Id": str(existing_perf.performance_id)}
+        )
+
+    # 8. Create Performance
     db_perf = Performance(
         performance_id=uuid.uuid4(),
         schedule_id=schedule_id,
         owner_id=owner_id,
         actual_start_date=performance_data.actual_start_date,
         actual_end_date=performance_data.actual_end_date,
-        escalation=performance_data.escalation if performance_data.escalation is not None else False,
+        escalation=esc,
         escalation_reason=performance_data.escalation_reason,
         feedback=performance_data.feedback,
         score=performance_data.score,

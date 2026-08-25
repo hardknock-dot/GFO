@@ -2432,12 +2432,14 @@ async def bulk_upload(
                     if mapped_field:
                         col_indices[mapped_field] = idx + 1
 
-            # Check required columns: orbit_id
-            if "orbit_id" not in col_indices:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Required header 'Orbit ID' is missing from the Excel sheet."
-                )
+            # Required headers: schedule_id, orbit_id, actual_start_date, score
+            required_cols = [("schedule_id", "Schedule ID"), ("orbit_id", "Orbit ID"), ("actual_start_date", "Actual Start Date"), ("score", "Score")]
+            for req_field, req_name in required_cols:
+                if req_field not in col_indices:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Required header '{req_name}' is missing from the Excel sheet."
+                    )
 
             # Gather all non-blank rows
             raw_rows = []
@@ -2482,60 +2484,40 @@ async def bulk_upload(
 
             t_excel = time.perf_counter()
 
-            # Bulk Engineer Resolution
-            unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
-                for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
-            }
+            # Pre-fetch Schedules and Engineers by Schedule ID
+            raw_sch_ids = set()
+            for row in raw_rows:
+                v = row.get("schedule_id")
+                if v:
+                    try:
+                        raw_sch_ids.add(uuid_pkg.UUID(str(v).strip()))
+                    except ValueError:
+                        pass
 
-            db_engineers = []
-            if unique_orbit_ids:
-                db_engineers = db.scalars(
-                    select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
-                        Engineer.company_id == target_company_id
-                    )
+            db_schedules_map = {}
+            if raw_sch_ids:
+                sches = db.scalars(
+                    select(Schedule).where(Schedule.schedule_id.in_(list(raw_sch_ids)))
                 ).all()
+                db_schedules_map = {sch.schedule_id: sch for sch in sches}
 
-            orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
-                for eng in db_engineers
-            }
+            sch_engineer_ids = {sch.engineer_id for sch in db_schedules_map.values() if sch.engineer_id}
+            db_engineers_map = {}
+            if sch_engineer_ids:
+                engs = db.scalars(
+                    select(Engineer).where(Engineer.engineer_id.in_(list(sch_engineer_ids)))
+                ).all()
+                db_engineers_map = {eng.engineer_id: eng for eng in engs}
+
             t_engineer = time.perf_counter()
 
-            # Resolution of Schedules for resolved engineers
-            resolved_engineer_ids = {
-                val[0] for val in orbit_to_engineer.values()
-            }
-
-            db_schedules = []
-            if resolved_engineer_ids:
-                db_schedules = db.scalars(
-                    select(Schedule).where(
-                        Schedule.engineer_id.in_(list(resolved_engineer_ids))
-                    )
-                ).all()
-
-            # Group schedules by engineer_id
-            engineer_schedules = {}
-            for sch in db_schedules:
-                engineer_schedules.setdefault(sch.engineer_id, []).append(sch)
-
-            # Query existing performance records for resolved schedules
-            resolved_schedule_ids = [sch.schedule_id for sch in db_schedules]
-            db_perfs = []
-            if resolved_schedule_ids:
-                db_perfs = db.scalars(
-                    select(Performance).where(
-                        Performance.schedule_id.in_(resolved_schedule_ids)
-                    )
-                ).all()
-
-            # Map existing performance records by (schedule_id, actual_start_date)
             existing_perf_map = {}
-            for pf in db_perfs:
-                existing_perf_map[(pf.schedule_id, pf.actual_start_date)] = pf
+            if raw_sch_ids:
+                perfs = db.scalars(
+                    select(Performance).where(Performance.schedule_id.in_(list(raw_sch_ids)))
+                ).all()
+                for p in perfs:
+                    existing_perf_map[(p.schedule_id, p.actual_start_date)] = p
 
             t_existing_lookup = time.perf_counter()
 
@@ -2543,7 +2525,6 @@ async def bulk_upload(
             duplicates_list = []
             existing_list = []
             valid_rows_to_insert = []
-            new_schedules_created = []
             seen_keys = set()
 
             total_rows = len(raw_rows)
@@ -2551,9 +2532,57 @@ async def bulk_upload(
             for row_dict in raw_rows:
                 row_errors = []
                 
-                # 1. Validate required fields: orbit_id
-                orbit_id = row_dict.get("orbit_id")
-                if not orbit_id:
+                # 1. Validate Schedule ID
+                raw_sch_str = str(row_dict.get("schedule_id") or "").strip()
+                if not raw_sch_str:
+                    row_errors.append({
+                        "field": "Schedule ID",
+                        "value": "",
+                        "error": "Schedule ID is required."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                parsed_sch_id = None
+                try:
+                    parsed_sch_id = uuid_pkg.UUID(raw_sch_str)
+                except ValueError:
+                    row_errors.append({
+                        "field": "Schedule ID",
+                        "value": raw_sch_str,
+                        "error": f"Schedule {raw_sch_str} was not found. Performance record was not created."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                target_sch = db_schedules_map.get(parsed_sch_id)
+                if not target_sch:
+                    row_errors.append({
+                        "field": "Schedule ID",
+                        "value": raw_sch_str,
+                        "error": f"Schedule {raw_sch_str} was not found. Performance record was not created."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 2. Resolve Engineer from Schedule
+                eng = db_engineers_map.get(target_sch.engineer_id) if target_sch.engineer_id else None
+                if not eng or eng.company_id != target_company_id:
+                    row_errors.append({
+                        "field": "Schedule ID",
+                        "value": raw_sch_str,
+                        "error": f"Schedule {raw_sch_str} has no valid engineer in the selected company."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 3. Validate Orbit ID matches schedule's engineer
+                uploaded_orbit_id = str(row_dict.get("orbit_id") or "").strip()
+                if not uploaded_orbit_id:
                     row_errors.append({
                         "field": "Orbit ID",
                         "value": "",
@@ -2563,26 +2592,24 @@ async def bulk_upload(
                     errors_list.append(row_dict)
                     continue
 
-                # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
-                if not eng_info:
+                if uploaded_orbit_id != eng.orbit_id:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
-                        "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
+                        "value": uploaded_orbit_id,
+                        "error": f"Orbit ID {uploaded_orbit_id} does not match Schedule {parsed_sch_id}, which belongs to Orbit ID {eng.orbit_id}."
                     })
                     row_dict["errors"] = row_errors
                     errors_list.append(row_dict)
                     continue
 
-                engineer_id, resolved_engineer_name = eng_info
-                row_dict["engineer_id"] = engineer_id
-                row_dict["resolved_engineer_name"] = resolved_engineer_name
+                row_dict["schedule_id"] = target_sch.schedule_id
+                row_dict["engineer_id"] = eng.engineer_id
+                row_dict["resolved_engineer_name"] = eng.engineer_name
 
-                # 3. Parse and validate dates
+                # 4. Parse dates
                 actual_start_date = None
                 start_val = row_dict.get("actual_start_date")
-                if start_val is not None:
+                if start_val is not None and str(start_val).strip() != "":
                     try:
                         actual_start_date = parse_date(start_val)
                     except ValueError:
@@ -2591,10 +2618,16 @@ async def bulk_upload(
                             "value": str(start_val),
                             "error": "Invalid actual start date format."
                         })
+                else:
+                    row_errors.append({
+                        "field": "Actual Start Date",
+                        "value": "",
+                        "error": "Actual Start Date is required."
+                    })
 
                 actual_end_date = None
                 end_val = row_dict.get("actual_end_date")
-                if end_val is not None:
+                if end_val is not None and str(end_val).strip() != "":
                     try:
                         actual_end_date = parse_date(end_val)
                     except ValueError:
@@ -2611,10 +2644,10 @@ async def bulk_upload(
                         "error": "actual_end_date should not be earlier than actual_start_date"
                     })
 
-                # 4. Score / Rating validation (1.0 to 5.0)
+                # 5. Score / Rating validation (1.0 to 5.0)
                 score = None
                 score_val = row_dict.get("score")
-                if score_val is not None:
+                if score_val is not None and str(score_val).strip() != "":
                     try:
                         score = float(score_val)
                         if score < 1.0 or score > 5.0:
@@ -2629,8 +2662,14 @@ async def bulk_upload(
                             "value": str(score_val),
                             "error": "Score must be a valid number."
                         })
+                else:
+                    row_errors.append({
+                        "field": "Score",
+                        "value": "",
+                        "error": "Score is required."
+                    })
 
-                # 5. Escalation & Escalation Reason validation
+                # 6. Escalation & Escalation Reason validation
                 escalation_val = row_dict.get("escalation")
                 escalation = False
                 if escalation_val is not None:
@@ -2670,41 +2709,16 @@ async def bulk_upload(
                 row_dict["feedback"] = row_dict.get("feedback")
                 row_dict["attachment"] = row_dict.get("attachment")
 
-                # 6. Resolve Schedule for this engineer
-                schedules_for_eng = engineer_schedules.get(engineer_id, [])
-                target_schedule = None
-                if schedules_for_eng:
-                    target_schedule = schedules_for_eng[0]
-                else:
-                    # Create baseline Schedule for engineer if none exists
-                    target_schedule = Schedule(
-                        schedule_id=uuid_pkg.uuid4(),
-                        engineer_id=engineer_id,
-                        support_type=row_dict.get("support_type") or "Customer Support",
-                        country=row_dict.get("country") or "Global",
-                        fab_city=row_dict.get("fab_city"),
-                        fab_site=row_dict.get("fab_site"),
-                        start_date=actual_start_date or date.today(),
-                        schedule_status="Upcoming",
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                    engineer_schedules.setdefault(engineer_id, []).append(target_schedule)
-                    new_schedules_created.append(target_schedule)
-
-                schedule_id = target_schedule.schedule_id
-                row_dict["schedule_id"] = schedule_id
-
                 # 7. Duplicate row detection in Excel sheet
-                row_key = (schedule_id, actual_start_date)
+                row_key = (target_sch.schedule_id, actual_start_date)
 
                 if row_key in seen_keys:
-                    row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, ActualStartDate: {actual_start_date}"
+                    row_dict["duplicate_key"] = f"ScheduleID: {target_sch.schedule_id}, ActualStartDate: {actual_start_date}"
                     duplicates_list.append(row_dict)
                     continue
                 seen_keys.add(row_key)
 
-                # 8. Upsert check: existing DB record vs new record
+                # 8. Upsert check
                 existing_perf_record = existing_perf_map.get(row_key)
                 if existing_perf_record:
                     row_dict["existing_perf"] = existing_perf_record
@@ -2738,10 +2752,6 @@ async def bulk_upload(
             updated_count = 0
             failed_count = 0
             try:
-                # Add baseline schedules if any created
-                if new_schedules_created:
-                    db.add_all(new_schedules_created)
-
                 # 1. Bulk Insert New Performance evaluations
                 perfs_to_add = []
                 for item in valid_rows_to_insert:
@@ -2799,7 +2809,7 @@ async def bulk_upload(
                 )
             t_insert = time.perf_counter()
 
-            # 8. Generate report workbook
+            # Generate report workbook
             report_wb = openpyxl.Workbook()
             ws_summary = report_wb.active
             ws_summary.title = "Summary"
@@ -2825,7 +2835,7 @@ async def bulk_upload(
                 ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
 
             headers_valid = [
-                "Excel Row", "Orbit ID", "Engineer Name", "Score", "Actual Start", 
+                "Excel Row", "Schedule ID", "Orbit ID", "Engineer Name", "Score", "Actual Start", 
                 "Actual End", "Escalation", "Escalation Reason", "Feedback", "Status"
             ]
 
@@ -2835,6 +2845,7 @@ async def bulk_upload(
             for r in valid_rows_to_insert:
                 ws_valid.append([
                     r["excel_row"],
+                    str(r.get("schedule_id") or ""),
                     r.get("orbit_id"),
                     r.get("resolved_engineer_name"),
                     r.get("score"),
@@ -2848,11 +2859,12 @@ async def bulk_upload(
 
             # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
-            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
+            ws_errors.append(["Excel Row", "Schedule ID", "Orbit ID", "Field", "Value", "Error"])
             for r in errors_list:
                 for err in r.get("errors", []):
                     ws_errors.append([
                         r["excel_row"],
+                        str(r.get("schedule_id") or ""),
                         r.get("orbit_id") or "",
                         err.get("field") or "",
                         err.get("value") or "",
@@ -2861,10 +2873,11 @@ async def bulk_upload(
 
             # Duplicates Sheet
             ws_dups = report_wb.create_sheet(title="Duplicates")
-            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
+            ws_dups.append(["Excel Row", "Schedule ID", "Orbit ID", "Duplicate Key", "Reason"])
             for r in duplicates_list:
                 ws_dups.append([
                     r["excel_row"],
+                    str(r.get("schedule_id") or ""),
                     r.get("orbit_id") or "",
                     r.get("duplicate_key") or "",
                     "Duplicate Performance row within Excel sheet"
@@ -2876,6 +2889,7 @@ async def bulk_upload(
             for r in existing_list:
                 ws_exist.append([
                     r["excel_row"],
+                    str(r.get("schedule_id") or ""),
                     r.get("orbit_id") or "",
                     r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
                     r.get("score"),
@@ -2889,7 +2903,7 @@ async def bulk_upload(
 
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
-            ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
+            ws_warn.append(["Excel Row", "Schedule ID", "Orbit ID", "Field", "Value", "Warning"])
 
             for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
                 for col in sheet_obj.columns:
@@ -2942,8 +2956,11 @@ async def bulk_upload(
 
             return {
                 "success": True,
+                "uploadId": str(upload_id),
+                "upload_id": str(upload_id),
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "existingCount": len(existing_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }

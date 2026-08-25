@@ -11,6 +11,7 @@ from app.schemas.performance import PerformanceResponse, PerformanceCreate
 from app.schemas.missed_schedule import MissedScheduleResponse, MissedScheduleCreate
 from app.services import schedule_service, travel_service, performance_service, missed_schedule_service
 from app.services.auth_service import get_current_user, get_schedule_and_verify, enforce_write_permission, enforce_delete_permission, is_engineer_user
+from app.services.audit_service import log_audit, object_to_dict
 from app.models.user import User
 
 
@@ -210,8 +211,24 @@ def create_schedule_performance(
     try:
         enforce_write_permission(current_user)
         get_schedule_and_verify(db, schedule_id, current_user)
-        # Derive owner_id from current_user
-        return performance_service.create_performance(db, schedule_id, performance_data, owner_id=current_user.user_id)
+        created = performance_service.create_performance(
+            db,
+            schedule_id,
+            performance_data,
+            owner_id=current_user.user_id,
+            orbit_id=performance_data.orbit_id
+        )
+        log_audit(
+            db=db,
+            user_id=current_user.user_id,
+            company_id=current_user.company_id,
+            action="CREATE",
+            entity_type="Performance",
+            entity_id=created.performance_id,
+            description=f"Created Performance evaluation for schedule {schedule_id}",
+            new_values=object_to_dict(created)
+        )
+        return created
     except HTTPException:
         raise
     except Exception as e:

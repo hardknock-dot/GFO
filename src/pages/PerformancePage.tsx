@@ -14,6 +14,7 @@ import { Modal } from '../components/forms/Modal';
 import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import type { Performance } from '../types';
 import { Star, Edit, Trash2, Plus } from 'lucide-react';
+import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
 
 export const PerformancePage: React.FC = () => {
   const { currentCompany } = useCompany();
@@ -62,22 +63,10 @@ export const PerformancePage: React.FC = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
   const handleOpenAddModal = () => {
-    setSelectedPerf(null);
-    setFormData({
-      scheduleId: schedulesList[0]?.id || '',
-      actualStartDate: '',
-      actualEndDate: '',
-      escalation: false,
-      escalationReason: '',
-      feedback: '',
-      score: '5.0',
-      attachment: '',
-    });
-    setFormErrors({});
-    setApiError(null);
-    setSuccessMessage(null);
-    setIsModalOpen(true);
+    setIsAddModalOpen(true);
   };
 
   const handleOpenEditModal = (p: Performance) => {
@@ -436,6 +425,20 @@ export const PerformancePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Add Performance Modal */}
+      <AddPerformanceModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        schedulesList={schedulesList}
+        onSuccess={() => refetch()}
+        onEditExisting={(id) => {
+          if (id) {
+            const found = perfList.find((p) => p.id === id);
+            if (found) handleOpenEditModal(found);
+          }
+        }}
+      />
     </div>
   );
 };

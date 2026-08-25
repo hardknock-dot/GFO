@@ -57,3 +57,7 @@ backend/app/uploads/
 
 # Accidental/generated nested backend directory
 backend/backend/
+
+*.dump
+*.backup
+ormp_backup*

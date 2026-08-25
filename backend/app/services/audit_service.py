@@ -10,6 +10,8 @@ from sqlalchemy import select, and_, or_, desc, func
 from app.models.audit_log import AuditLog
 from app.models.user import User
 
+from decimal import Decimal
+
 logger = logging.getLogger(__name__)
 
 SENSITIVE_KEYS = {"password", "password_hash", "token", "secret", "jwt", "access_token"}
@@ -17,6 +19,8 @@ SENSITIVE_KEYS = {"password", "password_hash", "token", "secret", "jwt", "access
 def sanitize_values(val: Any) -> Any:
     if val is None:
         return None
+    if isinstance(val, Decimal):
+        return float(val)
     if isinstance(val, (datetime, date)):
         return val.isoformat()
     if isinstance(val, UUID):

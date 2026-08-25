@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 from typing import Optional, List
 from fastapi import Query
 from app.schemas.pagination import PaginatedResponse
-from app.services.auth_service import enforce_company_isolation
+from app.schemas.performance import PerformanceCreate, PerformanceResponse, PerformanceUpdate
+from app.services.auth_service import get_schedule_and_verify, enforce_company_isolation
 
 router = APIRouter(prefix="/performance", tags=["performance"], dependencies=[Depends(get_current_user)])
 
@@ -61,6 +62,47 @@ def read_performances(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve performance records from database"
+        )
+
+@router.post("", response_model=PerformanceResponse, status_code=status.HTTP_201_CREATED)
+def create_new_performance(
+    performance_data: PerformanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        enforce_write_permission(current_user)
+        if not performance_data.schedule_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Schedule ID is required to create a Performance record."
+            )
+        get_schedule_and_verify(db, performance_data.schedule_id, current_user)
+        created = performance_service.create_performance(
+            db,
+            schedule_id=performance_data.schedule_id,
+            performance_data=performance_data,
+            owner_id=current_user.user_id,
+            orbit_id=performance_data.orbit_id
+        )
+        log_audit(
+            db=db,
+            user_id=current_user.user_id,
+            company_id=current_user.company_id,
+            action="CREATE",
+            entity_type="Performance",
+            entity_id=created.performance_id,
+            description=f"Created Performance evaluation for schedule {performance_data.schedule_id}",
+            new_values=object_to_dict(created)
+        )
+        return created
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error creating performance record: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create performance record in database"
         )
 
 @router.put("/{performance_id}", response_model=PerformanceResponse)
