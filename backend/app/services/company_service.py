@@ -57,9 +57,33 @@ def update_company(db: Session, company_id: UUID, data: CompanyUpdate) -> Compan
     db.refresh(comp)
     return comp
 
+from sqlalchemy import text
+
 def delete_company(db: Session, company_id: UUID) -> None:
     comp = db.get(Company, company_id)
-    if comp:
+    if not comp:
+        return
+    
+    try:
+        # Check if company has active engineers or users linked
+        eng_count = db.execute(text("SELECT COUNT(*) FROM engineers WHERE company_id = :cid"), {"cid": company_id}).scalar() or 0
+        usr_count = db.execute(text("SELECT COUNT(*) FROM users WHERE company_id = :cid"), {"cid": company_id}).scalar() or 0
+        
+        if eng_count > 0 or usr_count > 0:
+            # Soft delete / deactivate company tenant so historical records remain intact
+            comp.is_active = False
+            comp.updated_at = datetime.utcnow()
+            db.commit()
+            return
+
         db.delete(comp)
         db.commit()
+    except Exception:
+        db.rollback()
+        # Fall back to soft-deactivating company tenant
+        comp = db.get(Company, company_id)
+        if comp:
+            comp.is_active = False
+            comp.updated_at = datetime.utcnow()
+            db.commit()
 

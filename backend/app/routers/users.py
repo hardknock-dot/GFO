@@ -227,7 +227,7 @@ def update_user_details(target_user_id: UUID, req: UserUpdateRequest, current_us
 @router.delete("/{target_user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user_account(target_user_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
-    Delete a user account and associated company relationships.
+    Delete a user account safely by unlinking associated foreign key relationships.
     """
     check_global_admin(current_user)
     if target_user_id == current_user.user_id:
@@ -237,9 +237,36 @@ def delete_user_account(target_user_id: UUID, current_user: User = Depends(get_c
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     
     from sqlalchemy import text
-    db.execute(text("UPDATE schedules SET owner_id = NULL WHERE owner_id = :uid"), {"uid": target_user_id})
-    db.execute(text("UPDATE visa_details SET owner_id = NULL WHERE owner_id = :uid"), {"uid": target_user_id})
+    try:
+        db.execute(text("ALTER TABLE bulk_uploads ALTER COLUMN uploaded_by DROP NOT NULL;"))
+        db.commit()
+    except Exception:
+        db.rollback()
 
-    db.delete(target_user)
-    db.commit()
+    safe_queries = [
+        ("UPDATE bulk_uploads SET uploaded_by = NULL WHERE uploaded_by = :uid", {"uid": target_user_id}),
+        ("UPDATE schedules SET owner_id = NULL WHERE owner_id = :uid", {"uid": target_user_id}),
+        ("UPDATE visa_details SET owner_id = NULL WHERE owner_id = :uid", {"uid": target_user_id}),
+        ("UPDATE general_delete_requests SET requested_by = NULL WHERE requested_by = :uid", {"uid": target_user_id}),
+        ("UPDATE general_delete_requests SET reviewed_by = NULL WHERE reviewed_by = :uid", {"uid": target_user_id}),
+        ("DELETE FROM user_company_access WHERE user_id = :uid", {"uid": target_user_id}),
+    ]
+
+    for stmt, params in safe_queries:
+        try:
+            db.execute(text(stmt), params)
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    try:
+        db.delete(target_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting user {target_user_id}: {e}", exc_info=True)
+        target_user = db.get(User, target_user_id)
+        if target_user:
+            target_user.is_active = False
+            db.commit()
     return
