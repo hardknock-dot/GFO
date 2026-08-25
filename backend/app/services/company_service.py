@@ -63,27 +63,45 @@ def delete_company(db: Session, company_id: UUID) -> None:
     comp = db.get(Company, company_id)
     if not comp:
         return
-    
-    try:
-        # Check if company has active engineers or users linked
-        eng_count = db.execute(text("SELECT COUNT(*) FROM engineers WHERE company_id = :cid"), {"cid": company_id}).scalar() or 0
-        usr_count = db.execute(text("SELECT COUNT(*) FROM users WHERE company_id = :cid"), {"cid": company_id}).scalar() or 0
-        
-        if eng_count > 0 or usr_count > 0:
-            # Soft delete / deactivate company tenant so historical records remain intact
-            comp.is_active = False
-            comp.updated_at = datetime.utcnow()
-            db.commit()
-            return
 
+    cid_param = {"cid": company_id}
+
+    # Safe cascade deletion queries in dependency order:
+    cascade_queries = [
+        # 1. Performance evaluations & missed schedules
+        "DELETE FROM performance_evaluations WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid) OR engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
+        "DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid)",
+        
+        # 2. Engineer skills
+        "DELETE FROM engineer_skills WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
+        
+        # 3. Operational entities by company_id
+        "DELETE FROM schedules WHERE company_id = :cid",
+        "DELETE FROM visa_details WHERE company_id = :cid",
+        "DELETE FROM travel_details WHERE company_id = :cid",
+        "DELETE FROM leaves WHERE company_id = :cid",
+        "DELETE FROM bulk_uploads WHERE company_id = :cid",
+        "DELETE FROM general_delete_requests WHERE company_id = :cid",
+        "DELETE FROM user_company_access WHERE company_id = :cid",
+        
+        # 4. Engineers
+        "UPDATE users SET engineer_id = NULL WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)",
+        "DELETE FROM engineers WHERE company_id = :cid",
+        
+        # 5. Users associated with company
+        "UPDATE users SET company_id = NULL WHERE company_id = :cid",
+    ]
+
+    for stmt in cascade_queries:
+        try:
+            db.execute(text(stmt), cid_param)
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    # 6. Hard delete the company record itself
+    comp = db.get(Company, company_id)
+    if comp:
         db.delete(comp)
         db.commit()
-    except Exception:
-        db.rollback()
-        # Fall back to soft-deactivating company tenant
-        comp = db.get(Company, company_id)
-        if comp:
-            comp.is_active = False
-            comp.updated_at = datetime.utcnow()
-            db.commit()
 
