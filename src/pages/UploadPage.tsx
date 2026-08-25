@@ -25,7 +25,7 @@ export const UploadPage: React.FC = () => {
     report_url?: string;
   } | null>(null);
 
-  const [selectedTab, setSelectedTab] = useState<'engineers' | 'skills' | 'schedules' | 'visas'>('engineers');
+  const [selectedTab, setSelectedTab] = useState<'engineers' | 'skills' | 'schedules' | 'visas' | 'travel' | 'performance' | 'leaves'>('engineers');
 
   const { currentCompany, companies, setCompany } = useCompany();
   const { user } = useAuth();
@@ -72,6 +72,15 @@ export const UploadPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
     if (selectedCard.id === 'up-visa') {
       queryClient.invalidateQueries({ queryKey: ['visa'] });
+    }
+    if (selectedCard.id === 'up-travel') {
+      queryClient.invalidateQueries({ queryKey: ['travel'] });
+    }
+    if (selectedCard.id === 'up-performance') {
+      queryClient.invalidateQueries({ queryKey: ['performance'] });
+    }
+    if (selectedCard.id === 'up-leave') {
+      queryClient.invalidateQueries({ queryKey: ['leave'] });
     }
 
     // Update card status
@@ -171,6 +180,36 @@ export const UploadPage: React.FC = () => {
         >
           Visas & Permits
         </button>
+        <button
+          onClick={() => setSelectedTab('travel')}
+          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+            selectedTab === 'travel'
+              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Travel & Mobility
+        </button>
+        <button
+          onClick={() => setSelectedTab('performance')}
+          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+            selectedTab === 'performance'
+              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Performance & Reviews
+        </button>
+        <button
+          onClick={() => setSelectedTab('leaves')}
+          className={`flex-1 py-2 px-4 text-xs font-extrabold rounded-lg transition-all ${
+            selectedTab === 'leaves'
+              ? 'bg-white dark:bg-slate-900 text-[var(--color-secondary)] shadow-sm'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Leaves & Absences
+        </button>
       </div>
 
       {/* Grid of Upload Cards */}
@@ -181,6 +220,9 @@ export const UploadPage: React.FC = () => {
             if (selectedTab === 'skills') return card.id === 'up-skills';
             if (selectedTab === 'schedules') return card.id === 'up-schedule';
             if (selectedTab === 'visas') return card.id === 'up-visa';
+            if (selectedTab === 'travel') return card.id === 'up-travel';
+            if (selectedTab === 'performance') return card.id === 'up-performance';
+            if (selectedTab === 'leaves') return card.id === 'up-leave';
             return true;
           })
           .map((card) => (

@@ -19,6 +19,9 @@ from app.models.engineer import Engineer
 from app.models.skill import Skill
 from app.models.schedule import Schedule
 from app.models.visa import Visa
+from app.models.travel import Travel
+from app.models.performance import Performance
+from app.models.leave import Leave
 from app.services.auth_service import get_current_user, enforce_company_isolation, enforce_write_permission
 from app.services.audit_service import log_audit
 from app.services import bulk_upload_service
@@ -179,6 +182,66 @@ VISA_HEADER_MAP = {
     "remarks": "comments"
 }
 
+TRAVEL_HEADER_MAP = {
+    "orbitid": "orbit_id",
+    "engineername": "engineer_name",
+    "bookingdate": "booking_date",
+    "traveldate": "travel_date",
+    "departuredate": "travel_date",
+    "flightdate": "travel_date",
+    "purpose": "purpose",
+    "travelpurpose": "purpose",
+    "comments": "comments",
+    "remarks": "comments",
+    "notes": "comments",
+    "supporttype": "support_type",
+    "country": "country",
+    "fabcity": "fab_city",
+    "fabsite": "fab_site",
+    "scheduleid": "schedule_id"
+}
+
+PERFORMANCE_HEADER_MAP = {
+    "orbitid": "orbit_id",
+    "engineername": "engineer_name",
+    "actualstartdate": "actual_start_date",
+    "startdate": "actual_start_date",
+    "actualenddate": "actual_end_date",
+    "enddate": "actual_end_date",
+    "escalation": "escalation",
+    "escalated": "escalation",
+    "escalationreason": "escalation_reason",
+    "reason": "escalation_reason",
+    "feedback": "feedback",
+    "notes": "feedback",
+    "comments": "feedback",
+    "score": "score",
+    "rating": "score",
+    "attachment": "attachment",
+    "supporttype": "support_type",
+    "country": "country",
+    "fabcity": "fab_city",
+    "fabsite": "fab_site",
+    "scheduleid": "schedule_id"
+}
+
+LEAVE_HEADER_MAP = {
+    "orbitid": "orbit_id",
+    "engineername": "engineer_name",
+    "leavetype": "leave_type",
+    "type": "leave_type",
+    "category": "leave_type",
+    "requesteddate": "requested_date",
+    "absencedate": "requested_date",
+    "startdate": "requested_date",
+    "leavedate": "requested_date",
+    "requestedon": "requested_on",
+    "submissiondate": "requested_on",
+    "submittedon": "requested_on",
+    "approvalstatus": "approval_status",
+    "status": "approval_status"
+}
+
 @router.post("")
 async def bulk_upload(
     file: UploadFile = File(...),
@@ -237,6 +300,12 @@ async def bulk_upload(
         upload_type = "schedules"
     elif module_id == "up-visa":
         upload_type = "visas"
+    elif module_id == "up-travel":
+        upload_type = "travel"
+    elif module_id == "up-performance":
+        upload_type = "performance"
+    elif module_id == "up-leave":
+        upload_type = "leaves"
     elif module_id != "up-engineers":
         upload_type = module_id
 
@@ -261,8 +330,8 @@ async def bulk_upload(
     )
 
     try:
-        # If it is not engineers roster, and not up-skills, up-schedule, or up-visa, return default message
-        if module_id != "up-engineers" and module_id != "up-skills" and module_id != "up-schedule" and module_id != "up-visa":
+        # If it is not engineers roster, and not up-skills, up-schedule, up-visa, up-travel, up-performance, or up-leave, return default message
+        if module_id != "up-engineers" and module_id != "up-skills" and module_id != "up-schedule" and module_id != "up-visa" and module_id != "up-travel" and module_id != "up-performance" and module_id != "up-leave":
             bulk_upload_service.update_bulk_upload(
                 db,
                 upload_id=upload_id,
@@ -1781,6 +1850,1536 @@ async def bulk_upload(
             )
 
             ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new visa records and updated {updated_count} existing visa records."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+
+            return {
+                "success": True,
+                "rowsProcessed": total_rows,
+                "errorsCount": len(errors_list),
+                "message": ingested_msg,
+                "report_url": f"/api/upload/download-report/{report_filename}"
+            }
+
+        if module_id == "up-travel":
+            import time
+            start_time = time.perf_counter()
+
+            try:
+                contents = await file.read()
+                wb = openpyxl.load_workbook(io.BytesIO(contents))
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to parse Excel file. Please ensure it is a valid .xlsx file."
+                )
+
+            # Case-insensitive detection of the "Travel" sheet
+            travel_sheet_name = None
+            for name in wb.sheetnames:
+                norm_name = name.strip().lower()
+                if norm_name in ("travel", "travels", "travel details", "travel arrangements", "travel itinerary"):
+                    travel_sheet_name = name
+                    break
+
+            if not travel_sheet_name:
+                if len(wb.sheetnames) == 1:
+                    travel_sheet_name = wb.sheetnames[0]
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Excel workbook must contain a 'Travel' or 'Travel Details' sheet."
+                    )
+
+            sheet = wb[travel_sheet_name]
+            
+            # Map headers
+            first_row = [sheet.cell(row=1, column=c).value for c in range(1, sheet.max_column + 1)]
+            col_indices = {}
+            for idx, val in enumerate(first_row):
+                if val is not None:
+                    norm = normalize_header(val)
+                    mapped_field = TRAVEL_HEADER_MAP.get(norm)
+                    if mapped_field:
+                        col_indices[mapped_field] = idx + 1
+
+            # Check required columns: orbit_id
+            if "orbit_id" not in col_indices:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Required header 'Orbit ID' is missing from the Excel sheet."
+                )
+
+            # Gather all non-blank rows
+            raw_rows = []
+            for r in range(2, sheet.max_row + 1):
+                is_blank = True
+                for c in range(1, sheet.max_column + 1):
+                    val = sheet.cell(row=r, column=c).value
+                    if val is not None and str(val).strip() != "":
+                        is_blank = False
+                        break
+                if is_blank:
+                    continue
+
+                row_dict = {"excel_row": r}
+                
+                # Retrieve original engineer name if present
+                original_engineer_name = None
+                for idx, val in enumerate(first_row):
+                    if val is not None:
+                        norm = normalize_header(val)
+                        if norm in ("engineername", "name"):
+                            original_engineer_name = clean_val(sheet.cell(row=r, column=idx + 1).value)
+                            break
+                row_dict["original_engineer_name"] = original_engineer_name
+
+                # Load fields from mapped headers
+                for field, col_idx in col_indices.items():
+                    row_dict[field] = clean_val(sheet.cell(row=r, column=col_idx).value)
+
+                # Fill missing columns
+                for field in set(TRAVEL_HEADER_MAP.values()):
+                    if field not in row_dict:
+                        row_dict[field] = None
+
+                raw_rows.append(row_dict)
+
+            if not raw_rows:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The Travel sheet is empty or contains no rows."
+                )
+
+            t_excel = time.perf_counter()
+
+            # Bulk Engineer Resolution
+            unique_orbit_ids = {
+                str(row.get("orbit_id")).strip()
+                for row in raw_rows
+                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+            }
+
+            db_engineers = []
+            if unique_orbit_ids:
+                db_engineers = db.scalars(
+                    select(Engineer).where(
+                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        Engineer.company_id == target_company_id
+                    )
+                ).all()
+
+            orbit_to_engineer = {
+                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                for eng in db_engineers
+            }
+            t_engineer = time.perf_counter()
+
+            # Resolution of Schedules for resolved engineers
+            resolved_engineer_ids = {
+                val[0] for val in orbit_to_engineer.values()
+            }
+
+            db_schedules = []
+            if resolved_engineer_ids:
+                db_schedules = db.scalars(
+                    select(Schedule).where(
+                        Schedule.engineer_id.in_(list(resolved_engineer_ids))
+                    )
+                ).all()
+
+            # Group schedules by engineer_id
+            engineer_schedules = {}
+            for sch in db_schedules:
+                engineer_schedules.setdefault(sch.engineer_id, []).append(sch)
+
+            # Query existing travel arrangements for resolved schedules
+            resolved_schedule_ids = [sch.schedule_id for sch in db_schedules]
+            db_travels = []
+            if resolved_schedule_ids:
+                db_travels = db.scalars(
+                    select(Travel).where(
+                        Travel.schedule_id.in_(resolved_schedule_ids)
+                    )
+                ).all()
+
+            # Map existing travel records by (schedule_id, travel_date, purpose_lower)
+            existing_travel_map = {}
+            for tr in db_travels:
+                p_key = (tr.purpose or "").strip().lower()
+                existing_travel_map[(tr.schedule_id, tr.travel_date, p_key)] = tr
+
+            t_existing_lookup = time.perf_counter()
+
+            errors_list = []
+            duplicates_list = []
+            existing_list = []
+            valid_rows_to_insert = []
+            new_schedules_created = []
+            seen_keys = set()
+
+            total_rows = len(raw_rows)
+
+            for row_dict in raw_rows:
+                row_errors = []
+                
+                # 1. Validate required fields: orbit_id
+                orbit_id = row_dict.get("orbit_id")
+                if not orbit_id:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": "",
+                        "error": "Orbit ID is required."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 2. Resolve engineer using bulk lookup
+                eng_info = orbit_to_engineer.get(orbit_id)
+                if not eng_info:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": orbit_id,
+                        "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                engineer_id, resolved_engineer_name = eng_info
+                row_dict["engineer_id"] = engineer_id
+                row_dict["resolved_engineer_name"] = resolved_engineer_name
+
+                # 3. Parse and validate dates
+                booking_date = None
+                booking_date_val = row_dict.get("booking_date")
+                if booking_date_val is not None:
+                    try:
+                        booking_date = parse_date(booking_date_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Booking Date",
+                            "value": str(booking_date_val),
+                            "error": "Invalid booking date format."
+                        })
+
+                travel_date = None
+                travel_date_val = row_dict.get("travel_date")
+                if travel_date_val is not None:
+                    try:
+                        travel_date = parse_date(travel_date_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Travel Date",
+                            "value": str(travel_date_val),
+                            "error": "Invalid travel date format."
+                        })
+
+                if booking_date and travel_date and travel_date < booking_date:
+                    row_errors.append({
+                        "field": "Travel Date",
+                        "value": str(travel_date_val),
+                        "error": "travel_date should not be earlier than booking_date"
+                    })
+
+                if row_errors:
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                row_dict["booking_date"] = booking_date
+                row_dict["travel_date"] = travel_date
+
+                purpose = row_dict.get("purpose") or "Customer Support"
+                row_dict["purpose"] = purpose
+
+                # 4. Resolve Schedule for this engineer
+                schedules_for_eng = engineer_schedules.get(engineer_id, [])
+                target_schedule = None
+                if schedules_for_eng:
+                    # Pick best matching schedule or latest
+                    target_schedule = schedules_for_eng[0]
+                else:
+                    # Create baseline Schedule for engineer if none exists
+                    target_schedule = Schedule(
+                        schedule_id=uuid_pkg.uuid4(),
+                        engineer_id=engineer_id,
+                        support_type=row_dict.get("support_type") or "Customer Support",
+                        country=row_dict.get("country") or "Global",
+                        fab_city=row_dict.get("fab_city"),
+                        fab_site=row_dict.get("fab_site"),
+                        start_date=travel_date or date.today(),
+                        schedule_status="Upcoming",
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    engineer_schedules.setdefault(engineer_id, []).append(target_schedule)
+                    new_schedules_created.append(target_schedule)
+
+                schedule_id = target_schedule.schedule_id
+                row_dict["schedule_id"] = schedule_id
+
+                # 5. Duplicate row detection in Excel sheet
+                purpose_clean = (purpose or "").strip().lower()
+                row_key = (schedule_id, travel_date, purpose_clean)
+
+                if row_key in seen_keys:
+                    row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, TravelDate: {travel_date}, Purpose: {purpose}"
+                    duplicates_list.append(row_dict)
+                    continue
+                seen_keys.add(row_key)
+
+                # 6. Upsert check: existing DB record vs new record
+                existing_travel_record = existing_travel_map.get(row_key)
+                if existing_travel_record:
+                    row_dict["existing_travel"] = existing_travel_record
+                    existing_list.append(row_dict)
+                else:
+                    valid_rows_to_insert.append(row_dict)
+
+            t_validation = time.perf_counter()
+
+            # Update BulkUpload stats
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                total_rows=total_rows,
+                valid_rows=len(valid_rows_to_insert),
+                error_rows=len(errors_list),
+                duplicate_rows=len(duplicates_list),
+                existing_rows=len(existing_list),
+                warning_rows=0,
+                status="READY"
+            )
+
+            # Transition to IMPORTING
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status="IMPORTING"
+            )
+
+            imported_count = 0
+            updated_count = 0
+            failed_count = 0
+            try:
+                # Add baseline schedules if any created
+                if new_schedules_created:
+                    db.add_all(new_schedules_created)
+
+                # 1. Bulk Insert New Travels
+                travels_to_add = []
+                for item in valid_rows_to_insert:
+                    db_tr = Travel(
+                        travel_id=uuid_pkg.uuid4(),
+                        schedule_id=item["schedule_id"],
+                        booking_date=item["booking_date"],
+                        travel_date=item["travel_date"],
+                        purpose=item["purpose"],
+                        comments=item["comments"],
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    travels_to_add.append(db_tr)
+                if travels_to_add:
+                    db.add_all(travels_to_add)
+
+                # 2. Update Existing Travels
+                for item in existing_list:
+                    etr = item["existing_travel"]
+                    if item.get("booking_date") is not None:
+                        etr.booking_date = item["booking_date"]
+                    if item.get("travel_date") is not None:
+                        etr.travel_date = item["travel_date"]
+                    if item.get("purpose") is not None:
+                        etr.purpose = item["purpose"]
+                    if item.get("comments") is not None:
+                        etr.comments = item["comments"]
+                    etr.updated_at = datetime.utcnow()
+
+                db.commit()
+                imported_count = len(valid_rows_to_insert)
+                updated_count = len(existing_list)
+            except Exception as insert_err:
+                db.rollback()
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
+                bulk_upload_service.update_bulk_upload(
+                    db,
+                    upload_id=upload_id,
+                    status="FAILED",
+                    failed_rows=failed_count
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Database ingestion failed: {str(insert_err)}"
+                )
+            t_insert = time.perf_counter()
+
+            # 8. Generate report workbook
+            report_wb = openpyxl.Workbook()
+            ws_summary = report_wb.active
+            ws_summary.title = "Summary"
+            ws_summary.append(["ORMP Travel Bulk Ingestion Report"])
+            ws_summary.append([])
+            ws_summary.append(["File Name", file.filename])
+            ws_summary.append(["Upload Type", "travel"])
+            ws_summary.append(["Uploaded By", current_user.full_name])
+            ws_summary.append(["Upload Date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            ws_summary.append(["Target Company", company.company_name])
+            ws_summary.append(["Company UUID", str(company.company_id)])
+            ws_summary.append([])
+            ws_summary.append(["Metric", "Count"])
+            ws_summary.append(["Total Rows", total_rows])
+            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
+            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Error Rows", len(errors_list)])
+            ws_summary.append(["Duplicate Rows", len(duplicates_list)])
+            ws_summary.append(["Warning Rows", 0])
+            
+            for col in ws_summary.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            headers_valid = [
+                "Excel Row", "Orbit ID", "Engineer Name", "Booking Date", 
+                "Travel Date", "Purpose", "Comments", "Status"
+            ]
+
+            # Valid Records Sheet (Inserted)
+            ws_valid = report_wb.create_sheet(title="Valid Records")
+            ws_valid.append(headers_valid)
+            for r in valid_rows_to_insert:
+                ws_valid.append([
+                    r["excel_row"],
+                    r.get("orbit_id"),
+                    r.get("resolved_engineer_name"),
+                    str(r.get("booking_date")) if r.get("booking_date") else "",
+                    str(r.get("travel_date")) if r.get("travel_date") else "",
+                    r.get("purpose"),
+                    r.get("comments"),
+                    "INSERTED"
+                ])
+
+            # Errors Sheet
+            ws_errors = report_wb.create_sheet(title="Errors")
+            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
+            for r in errors_list:
+                for err in r.get("errors", []):
+                    ws_errors.append([
+                        r["excel_row"],
+                        r.get("orbit_id") or "",
+                        err.get("field") or "",
+                        err.get("value") or "",
+                        err.get("error") or ""
+                    ])
+
+            # Duplicates Sheet
+            ws_dups = report_wb.create_sheet(title="Duplicates")
+            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
+            for r in duplicates_list:
+                ws_dups.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("duplicate_key") or "",
+                    "Duplicate Travel row within Excel sheet"
+                ])
+
+            # Existing Records Sheet (Updated)
+            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist.append(headers_valid)
+            for r in existing_list:
+                ws_exist.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    str(r.get("booking_date")) if r.get("booking_date") else "",
+                    str(r.get("travel_date")) if r.get("travel_date") else "",
+                    r.get("purpose"),
+                    r.get("comments"),
+                    "UPDATED"
+                ])
+
+            # Warnings Sheet
+            ws_warn = report_wb.create_sheet(title="Warnings")
+            ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
+
+            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+                for col in sheet_obj.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            os.makedirs(TEMP_REPORTS_DIR, exist_ok=True)
+            report_filename = f"validation_report_{uuid_pkg.uuid4()}.xlsx"
+            report_path = os.path.join(TEMP_REPORTS_DIR, report_filename)
+            report_wb.save(report_path)
+            t_report = time.perf_counter()
+
+            final_status = "COMPLETED"
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
+                final_status = "COMPLETED_WITH_ERRORS"
+
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status=final_status,
+                report_file=report_filename,
+                imported_rows=imported_count + updated_count,
+                failed_rows=failed_count
+            )
+
+            total_time = time.perf_counter() - start_time
+            logger.info(
+                "\nTravel upload:\n"
+                "Rows detected: %d\n"
+                "Excel parsing: %.4fs\n"
+                "Engineer lookup: %.4fs\n"
+                "Existing travel lookup: %.4fs\n"
+                "Validation & Duplicate detection: %.4fs\n"
+                "Database upsert & commit: %.4fs\n"
+                "Report generation: %.4fs\n"
+                "Total: %.4fs",
+                total_rows,
+                t_excel - start_time,
+                t_engineer - t_excel,
+                t_existing_lookup - t_engineer,
+                t_validation - t_existing_lookup,
+                t_insert - t_validation,
+                t_report - t_insert,
+                total_time
+            )
+
+            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new travel records and updated {updated_count} existing travel records."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+
+            return {
+                "success": True,
+                "rowsProcessed": total_rows,
+                "errorsCount": len(errors_list),
+                "message": ingested_msg,
+                "report_url": f"/api/upload/download-report/{report_filename}"
+            }
+
+        if module_id == "up-performance":
+            import time
+            start_time = time.perf_counter()
+
+            try:
+                contents = await file.read()
+                wb = openpyxl.load_workbook(io.BytesIO(contents))
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to parse Excel file. Please ensure it is a valid .xlsx file."
+                )
+
+            # Case-insensitive detection of the "Performance" sheet
+            perf_sheet_name = None
+            for name in wb.sheetnames:
+                norm_name = name.strip().lower()
+                if norm_name in ("performance", "performances", "performance details", "performance evaluations", "evaluations"):
+                    perf_sheet_name = name
+                    break
+
+            if not perf_sheet_name:
+                if len(wb.sheetnames) == 1:
+                    perf_sheet_name = wb.sheetnames[0]
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Excel workbook must contain a 'Performance' or 'Performance Details' sheet."
+                    )
+
+            sheet = wb[perf_sheet_name]
+            
+            # Map headers
+            first_row = [sheet.cell(row=1, column=c).value for c in range(1, sheet.max_column + 1)]
+            col_indices = {}
+            for idx, val in enumerate(first_row):
+                if val is not None:
+                    norm = normalize_header(val)
+                    mapped_field = PERFORMANCE_HEADER_MAP.get(norm)
+                    if mapped_field:
+                        col_indices[mapped_field] = idx + 1
+
+            # Check required columns: orbit_id
+            if "orbit_id" not in col_indices:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Required header 'Orbit ID' is missing from the Excel sheet."
+                )
+
+            # Gather all non-blank rows
+            raw_rows = []
+            for r in range(2, sheet.max_row + 1):
+                is_blank = True
+                for c in range(1, sheet.max_column + 1):
+                    val = sheet.cell(row=r, column=c).value
+                    if val is not None and str(val).strip() != "":
+                        is_blank = False
+                        break
+                if is_blank:
+                    continue
+
+                row_dict = {"excel_row": r}
+                
+                # Retrieve original engineer name if present
+                original_engineer_name = None
+                for idx, val in enumerate(first_row):
+                    if val is not None:
+                        norm = normalize_header(val)
+                        if norm in ("engineername", "name"):
+                            original_engineer_name = clean_val(sheet.cell(row=r, column=idx + 1).value)
+                            break
+                row_dict["original_engineer_name"] = original_engineer_name
+
+                # Load fields from mapped headers
+                for field, col_idx in col_indices.items():
+                    row_dict[field] = clean_val(sheet.cell(row=r, column=col_idx).value)
+
+                # Fill missing columns
+                for field in set(PERFORMANCE_HEADER_MAP.values()):
+                    if field not in row_dict:
+                        row_dict[field] = None
+
+                raw_rows.append(row_dict)
+
+            if not raw_rows:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The Performance sheet is empty or contains no rows."
+                )
+
+            t_excel = time.perf_counter()
+
+            # Bulk Engineer Resolution
+            unique_orbit_ids = {
+                str(row.get("orbit_id")).strip()
+                for row in raw_rows
+                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+            }
+
+            db_engineers = []
+            if unique_orbit_ids:
+                db_engineers = db.scalars(
+                    select(Engineer).where(
+                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        Engineer.company_id == target_company_id
+                    )
+                ).all()
+
+            orbit_to_engineer = {
+                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                for eng in db_engineers
+            }
+            t_engineer = time.perf_counter()
+
+            # Resolution of Schedules for resolved engineers
+            resolved_engineer_ids = {
+                val[0] for val in orbit_to_engineer.values()
+            }
+
+            db_schedules = []
+            if resolved_engineer_ids:
+                db_schedules = db.scalars(
+                    select(Schedule).where(
+                        Schedule.engineer_id.in_(list(resolved_engineer_ids))
+                    )
+                ).all()
+
+            # Group schedules by engineer_id
+            engineer_schedules = {}
+            for sch in db_schedules:
+                engineer_schedules.setdefault(sch.engineer_id, []).append(sch)
+
+            # Query existing performance records for resolved schedules
+            resolved_schedule_ids = [sch.schedule_id for sch in db_schedules]
+            db_perfs = []
+            if resolved_schedule_ids:
+                db_perfs = db.scalars(
+                    select(Performance).where(
+                        Performance.schedule_id.in_(resolved_schedule_ids)
+                    )
+                ).all()
+
+            # Map existing performance records by (schedule_id, actual_start_date)
+            existing_perf_map = {}
+            for pf in db_perfs:
+                existing_perf_map[(pf.schedule_id, pf.actual_start_date)] = pf
+
+            t_existing_lookup = time.perf_counter()
+
+            errors_list = []
+            duplicates_list = []
+            existing_list = []
+            valid_rows_to_insert = []
+            new_schedules_created = []
+            seen_keys = set()
+
+            total_rows = len(raw_rows)
+
+            for row_dict in raw_rows:
+                row_errors = []
+                
+                # 1. Validate required fields: orbit_id
+                orbit_id = row_dict.get("orbit_id")
+                if not orbit_id:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": "",
+                        "error": "Orbit ID is required."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 2. Resolve engineer using bulk lookup
+                eng_info = orbit_to_engineer.get(orbit_id)
+                if not eng_info:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": orbit_id,
+                        "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                engineer_id, resolved_engineer_name = eng_info
+                row_dict["engineer_id"] = engineer_id
+                row_dict["resolved_engineer_name"] = resolved_engineer_name
+
+                # 3. Parse and validate dates
+                actual_start_date = None
+                start_val = row_dict.get("actual_start_date")
+                if start_val is not None:
+                    try:
+                        actual_start_date = parse_date(start_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Actual Start Date",
+                            "value": str(start_val),
+                            "error": "Invalid actual start date format."
+                        })
+
+                actual_end_date = None
+                end_val = row_dict.get("actual_end_date")
+                if end_val is not None:
+                    try:
+                        actual_end_date = parse_date(end_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Actual End Date",
+                            "value": str(end_val),
+                            "error": "Invalid actual end date format."
+                        })
+
+                if actual_start_date and actual_end_date and actual_end_date < actual_start_date:
+                    row_errors.append({
+                        "field": "Actual End Date",
+                        "value": str(end_val),
+                        "error": "actual_end_date should not be earlier than actual_start_date"
+                    })
+
+                # 4. Score / Rating validation (1.0 to 5.0)
+                score = None
+                score_val = row_dict.get("score")
+                if score_val is not None:
+                    try:
+                        score = float(score_val)
+                        if score < 1.0 or score > 5.0:
+                            row_errors.append({
+                                "field": "Score",
+                                "value": str(score_val),
+                                "error": "Performance rating score must be between 1.0 and 5.0"
+                            })
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Score",
+                            "value": str(score_val),
+                            "error": "Score must be a valid number."
+                        })
+
+                # 5. Escalation & Escalation Reason validation
+                escalation_val = row_dict.get("escalation")
+                escalation = False
+                if escalation_val is not None:
+                    if isinstance(escalation_val, bool):
+                        escalation = escalation_val
+                    else:
+                        str_esc = str(escalation_val).strip().lower()
+                        if str_esc in ("true", "yes", "y", "1"):
+                            escalation = True
+                        elif str_esc in ("false", "no", "n", "0"):
+                            escalation = False
+                        else:
+                            row_errors.append({
+                                "field": "Escalation",
+                                "value": str(escalation_val),
+                                "error": "Escalation must be true or false."
+                            })
+
+                escalation_reason = row_dict.get("escalation_reason")
+                if escalation and not (escalation_reason and str(escalation_reason).strip()):
+                    row_errors.append({
+                        "field": "Escalation Reason",
+                        "value": "",
+                        "error": "Escalation reason is required when escalation is enabled."
+                    })
+
+                if row_errors:
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                row_dict["actual_start_date"] = actual_start_date
+                row_dict["actual_end_date"] = actual_end_date
+                row_dict["score"] = score
+                row_dict["escalation"] = escalation
+                row_dict["escalation_reason"] = escalation_reason
+                row_dict["feedback"] = row_dict.get("feedback")
+                row_dict["attachment"] = row_dict.get("attachment")
+
+                # 6. Resolve Schedule for this engineer
+                schedules_for_eng = engineer_schedules.get(engineer_id, [])
+                target_schedule = None
+                if schedules_for_eng:
+                    target_schedule = schedules_for_eng[0]
+                else:
+                    # Create baseline Schedule for engineer if none exists
+                    target_schedule = Schedule(
+                        schedule_id=uuid_pkg.uuid4(),
+                        engineer_id=engineer_id,
+                        support_type=row_dict.get("support_type") or "Customer Support",
+                        country=row_dict.get("country") or "Global",
+                        fab_city=row_dict.get("fab_city"),
+                        fab_site=row_dict.get("fab_site"),
+                        start_date=actual_start_date or date.today(),
+                        schedule_status="Upcoming",
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    engineer_schedules.setdefault(engineer_id, []).append(target_schedule)
+                    new_schedules_created.append(target_schedule)
+
+                schedule_id = target_schedule.schedule_id
+                row_dict["schedule_id"] = schedule_id
+
+                # 7. Duplicate row detection in Excel sheet
+                row_key = (schedule_id, actual_start_date)
+
+                if row_key in seen_keys:
+                    row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, ActualStartDate: {actual_start_date}"
+                    duplicates_list.append(row_dict)
+                    continue
+                seen_keys.add(row_key)
+
+                # 8. Upsert check: existing DB record vs new record
+                existing_perf_record = existing_perf_map.get(row_key)
+                if existing_perf_record:
+                    row_dict["existing_perf"] = existing_perf_record
+                    existing_list.append(row_dict)
+                else:
+                    valid_rows_to_insert.append(row_dict)
+
+            t_validation = time.perf_counter()
+
+            # Update BulkUpload stats
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                total_rows=total_rows,
+                valid_rows=len(valid_rows_to_insert),
+                error_rows=len(errors_list),
+                duplicate_rows=len(duplicates_list),
+                existing_rows=len(existing_list),
+                warning_rows=0,
+                status="READY"
+            )
+
+            # Transition to IMPORTING
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status="IMPORTING"
+            )
+
+            imported_count = 0
+            updated_count = 0
+            failed_count = 0
+            try:
+                # Add baseline schedules if any created
+                if new_schedules_created:
+                    db.add_all(new_schedules_created)
+
+                # 1. Bulk Insert New Performance evaluations
+                perfs_to_add = []
+                for item in valid_rows_to_insert:
+                    db_pf = Performance(
+                        performance_id=uuid_pkg.uuid4(),
+                        schedule_id=item["schedule_id"],
+                        actual_start_date=item["actual_start_date"],
+                        actual_end_date=item["actual_end_date"],
+                        escalation=item["escalation"],
+                        escalation_reason=item["escalation_reason"],
+                        feedback=item["feedback"],
+                        score=item["score"],
+                        attachment=item["attachment"],
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    perfs_to_add.append(db_pf)
+                if perfs_to_add:
+                    db.add_all(perfs_to_add)
+
+                # 2. Update Existing Performance evaluations
+                for item in existing_list:
+                    epf = item["existing_perf"]
+                    if item.get("actual_start_date") is not None:
+                        epf.actual_start_date = item["actual_start_date"]
+                    if item.get("actual_end_date") is not None:
+                        epf.actual_end_date = item["actual_end_date"]
+                    if item.get("escalation") is not None:
+                        epf.escalation = item["escalation"]
+                    if item.get("escalation_reason") is not None:
+                        epf.escalation_reason = item["escalation_reason"]
+                    if item.get("feedback") is not None:
+                        epf.feedback = item["feedback"]
+                    if item.get("score") is not None:
+                        epf.score = item["score"]
+                    if item.get("attachment") is not None:
+                        epf.attachment = item["attachment"]
+                    epf.updated_at = datetime.utcnow()
+
+                db.commit()
+                imported_count = len(valid_rows_to_insert)
+                updated_count = len(existing_list)
+            except Exception as insert_err:
+                db.rollback()
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
+                bulk_upload_service.update_bulk_upload(
+                    db,
+                    upload_id=upload_id,
+                    status="FAILED",
+                    failed_rows=failed_count
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Database ingestion failed: {str(insert_err)}"
+                )
+            t_insert = time.perf_counter()
+
+            # 8. Generate report workbook
+            report_wb = openpyxl.Workbook()
+            ws_summary = report_wb.active
+            ws_summary.title = "Summary"
+            ws_summary.append(["ORMP Performance Bulk Ingestion Report"])
+            ws_summary.append([])
+            ws_summary.append(["File Name", file.filename])
+            ws_summary.append(["Upload Type", "performance"])
+            ws_summary.append(["Uploaded By", current_user.full_name])
+            ws_summary.append(["Upload Date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            ws_summary.append(["Target Company", company.company_name])
+            ws_summary.append(["Company UUID", str(company.company_id)])
+            ws_summary.append([])
+            ws_summary.append(["Metric", "Count"])
+            ws_summary.append(["Total Rows", total_rows])
+            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
+            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Error Rows", len(errors_list)])
+            ws_summary.append(["Duplicate Rows", len(duplicates_list)])
+            ws_summary.append(["Warning Rows", 0])
+            
+            for col in ws_summary.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            headers_valid = [
+                "Excel Row", "Orbit ID", "Engineer Name", "Score", "Actual Start", 
+                "Actual End", "Escalation", "Escalation Reason", "Feedback", "Status"
+            ]
+
+            # Valid Records Sheet (Inserted)
+            ws_valid = report_wb.create_sheet(title="Valid Records")
+            ws_valid.append(headers_valid)
+            for r in valid_rows_to_insert:
+                ws_valid.append([
+                    r["excel_row"],
+                    r.get("orbit_id"),
+                    r.get("resolved_engineer_name"),
+                    r.get("score"),
+                    str(r.get("actual_start_date")) if r.get("actual_start_date") else "",
+                    str(r.get("actual_end_date")) if r.get("actual_end_date") else "",
+                    "Yes" if r.get("escalation") else "No",
+                    r.get("escalation_reason"),
+                    r.get("feedback"),
+                    "INSERTED"
+                ])
+
+            # Errors Sheet
+            ws_errors = report_wb.create_sheet(title="Errors")
+            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
+            for r in errors_list:
+                for err in r.get("errors", []):
+                    ws_errors.append([
+                        r["excel_row"],
+                        r.get("orbit_id") or "",
+                        err.get("field") or "",
+                        err.get("value") or "",
+                        err.get("error") or ""
+                    ])
+
+            # Duplicates Sheet
+            ws_dups = report_wb.create_sheet(title="Duplicates")
+            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
+            for r in duplicates_list:
+                ws_dups.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("duplicate_key") or "",
+                    "Duplicate Performance row within Excel sheet"
+                ])
+
+            # Existing Records Sheet (Updated)
+            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist.append(headers_valid)
+            for r in existing_list:
+                ws_exist.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    r.get("score"),
+                    str(r.get("actual_start_date")) if r.get("actual_start_date") else "",
+                    str(r.get("actual_end_date")) if r.get("actual_end_date") else "",
+                    "Yes" if r.get("escalation") else "No",
+                    r.get("escalation_reason"),
+                    r.get("feedback"),
+                    "UPDATED"
+                ])
+
+            # Warnings Sheet
+            ws_warn = report_wb.create_sheet(title="Warnings")
+            ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
+
+            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+                for col in sheet_obj.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            os.makedirs(TEMP_REPORTS_DIR, exist_ok=True)
+            report_filename = f"validation_report_{uuid_pkg.uuid4()}.xlsx"
+            report_path = os.path.join(TEMP_REPORTS_DIR, report_filename)
+            report_wb.save(report_path)
+            t_report = time.perf_counter()
+
+            final_status = "COMPLETED"
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
+                final_status = "COMPLETED_WITH_ERRORS"
+
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status=final_status,
+                report_file=report_filename,
+                imported_rows=imported_count + updated_count,
+                failed_rows=failed_count
+            )
+
+            total_time = time.perf_counter() - start_time
+            logger.info(
+                "\nPerformance upload:\n"
+                "Rows detected: %d\n"
+                "Excel parsing: %.4fs\n"
+                "Engineer lookup: %.4fs\n"
+                "Existing performance lookup: %.4fs\n"
+                "Validation & Duplicate detection: %.4fs\n"
+                "Database upsert & commit: %.4fs\n"
+                "Report generation: %.4fs\n"
+                "Total: %.4fs",
+                total_rows,
+                t_excel - start_time,
+                t_engineer - t_excel,
+                t_existing_lookup - t_engineer,
+                t_validation - t_existing_lookup,
+                t_insert - t_validation,
+                t_report - t_insert,
+                total_time
+            )
+
+            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new performance records and updated {updated_count} existing performance records."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+
+            return {
+                "success": True,
+                "rowsProcessed": total_rows,
+                "errorsCount": len(errors_list),
+                "message": ingested_msg,
+                "report_url": f"/api/upload/download-report/{report_filename}"
+            }
+
+        if module_id == "up-leave":
+            import time
+            start_time = time.perf_counter()
+
+            try:
+                contents = await file.read()
+                wb = openpyxl.load_workbook(io.BytesIO(contents))
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to parse Excel file. Please ensure it is a valid .xlsx file."
+                )
+
+            # Case-insensitive detection of the "Leave" sheet
+            leave_sheet_name = None
+            for name in wb.sheetnames:
+                norm_name = name.strip().lower()
+                if norm_name in ("leave", "leaves", "leave details", "leave records", "absences"):
+                    leave_sheet_name = name
+                    break
+
+            if not leave_sheet_name:
+                if len(wb.sheetnames) == 1:
+                    leave_sheet_name = wb.sheetnames[0]
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Excel workbook must contain a 'Leave' or 'Leaves' sheet."
+                    )
+
+            sheet = wb[leave_sheet_name]
+            
+            # Map headers
+            first_row = [sheet.cell(row=1, column=c).value for c in range(1, sheet.max_column + 1)]
+            col_indices = {}
+            for idx, val in enumerate(first_row):
+                if val is not None:
+                    norm = normalize_header(val)
+                    mapped_field = LEAVE_HEADER_MAP.get(norm)
+                    if mapped_field:
+                        col_indices[mapped_field] = idx + 1
+
+            # Check required columns: orbit_id, requested_date
+            if "orbit_id" not in col_indices:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Required header 'Orbit ID' is missing from the Excel sheet."
+                )
+            if "requested_date" not in col_indices:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Required header 'Requested Date' (Absence Date) is missing from the Excel sheet."
+                )
+
+            # Gather all non-blank rows
+            raw_rows = []
+            for r in range(2, sheet.max_row + 1):
+                is_blank = True
+                for c in range(1, sheet.max_column + 1):
+                    val = sheet.cell(row=r, column=c).value
+                    if val is not None and str(val).strip() != "":
+                        is_blank = False
+                        break
+                if is_blank:
+                    continue
+
+                row_dict = {"excel_row": r}
+                
+                # Retrieve original engineer name if present
+                original_engineer_name = None
+                for idx, val in enumerate(first_row):
+                    if val is not None:
+                        norm = normalize_header(val)
+                        if norm in ("engineername", "name"):
+                            original_engineer_name = clean_val(sheet.cell(row=r, column=idx + 1).value)
+                            break
+                row_dict["original_engineer_name"] = original_engineer_name
+
+                # Load fields from mapped headers
+                for field, col_idx in col_indices.items():
+                    row_dict[field] = clean_val(sheet.cell(row=r, column=col_idx).value)
+
+                # Fill missing columns
+                for field in set(LEAVE_HEADER_MAP.values()):
+                    if field not in row_dict:
+                        row_dict[field] = None
+
+                raw_rows.append(row_dict)
+
+            if not raw_rows:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The Leave sheet is empty or contains no rows."
+                )
+
+            t_excel = time.perf_counter()
+
+            # Bulk Engineer Resolution
+            unique_orbit_ids = {
+                str(row.get("orbit_id")).strip()
+                for row in raw_rows
+                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+            }
+
+            db_engineers = []
+            if unique_orbit_ids:
+                db_engineers = db.scalars(
+                    select(Engineer).where(
+                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        Engineer.company_id == target_company_id
+                    )
+                ).all()
+
+            orbit_to_engineer = {
+                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                for eng in db_engineers
+            }
+            t_engineer = time.perf_counter()
+
+            # Query existing leave records for resolved engineers
+            resolved_engineer_ids = [val[0] for val in orbit_to_engineer.values()]
+            db_leaves = []
+            if resolved_engineer_ids:
+                db_leaves = db.scalars(
+                    select(Leave).where(
+                        Leave.engineer_id.in_(resolved_engineer_ids)
+                    )
+                ).all()
+
+            # Map existing leave records by (engineer_id, requested_date, leave_type_lower)
+            existing_leave_map = {}
+            for lv in db_leaves:
+                lt_key = (lv.leave_type or "Annual Leave").strip().lower()
+                existing_leave_map[(lv.engineer_id, lv.requested_date, lt_key)] = lv
+
+            t_existing_lookup = time.perf_counter()
+
+            errors_list = []
+            duplicates_list = []
+            existing_list = []
+            valid_rows_to_insert = []
+            seen_keys = set()
+
+            total_rows = len(raw_rows)
+
+            for row_dict in raw_rows:
+                row_errors = []
+                
+                # 1. Validate required fields: orbit_id
+                orbit_id = row_dict.get("orbit_id")
+                if not orbit_id:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": "",
+                        "error": "Orbit ID is required."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                # 2. Resolve engineer using bulk lookup
+                eng_info = orbit_to_engineer.get(orbit_id)
+                if not eng_info:
+                    row_errors.append({
+                        "field": "Orbit ID",
+                        "value": orbit_id,
+                        "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
+                    })
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                engineer_id, resolved_engineer_name = eng_info
+                row_dict["engineer_id"] = engineer_id
+                row_dict["resolved_engineer_name"] = resolved_engineer_name
+
+                # 3. Parse and validate dates
+                requested_date = None
+                req_date_val = row_dict.get("requested_date")
+                if req_date_val is not None:
+                    try:
+                        requested_date = parse_date(req_date_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Requested Date",
+                            "value": str(req_date_val),
+                            "error": "Invalid requested date format."
+                        })
+                else:
+                    row_errors.append({
+                        "field": "Requested Date",
+                        "value": "",
+                        "error": "Requested Date is required."
+                    })
+
+                requested_on = None
+                req_on_val = row_dict.get("requested_on")
+                if req_on_val is not None:
+                    try:
+                        requested_on = parse_date(req_on_val)
+                    except ValueError:
+                        row_errors.append({
+                            "field": "Requested On",
+                            "value": str(req_on_val),
+                            "error": "Invalid requested on submission date format."
+                        })
+                else:
+                    requested_on = date.today()
+
+                if requested_date and requested_on and requested_on > requested_date:
+                    row_errors.append({
+                        "field": "Requested On",
+                        "value": str(req_on_val),
+                        "error": "requested_on date cannot be later than requested_date"
+                    })
+
+                leave_type = row_dict.get("leave_type") or "Annual Leave"
+                approval_status = row_dict.get("approval_status") or "Pending"
+                
+                # Normalize approval_status
+                norm_status = str(approval_status).strip().title()
+                if norm_status not in ("Pending", "Approved", "Rejected", "Cancelled"):
+                    norm_status = "Pending"
+                approval_status = norm_status
+
+                if row_errors:
+                    row_dict["errors"] = row_errors
+                    errors_list.append(row_dict)
+                    continue
+
+                row_dict["requested_date"] = requested_date
+                row_dict["requested_on"] = requested_on
+                row_dict["leave_type"] = leave_type
+                row_dict["approval_status"] = approval_status
+
+                # 4. Duplicate row detection in Excel sheet
+                lt_clean = (leave_type or "").strip().lower()
+                row_key = (engineer_id, requested_date, lt_clean)
+
+                if row_key in seen_keys:
+                    row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, RequestedDate: {requested_date}, LeaveType: {leave_type}"
+                    duplicates_list.append(row_dict)
+                    continue
+                seen_keys.add(row_key)
+
+                # 5. Upsert check: existing DB record vs new record
+                existing_leave_record = existing_leave_map.get(row_key)
+                if existing_leave_record:
+                    row_dict["existing_leave"] = existing_leave_record
+                    existing_list.append(row_dict)
+                else:
+                    valid_rows_to_insert.append(row_dict)
+
+            t_validation = time.perf_counter()
+
+            # Update BulkUpload stats
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                total_rows=total_rows,
+                valid_rows=len(valid_rows_to_insert),
+                error_rows=len(errors_list),
+                duplicate_rows=len(duplicates_list),
+                existing_rows=len(existing_list),
+                warning_rows=0,
+                status="READY"
+            )
+
+            # Transition to IMPORTING
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status="IMPORTING"
+            )
+
+            imported_count = 0
+            updated_count = 0
+            failed_count = 0
+            try:
+                # 1. Bulk Insert New Leave records
+                leaves_to_add = []
+                for item in valid_rows_to_insert:
+                    db_lv = Leave(
+                        leave_id=uuid_pkg.uuid4(),
+                        engineer_id=item["engineer_id"],
+                        leave_type=item["leave_type"],
+                        requested_date=item["requested_date"],
+                        requested_on=item["requested_on"],
+                        approval_status=item["approval_status"],
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    leaves_to_add.append(db_lv)
+                if leaves_to_add:
+                    db.add_all(leaves_to_add)
+
+                # 2. Update Existing Leave records
+                for item in existing_list:
+                    elv = item["existing_leave"]
+                    if item.get("leave_type") is not None:
+                        elv.leave_type = item["leave_type"]
+                    if item.get("requested_date") is not None:
+                        elv.requested_date = item["requested_date"]
+                    if item.get("requested_on") is not None:
+                        elv.requested_on = item["requested_on"]
+                    if item.get("approval_status") is not None:
+                        elv.approval_status = item["approval_status"]
+                    elv.updated_at = datetime.utcnow()
+
+                db.commit()
+                imported_count = len(valid_rows_to_insert)
+                updated_count = len(existing_list)
+            except Exception as insert_err:
+                db.rollback()
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
+                bulk_upload_service.update_bulk_upload(
+                    db,
+                    upload_id=upload_id,
+                    status="FAILED",
+                    failed_rows=failed_count
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Database ingestion failed: {str(insert_err)}"
+                )
+            t_insert = time.perf_counter()
+
+            # 8. Generate report workbook
+            report_wb = openpyxl.Workbook()
+            ws_summary = report_wb.active
+            ws_summary.title = "Summary"
+            ws_summary.append(["ORMP Leave Bulk Ingestion Report"])
+            ws_summary.append([])
+            ws_summary.append(["File Name", file.filename])
+            ws_summary.append(["Upload Type", "leave"])
+            ws_summary.append(["Uploaded By", current_user.full_name])
+            ws_summary.append(["Upload Date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            ws_summary.append(["Target Company", company.company_name])
+            ws_summary.append(["Company UUID", str(company.company_id)])
+            ws_summary.append([])
+            ws_summary.append(["Metric", "Count"])
+            ws_summary.append(["Total Rows", total_rows])
+            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
+            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Error Rows", len(errors_list)])
+            ws_summary.append(["Duplicate Rows", len(duplicates_list)])
+            ws_summary.append(["Warning Rows", 0])
+            
+            for col in ws_summary.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            headers_valid = [
+                "Excel Row", "Orbit ID", "Engineer Name", "Leave Type", 
+                "Requested Date", "Requested On", "Approval Status", "Status"
+            ]
+
+            # Valid Records Sheet (Inserted)
+            ws_valid = report_wb.create_sheet(title="Valid Records")
+            ws_valid.append(headers_valid)
+            for r in valid_rows_to_insert:
+                ws_valid.append([
+                    r["excel_row"],
+                    r.get("orbit_id"),
+                    r.get("resolved_engineer_name"),
+                    r.get("leave_type"),
+                    str(r.get("requested_date")) if r.get("requested_date") else "",
+                    str(r.get("requested_on")) if r.get("requested_on") else "",
+                    r.get("approval_status"),
+                    "INSERTED"
+                ])
+
+            # Errors Sheet
+            ws_errors = report_wb.create_sheet(title="Errors")
+            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
+            for r in errors_list:
+                for err in r.get("errors", []):
+                    ws_errors.append([
+                        r["excel_row"],
+                        r.get("orbit_id") or "",
+                        err.get("field") or "",
+                        err.get("value") or "",
+                        err.get("error") or ""
+                    ])
+
+            # Duplicates Sheet
+            ws_dups = report_wb.create_sheet(title="Duplicates")
+            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
+            for r in duplicates_list:
+                ws_dups.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("duplicate_key") or "",
+                    "Duplicate Leave row within Excel sheet"
+                ])
+
+            # Existing Records Sheet (Updated)
+            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist.append(headers_valid)
+            for r in existing_list:
+                ws_exist.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    r.get("leave_type"),
+                    str(r.get("requested_date")) if r.get("requested_date") else "",
+                    str(r.get("requested_on")) if r.get("requested_on") else "",
+                    r.get("approval_status"),
+                    "UPDATED"
+                ])
+
+            # Warnings Sheet
+            ws_warn = report_wb.create_sheet(title="Warnings")
+            ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
+
+            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+                for col in sheet_obj.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+
+            os.makedirs(TEMP_REPORTS_DIR, exist_ok=True)
+            report_filename = f"validation_report_{uuid_pkg.uuid4()}.xlsx"
+            report_path = os.path.join(TEMP_REPORTS_DIR, report_filename)
+            report_wb.save(report_path)
+            t_report = time.perf_counter()
+
+            final_status = "COMPLETED"
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
+                final_status = "COMPLETED_WITH_ERRORS"
+
+            bulk_upload_service.update_bulk_upload(
+                db,
+                upload_id=upload_id,
+                status=final_status,
+                report_file=report_filename,
+                imported_rows=imported_count + updated_count,
+                failed_rows=failed_count
+            )
+
+            total_time = time.perf_counter() - start_time
+            logger.info(
+                "\nLeave upload:\n"
+                "Rows detected: %d\n"
+                "Excel parsing: %.4fs\n"
+                "Engineer lookup: %.4fs\n"
+                "Existing leave lookup: %.4fs\n"
+                "Validation & Duplicate detection: %.4fs\n"
+                "Database upsert & commit: %.4fs\n"
+                "Report generation: %.4fs\n"
+                "Total: %.4fs",
+                total_rows,
+                t_excel - start_time,
+                t_engineer - t_excel,
+                t_existing_lookup - t_engineer,
+                t_validation - t_existing_lookup,
+                t_insert - t_validation,
+                t_report - t_insert,
+                total_time
+            )
+
+            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new leave records and updated {updated_count} existing leave records."
             if errors_list or duplicates_list:
                 ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
 
