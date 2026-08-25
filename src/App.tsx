@@ -8,6 +8,8 @@ import { UserProvider } from './context/UserContext';
 
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
+import { EngineerLoginPage } from './pages/EngineerLoginPage';
+import { PortalSelectionPage } from './pages/PortalSelectionPage';
 import { CompanySelectionPage } from './pages/CompanySelectionPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AllDataPage } from './pages/AllDataPage';
@@ -68,7 +70,10 @@ export const App: React.FC = () => {
                   <Routes>
                     {/* Public Authentication Routes */}
                     <Route element={<GuestRoute />}>
-                      <Route path="/" element={<LoginPage />} />
+                      <Route path="/" element={<PortalSelectionPage />} />
+                      <Route path="/login" element={<PortalSelectionPage />} />
+                      <Route path="/login/executive" element={<LoginPage />} />
+                      <Route path="/login/engineer" element={<EngineerLoginPage />} />
                     </Route>
 
                     {/* Main App Layout Persistent Routes */}
