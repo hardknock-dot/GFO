@@ -22,6 +22,7 @@ class Engineer(Base):
     status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
@@ -41,6 +42,8 @@ class Engineer(Base):
 
     @property
     def current_schedule(self):
+        if hasattr(self, "_cached_current_schedule"):
+            return self._cached_current_schedule
         from sqlalchemy.orm import object_session
         from app.models.schedule import Schedule
         from sqlalchemy import select, and_, or_

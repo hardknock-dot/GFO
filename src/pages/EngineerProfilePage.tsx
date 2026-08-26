@@ -42,6 +42,7 @@ import { useAuth } from '../context/AuthContext';
 import type { Skill, Schedule, Visa, Travel, Performance, Leave } from '../types';
 import { EngineerIndividualReportView } from '../components/reports/EngineerIndividualReportView';
 import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
+import { EngineerPhotoUploadModal } from '../components/common/EngineerPhotoUploadModal';
 import {
   User,
   Wrench,
@@ -61,6 +62,7 @@ import {
   AlertTriangle,
   BarChart3,
   MessageSquare,
+  Camera,
 } from 'lucide-react';
 
 
@@ -449,6 +451,9 @@ export const EngineerProfilePage: React.FC = () => {
   const [visaFormErrors, setVisaFormErrors] = useState<Record<string, string>>({});
   const [visaApiError, setVisaApiError] = useState<string | null>(null);
   const [visaSuccessMessage, setVisaSuccessMessage] = useState<string | null>(null);
+
+  // Photo Upload Modal state
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   if (isLoading) return <CardSkeleton />;
   if (isError || !engineer) return <ErrorState onRetry={refetch} message="Engineer profile could not be retrieved." />;
@@ -1593,11 +1598,17 @@ export const EngineerProfilePage: React.FC = () => {
         <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start md:items-center space-x-4">
-              <img
-                src={engineer.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                alt={engineer.name}
-                className="w-16 h-16 rounded-2xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
-              />
+              {engineer.avatarUrl ? (
+                <img
+                  src={engineer.avatarUrl}
+                  alt={engineer.name}
+                  className="w-16 h-16 rounded-2xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md flex-shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 shadow-sm flex-shrink-0">
+                  <User className="w-8 h-8 text-sky-600 dark:text-sky-400" />
+                </div>
+              )}
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
                   <h1 className="text-xl font-bold text-slate-900 dark:text-white">{engineer.name}</h1>
@@ -1638,14 +1649,24 @@ export const EngineerProfilePage: React.FC = () => {
                 <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.yearsExperience} Yrs</p>
               </div>
               {(canEdit || isEngineerUser) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleOpenEditEngineerModal}
-                  icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-                >
-                  Edit Profile
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsPhotoModalOpen(true)}
+                    icon={<Camera className="w-3.5 h-3.5 text-sky-500" />}
+                  >
+                    Upload Photo
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenEditEngineerModal}
+                    icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+                  >
+                    Edit Profile
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -3097,6 +3118,16 @@ export const EngineerProfilePage: React.FC = () => {
         orbitId={engineer?.orbitId}
         onSuccess={() => refetch()}
         onEditExisting={() => navigate('/performance')}
+      />
+
+      {/* Upload Profile Photo Modal */}
+      <EngineerPhotoUploadModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+        engineerId={engineer?.id || ''}
+        engineerName={engineer?.name}
+        orbitId={engineer?.orbitId}
+        onSuccess={() => refetch()}
       />
     </div>
   );

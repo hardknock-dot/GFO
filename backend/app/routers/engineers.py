@@ -51,9 +51,10 @@ def read_engineers(
     status: Optional[str] = Query(None),
     level: Optional[str] = Query(None),
     primary_tool: Optional[str] = Query(None),
+    tool_name: Optional[str] = Query(None),
     country: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -70,6 +71,7 @@ def read_engineers(
             status_filter=status,
             level_filter=level,
             primary_tool_filter=primary_tool,
+            tool_name_filter=tool_name,
             country_filter=country,
             page=page,
             page_size=page_size
@@ -470,4 +472,136 @@ def read_engineer_reports_summary(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate engineer reports summary"
         )
+
+from fastapi import UploadFile, File
+import os
+import re
+from app.services.sharepoint_service import sharepoint_service, SharePointServiceError
+from app.services.audit_service import log_audit
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB limit
+
+@router.post("/{engineer_id}/photo", response_model=EngineerResponse)
+async def upload_engineer_photo(
+    engineer_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload engineer photo to SharePoint via Microsoft Graph API and update database record.
+    Enforces company tenant isolation and permission checks.
+    """
+    enforce_write_permission(current_user)
+    if is_engineer_user(current_user) and current_user.engineer_id != engineer_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Engineers can only upload photo for their own profile record."
+        )
+
+    db_engineer = get_engineer_and_verify(db, engineer_id, current_user)
+
+    # 1. Validate file extension & mime type
+    filename = file.filename or "photo.jpg"
+    ext = os.path.splitext(filename)[1].lower()
+    if not ext or ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported image file format '{ext}'. Allowed formats: JPG, PNG, WEBP."
+        )
+
+    content_type = file.content_type or ""
+    if content_type and content_type.lower() not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported image MIME type '{content_type}'. Allowed types: image/jpeg, image/png, image/webp."
+        )
+
+    # 2. Read file content & validate size limit
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded image file is empty."
+        )
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Image file size ({round(len(contents)/(1024*1024), 2)}MB) exceeds maximum limit of 5MB."
+        )
+
+    # 3. Generate safe deterministic filename: {orbit_id}.{extension}
+    clean_orbit = re.sub(r'[/\\?%*:|"<> ]', '_', db_engineer.orbit_id or str(engineer_id))
+    safe_filename = f"{clean_orbit}{ext}"
+
+    # 4. Upload file to SharePoint via Microsoft Graph API
+    try:
+        mime = content_type if content_type.lower() in ALLOWED_MIME_TYPES else "image/jpeg"
+        sp_result = sharepoint_service.upload_photo(safe_filename, contents, mime)
+    except SharePointServiceError as err:
+        logger.error("SharePoint photo upload error for engineer %s: %s", str(engineer_id), err.message)
+        raise HTTPException(
+            status_code=err.status_code,
+            detail=err.message
+        )
+    except Exception as e:
+        logger.error("Unexpected error uploading photo to SharePoint for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to upload photo to SharePoint repository: {str(e)}"
+        )
+
+    # 5. On SharePoint upload success, update PostgreSQL engineer photo URL
+    photo_url = sp_result.get("web_url") or f"/api/engineers/{engineer_id}/photo"
+    db_engineer.avatar_url = photo_url
+
+    # 6. Audit Logging
+    log_audit(
+        db=db,
+        user_id=current_user.user_id,
+        company_id=db_engineer.company_id,
+        action="ENGINEER_PHOTO_UPDATED",
+        entity_type="Engineer",
+        entity_id=db_engineer.engineer_id,
+        description=f"Engineer photo updated for {db_engineer.engineer_name} ({db_engineer.orbit_id}) in SharePoint",
+        new_values={
+            "avatar_url": photo_url,
+            "sharepoint_web_url": sp_result.get("web_url"),
+            "sharepoint_item_id": sp_result.get("item_id")
+        }
+    )
+
+    db.commit()
+    db.refresh(db_engineer)
+
+    return EngineerResponse.model_validate(db_engineer)
+
+
+@router.get("/{engineer_id}/photo")
+def get_engineer_photo(
+    engineer_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve or proxy engineer photo image.
+    """
+    db_engineer = get_engineer_and_verify(db, engineer_id, current_user)
+    if not db_engineer.avatar_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No profile photo found for this engineer."
+        )
+
+    if db_engineer.avatar_url.startswith("http://") or db_engineer.avatar_url.startswith("https://"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=db_engineer.avatar_url, status_code=307)
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Engineer photo image is not stored locally."
+    )
+
 

@@ -7,6 +7,8 @@ export interface EngineerQueryParams {
   search?: string;
   status?: string;
   tool?: string;
+  primaryTool?: string;
+  toolName?: string;
   country?: string;
   level?: string;
   minExperience?: number;
@@ -43,7 +45,7 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
     customerExperience: Number(apiEng.customer_experience) || Number(apiEng.lam_experience) || 0,
     certificationsCount: apiEng.certifications_count || 0,
     activeProjectsCount: apiEng.active_projects_count || 0,
-    avatarUrl: apiEng.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
+    avatarUrl: apiEng.avatar_url || '',
     joinDate: apiEng.date_of_joining || '',
   };
 };
@@ -90,6 +92,18 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
     if (queryParams.limit) {
       queryParams.page_size = queryParams.limit;
       delete queryParams.limit;
+    }
+    if (queryParams.tool) {
+      queryParams.primary_tool = queryParams.tool;
+      delete queryParams.tool;
+    }
+    if (queryParams.primaryTool) {
+      queryParams.primary_tool = queryParams.primaryTool;
+      delete queryParams.primaryTool;
+    }
+    if (queryParams.toolName) {
+      queryParams.tool_name = queryParams.toolName;
+      delete queryParams.toolName;
     }
     const response = await api.get('/engineers', { params: queryParams });
     const raw = response.data;
@@ -175,6 +189,7 @@ export const updateEngineer = async (id: string, data: Partial<Engineer>): Promi
     status: data.status,
     email: data.email || null,
     phone_number: data.phoneNumber || null,
+    avatar_url: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
   };
   const response = await api.put(`/engineers/${id}`, payload);
   return mapApiEngineerToFrontend(response.data);

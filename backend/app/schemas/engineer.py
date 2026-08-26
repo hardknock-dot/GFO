@@ -42,6 +42,7 @@ class EngineerCreate(BaseModel):
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None
+    avatar_url: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -67,6 +68,7 @@ class EngineerUpdate(BaseModel):
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None
+    avatar_url: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -96,6 +98,7 @@ class EngineerResponse(BaseModel):
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None
+    avatar_url: str | None = None
     country: str | None = None
     city: str | None = None
     assigned_site: str | None = None

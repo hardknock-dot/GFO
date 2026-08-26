@@ -18,6 +18,7 @@ try:
         conn.execute(text("ALTER TABLE schedules ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE visa_details ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE engineer_deletion_requests ALTER COLUMN engineer_id DROP NOT NULL;"))
+        conn.execute(text("ALTER TABLE engineers ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(1000);"))
         
         # Add performance indexes
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_engineers_company_id ON engineers(company_id);"))

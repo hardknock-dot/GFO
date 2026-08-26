@@ -16,6 +16,8 @@ from app.schemas.engineer import EngineerCreate, EngineerUpdate
 from app.services.audit_service import log_audit, object_to_dict
 from fastapi import HTTPException, status
 
+from sqlalchemy.orm import Session
+
 def get_engineers_paginated(
     db: Session,
     company_id: Optional[Union[UUID, List[UUID]]] = None,
@@ -23,6 +25,7 @@ def get_engineers_paginated(
     status_filter: Optional[str] = None,
     level_filter: Optional[str] = None,
     primary_tool_filter: Optional[str] = None,
+    tool_name_filter: Optional[str] = None,
     country_filter: Optional[str] = None,
     page: int = 1,
     page_size: int = 20
@@ -41,7 +44,13 @@ def get_engineers_paginated(
     if level_filter:
         conditions.append(Engineer.level == level_filter)
     if primary_tool_filter:
-        conditions.append(Engineer.primary_tool_type == primary_tool_filter)
+        conditions.append(Engineer.primary_tool_type.ilike(f"%{primary_tool_filter.strip()}%"))
+    if tool_name_filter:
+        conditions.append(
+            Engineer.engineer_id.in_(
+                select(Skill.engineer_id).where(Skill.tool_name.ilike(f"%{tool_name_filter.strip()}%"))
+            )
+        )
     if country_filter:
         conditions.append(Engineer.country == country_filter)
 
@@ -72,6 +81,30 @@ def get_engineers_paginated(
     stmt = stmt.order_by(Engineer.engineer_name.asc()).offset(offset).limit(page_size)
 
     items = list(db.scalars(stmt).all())
+
+    # Bulk pre-fetch current active schedules for all returned engineers to prevent N+1 query overhead
+    if items:
+        eng_ids = [item.engineer_id for item in items]
+        today = date.today()
+        active_schedules = db.scalars(
+            select(Schedule)
+            .where(
+                and_(
+                    Schedule.engineer_id.in_(eng_ids),
+                    Schedule.start_date <= today,
+                    or_(Schedule.end_date >= today, Schedule.end_date.is_(None))
+                )
+            )
+            .order_by(Schedule.start_date.desc())
+        ).all()
+
+        sched_map = {}
+        for s in active_schedules:
+            if s.engineer_id not in sched_map:
+                sched_map[s.engineer_id] = s
+
+        for item in items:
+            item._cached_current_schedule = sched_map.get(item.engineer_id)
 
     return {
         "items": items,

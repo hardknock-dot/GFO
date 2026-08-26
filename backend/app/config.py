@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "ormp_super_secret_signing_key_production_grade_998877!"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
+    # SharePoint / Microsoft Graph Integration Settings
+    SHAREPOINT_TENANT_ID: str | None = None
+    SHAREPOINT_CLIENT_ID: str | None = None
+    SHAREPOINT_CLIENT_SECRET: str | None = None
+    SHAREPOINT_SITE_ID: str | None = None
+    SHAREPOINT_DRIVE_ID: str | None = None
+    SHAREPOINT_FOLDER_ID: str | None = None
+    SHAREPOINT_SHARE_LINK: str = "https://obtmhl.sharepoint.com/:f:/s/GFOLamDashboard/IgCEoaEMIExDTZ8APnqexqm6AW57-lo5YOkQng0OaKntfJ4?e=zAHtzC"
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> List[str]:

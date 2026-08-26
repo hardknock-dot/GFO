@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEngineers } from '../hooks/useEngineers';
+import { useSkills } from '../hooks/useSkills';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Dropdown } from '../components/forms/Dropdown';
 import { Button } from '../components/forms/Button';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import {
   Users,
+  User,
   Search,
   Filter,
   Wrench,
@@ -15,22 +17,36 @@ import {
   RotateCcw,
   Building2,
   X,
+  Camera
 } from 'lucide-react';
+import { EngineerPhotoUploadModal } from '../components/common/EngineerPhotoUploadModal';
 
 export const EngineerSearchPage: React.FC = () => {
   const navigate = useNavigate();
 
+  // Upload modal state
+  const [uploadTargetEng, setUploadTargetEng] = useState<{ id: string; name: string; orbitId?: string } | null>(null);
+
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [toolFilter, setToolFilter] = useState('All');
+  const [toolModuleFilter, setToolModuleFilter] = useState('All');
+  const [toolNameFilter, setToolNameFilter] = useState('All');
   const [levelFilter, setLevelFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
   const [minExpFilter, setMinExpFilter] = useState<number>(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
+  const { data: skillsRes } = useSkills({ limit: 1000 });
+  const rawSkills = useMemo(() => skillsRes?.data || [], [skillsRes]);
+
   const { data: res, isLoading, isError, refetch } = useEngineers({
-    limit: 1000, // Fetch full talent pool for instant multi-attribute search & filtering
+    search: search || undefined,
+    status: statusFilter !== 'All' ? statusFilter : undefined,
+    country: countryFilter !== 'All' ? countryFilter : undefined,
+    primaryTool: toolModuleFilter !== 'All' ? toolModuleFilter : undefined,
+    toolName: toolNameFilter !== 'All' ? toolNameFilter : undefined,
+    limit: 100, // Search gallery page size
   });
   const rawEngineers = useMemo(() => res?.data || [], [res]);
 
@@ -43,13 +59,23 @@ export const EngineerSearchPage: React.FC = () => {
     return ['All', ...Array.from(set).sort()];
   }, [rawEngineers]);
 
-  const availableTools = useMemo(() => {
+  // Extract dynamic filter options
+  const availableToolModules = useMemo(() => {
     const set = new Set<string>();
     rawEngineers.forEach((eng) => {
       if (eng.primaryTool) set.add(eng.primaryTool);
     });
     return ['All', ...Array.from(set).sort()];
   }, [rawEngineers]);
+
+  const availableToolNames = useMemo(() => {
+    const set = new Set<string>();
+    rawSkills.forEach((skill) => {
+      const t = skill.toolType || skill.toolModel;
+      if (t) set.add(t);
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [rawSkills]);
 
   const availableLevels = useMemo(() => {
     const set = new Set<string>();
@@ -108,9 +134,9 @@ export const EngineerSearchPage: React.FC = () => {
         }
       }
 
-      // Tool filter
-      if (toolFilter !== 'All') {
-        if (eng.primaryTool?.toLowerCase() !== toolFilter.toLowerCase()) {
+      // Tool Module filter
+      if (toolModuleFilter !== 'All') {
+        if (eng.primaryTool?.toLowerCase() !== toolModuleFilter.toLowerCase()) {
           return false;
         }
       }
@@ -138,13 +164,14 @@ export const EngineerSearchPage: React.FC = () => {
 
       return true;
     });
-  }, [rawEngineers, search, statusFilter, toolFilter, levelFilter, countryFilter, minExpFilter]);
+  }, [rawEngineers, search, statusFilter, toolModuleFilter, toolNameFilter, levelFilter, countryFilter, minExpFilter]);
 
   // Reset filters
   const handleResetFilters = () => {
     setSearch('');
     setStatusFilter('All');
-    setToolFilter('All');
+    setToolModuleFilter('All');
+    setToolNameFilter('All');
     setLevelFilter('All');
     setCountryFilter('All');
     setMinExpFilter(0);
@@ -153,7 +180,8 @@ export const EngineerSearchPage: React.FC = () => {
   const hasActiveFilters =
     search !== '' ||
     statusFilter !== 'All' ||
-    toolFilter !== 'All' ||
+    toolModuleFilter !== 'All' ||
+    toolNameFilter !== 'All' ||
     levelFilter !== 'All' ||
     countryFilter !== 'All' ||
     minExpFilter > 0;
@@ -229,15 +257,27 @@ export const EngineerSearchPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Primary Tool / Chamber Filter */}
+          {/* Tool Module Filter (from engineers table primary_tool) */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Primary Tool / Chamber
+              Tool Module
             </label>
             <Dropdown
-              value={toolFilter}
-              onChange={(e) => setToolFilter(e.target.value)}
-              options={availableTools}
+              value={toolModuleFilter}
+              onChange={(e) => setToolModuleFilter(e.target.value)}
+              options={availableToolModules}
+            />
+          </div>
+
+          {/* Tool Name Filter (from skills matrix table tool_name) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Tool Name
+            </label>
+            <Dropdown
+              value={toolNameFilter}
+              onChange={(e) => setToolNameFilter(e.target.value)}
+              options={availableToolNames}
             />
           </div>
 
@@ -379,14 +419,25 @@ export const EngineerSearchPage: React.FC = () => {
                     {/* Top Row: Avatar + Status + Orbit ID */}
                     <div className="flex items-start justify-between">
                       <div className="relative">
-                        <img
-                          src={
-                            eng.avatarUrl ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-                          }
-                          alt={eng.name}
-                          className="w-14 h-14 rounded-2xl object-cover ring-2 ring-slate-100 dark:ring-slate-800 group-hover:scale-105 transition-transform"
-                        />
+                        {eng.avatarUrl ? (
+                          <img
+                            src={eng.avatarUrl}
+                            alt={eng.name}
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                              const fallback = (e.target as HTMLElement).nextElementSibling;
+                              if (fallback) fallback.classList.remove('hidden');
+                            }}
+                            className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 dark:ring-slate-800 shadow-xs group-hover:scale-105 transition-transform"
+                          />
+                        ) : null}
+                        <div
+                          className={`w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 shadow-xs group-hover:scale-105 transition-transform ${
+                            eng.avatarUrl ? 'hidden' : ''
+                          }`}
+                        >
+                          <User className="w-6 h-6 text-sky-600 dark:text-sky-400" />
+                        </div>
                         <span
                           className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 ${
                             eng.status === 'Deployed'
@@ -401,9 +452,22 @@ export const EngineerSearchPage: React.FC = () => {
                       </div>
 
                       <div className="flex flex-col items-end space-y-1">
-                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-700 dark:bg-slate-800 text-white !text-white border border-slate-600 dark:border-slate-700">
-                          {eng.orbitId}
-                        </span>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUploadTargetEng({ id: eng.id, name: eng.name, orbitId: eng.orbitId });
+                            }}
+                            className="p-1 text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            title="Upload photo to SharePoint"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-700 dark:bg-slate-800 text-white !text-white border border-slate-600 dark:border-slate-700">
+                            {eng.orbitId}
+                          </span>
+                        </div>
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border text-white !text-white ${
                             statusBadgeColors[eng.status] || 'bg-slate-700 text-white dark:bg-slate-800 border-slate-600'
@@ -472,6 +536,17 @@ export const EngineerSearchPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {uploadTargetEng && (
+        <EngineerPhotoUploadModal
+          isOpen={!!uploadTargetEng}
+          onClose={() => setUploadTargetEng(null)}
+          engineerId={uploadTargetEng.id}
+          engineerName={uploadTargetEng.name}
+          orbitId={uploadTargetEng.orbitId}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 };

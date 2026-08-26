@@ -24,7 +24,7 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Eye, MapPin, Wrench, Edit, Trash2, Building2, ShieldAlert, Check, X } from 'lucide-react';
+import { UserPlus, User, Eye, MapPin, Wrench, Edit, Trash2, Building2, ShieldAlert, Check, X } from 'lucide-react';
 
 export const EngineersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -269,11 +269,25 @@ export const EngineersPage: React.FC = () => {
       sortable: true,
       render: (item) => (
         <div className="flex items-center space-x-3">
-          <img
-            src={item.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-            alt=""
-            className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-          />
+          {item.avatarUrl ? (
+            <img
+              src={item.avatarUrl}
+              alt={item.name}
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+                const fallback = (e.target as HTMLElement).nextElementSibling;
+                if (fallback) fallback.classList.remove('hidden');
+              }}
+              className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700 flex-shrink-0"
+            />
+          ) : null}
+          <div
+            className={`w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 flex-shrink-0 ${
+              item.avatarUrl ? 'hidden' : ''
+            }`}
+          >
+            <User className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+          </div>
           <div>
             <p className="font-semibold text-slate-900 dark:text-white hover:text-[var(--color-secondary)] transition-colors">
               {item.name}
