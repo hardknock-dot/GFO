@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEngineerDetail, useUpdateEngineer } from '../hooks/useEngineers';
 import { useEngineerMe, useUpdateEngineerMeScheduleComments } from '../hooks/useEngineerSelfService';
@@ -253,10 +253,32 @@ export const EngineerProfilePage: React.FC = () => {
   const { data: missedSchedulesRes } = useMissedSchedules({ engineerId });
   const missedScheduleIds = new Set(missedSchedulesRes?.data?.map(ms => ms.scheduleId).filter(Boolean) || []);
 
-  const currentActiveSchedule = schedulesRes?.data?.find(s => s.scheduleStatus === 'Active' || s.scheduleStatus === 'Ongoing') || schedulesRes?.data?.[0];
-  const currentScheduleSite = currentActiveSchedule
-    ? `${currentActiveSchedule.fabSite || currentActiveSchedule.siteLocation || currentActiveSchedule.country || 'Customer Site'} (${currentActiveSchedule.supportType || 'Assignment'})`
-    : (engineer?.assignedSite || 'Unassigned');
+  const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const currentOngoingSchedule = useMemo(() => {
+    if (!schedulesRes?.data || schedulesRes.data.length === 0) return null;
+
+    return schedulesRes.data.find((s) => {
+      const supportUpper = (s.supportType || '').toUpperCase();
+      const projUpper = (s.projectCode || '').toUpperCase();
+      const isPTO = supportUpper.includes('PTO') || supportUpper === 'TIME OFF' || supportUpper === 'LEAVE' || projUpper === 'PTO';
+      if (isPTO) return false;
+
+      const isActiveStatus = s.scheduleStatus === 'Active' || s.scheduleStatus === 'Ongoing' || s.status === 'Active Assignment';
+
+      let isCurrentDate = false;
+      if (s.startDate) {
+        const end = s.endDate || '9999-12-31';
+        isCurrentDate = s.startDate <= todayDateStr && todayDateStr <= end;
+      }
+
+      return isActiveStatus || isCurrentDate;
+    });
+  }, [schedulesRes, todayDateStr]);
+
+  const currentScheduleSite = currentOngoingSchedule
+    ? `${currentOngoingSchedule.fabSite || currentOngoingSchedule.siteLocation || currentOngoingSchedule.country || 'Customer Site'}${currentOngoingSchedule.supportType ? ` (${currentOngoingSchedule.supportType})` : ''}`
+    : 'No schedule Right now';
 
 
   // Skills Mutations
@@ -1357,7 +1379,7 @@ export const EngineerProfilePage: React.FC = () => {
       align: 'right',
       render: (s) => (
         <div className="flex items-center space-x-2 justify-end" onClick={(e) => e.stopPropagation()}>
-          {isEngineerUser && (
+          {(isEngineerUser || canEdit) && (
             <Button
               size="sm"
               variant="outline"
@@ -1369,25 +1391,26 @@ export const EngineerProfilePage: React.FC = () => {
             </Button>
           )}
 
+          {(canEdit || isEngineerUser) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEditScheduleModal(s)}
+              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+            >
+              Edit
+            </Button>
+          )}
+
           {canEdit && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleOpenEditScheduleModal(s)}
-                icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-              >
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleOpenDeleteScheduleModal(s)}
-                icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-              >
-                Delete
-              </Button>
-            </>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeleteScheduleModal(s)}
+              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete
+            </Button>
           )}
         </div>
       ),
@@ -1740,16 +1763,14 @@ export const EngineerProfilePage: React.FC = () => {
 
 
             {/* Schedule Comments & Roster Updates Card */}
-            {!isEngineerUser && (
-              <div className="md:col-span-2">
-                <ScheduleCommentsCard
-                  engineerId={engineerId}
-                  engineerName={engineer?.name}
-                  hideShowMore={true}
-                  hideViewProfile={true}
-                />
-              </div>
-            )}
+            <div className="md:col-span-2">
+              <ScheduleCommentsCard
+                engineerId={engineerId}
+                engineerName={engineer?.name}
+                hideShowMore={true}
+                hideViewProfile={true}
+              />
+            </div>
 
 
             {/* Operational Intelligence & Exceptions summary for this engineer */}

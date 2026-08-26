@@ -79,8 +79,19 @@ export interface ManagedUser {
 }
 
 export const getAllUsers = async (): Promise<ManagedUser[]> => {
-  const res = await api.get('/users');
-  return res.data;
+  try {
+    const res = await api.get('/users');
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    console.warn('getAllUsers /users failed, trying /admin/users fallback:', err);
+    try {
+      const resAdmin = await api.get('/admin/users');
+      return Array.isArray(resAdmin.data) ? resAdmin.data : [];
+    } catch (errAdmin) {
+      console.error('getAllUsers /admin/users also failed:', errAdmin);
+      throw errAdmin;
+    }
+  }
 };
 
 export const createUserAccount = async (payload: {

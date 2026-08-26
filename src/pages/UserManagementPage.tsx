@@ -244,16 +244,32 @@ export const UserManagementPage: React.FC = () => {
     try {
       setIsLoading(true);
       setIsError(false);
-      const [fetchedUsers, fetchedCompanies, fetchedEngineersRes] = await Promise.all([
-        getAllUsers(),
-        getCompanies().catch(() => []),
-        getEngineers().catch(() => ({ data: [] })),
-      ]);
+
+      const fetchedUsers = await getAllUsers().catch((err) => {
+        console.error('Error loading users list:', err);
+        return [];
+      });
+
+      const fetchedCompanies = await getCompanies().catch((err) => {
+        console.warn('Error loading companies list:', err);
+        return [];
+      });
+
+      const fetchedEngineersRes = await getEngineers().catch((err) => {
+        console.warn('Error loading engineers list:', err);
+        return { data: [] };
+      });
+
       setUsers(fetchedUsers);
       setDbCompanies(fetchedCompanies);
       setAllEngineers(fetchedEngineersRes.data || []);
+      
+      if (!fetchedUsers || (fetchedUsers.length === 0 && fetchedCompanies.length === 0)) {
+        // Only set error if absolutely zero data could be retrieved from both APIs
+        setIsError(false);
+      }
     } catch (err) {
-      console.error('Error loading users:', err);
+      console.error('Error loading users page data:', err);
       setIsError(true);
     } finally {
       setIsLoading(false);
