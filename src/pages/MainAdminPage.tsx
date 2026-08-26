@@ -159,10 +159,16 @@ export const MainAdminPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/admin/users');
+      const res = await api.get('/users');
       setUsersList(res.data);
     } catch (err) {
-      console.error('Failed to load users:', err);
+      console.warn('Primary /users endpoint failed, falling back to /admin/users:', err);
+      try {
+        const resAdmin = await api.get('/admin/users');
+        setUsersList(resAdmin.data);
+      } catch (errAdmin) {
+        console.error('Failed to load users from both endpoints:', errAdmin);
+      }
     }
   };
 
@@ -203,30 +209,54 @@ export const MainAdminPage: React.FC = () => {
   const handleUpdateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    const payload = {
+      role: editRole,
+      company_id: editCompanyId && editCompanyId !== 'all-data' ? editCompanyId : undefined,
+      is_active: editActive,
+    };
     try {
-      await api.put(`/admin/users/${editingUser.user_id}`, {
-        role: editRole,
-        company_id: editCompanyId,
-        is_active: editActive,
-      });
+      await api.put(`/users/${editingUser.user_id}`, payload);
       setEditingUser(null);
       fetchUsers();
       fetchOverview();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to update user.');
+      try {
+        await api.put(`/admin/users/${editingUser.user_id}`, {
+          role: editRole,
+          company_id: editCompanyId,
+          is_active: editActive,
+        });
+        setEditingUser(null);
+        fetchUsers();
+        fetchOverview();
+      } catch (errAdmin: any) {
+        alert(errAdmin.response?.data?.detail || err.response?.data?.detail || 'Failed to update user.');
+      }
     }
   };
 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      ...createForm,
+      company_id: createForm.company_id && createForm.company_id !== 'all-data' ? createForm.company_id : undefined
+    };
     try {
-      await api.post('/admin/users', createForm);
+      await api.post('/users', payload);
       setShowCreateUser(false);
       setCreateForm({ full_name: '', email: '', role: 'Engineer', company_id: '', password: '' });
       fetchUsers();
       fetchOverview();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to create user.');
+      try {
+        await api.post('/admin/users', createForm);
+        setShowCreateUser(false);
+        setCreateForm({ full_name: '', email: '', role: 'Engineer', company_id: '', password: '' });
+        fetchUsers();
+        fetchOverview();
+      } catch (errAdmin: any) {
+        alert(errAdmin.response?.data?.detail || err.response?.data?.detail || 'Failed to create user.');
+      }
     }
   };
 

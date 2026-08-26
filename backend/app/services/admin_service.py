@@ -121,7 +121,7 @@ def create_user_admin(db: Session, admin_user: User, payload: Dict[str, Any]) ->
         "full_name": new_user.full_name,
         "email": new_user.email,
         "role": new_user.role,
-        "company_id": str(new_user.company_id),
+        "company_id": str(new_user.company_id) if new_user.company_id else None,
         "is_active": new_user.is_active
     }
 
@@ -182,6 +182,6 @@ def update_user_admin(db: Session, admin_user: User, user_id: UUID, payload: Dic
         "full_name": target_user.full_name,
         "email": target_user.email,
         "role": target_user.role,
-        "company_id": str(target_user.company_id),
+        "company_id": str(target_user.company_id) if target_user.company_id else None,
         "is_active": target_user.is_active
     }
