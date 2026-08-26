@@ -31,9 +31,10 @@ export const MissedSchedulesPage: React.FC = () => {
   const missedSchedules = res?.data || [];
 
   // Query company-filtered schedule list for creation dropdown
-  const { data: schedulesRes } = useSchedule(
-    companyId ? { companyId } : undefined
-  );
+  const { data: schedulesRes } = useSchedule({
+    companyId: companyId || undefined,
+    pageSize: 1000,
+  });
   const schedulesList = schedulesRes?.data || [];
 
   // Mutations
@@ -330,10 +331,12 @@ export const MissedSchedulesPage: React.FC = () => {
                   requestedEndDate: matched?.endDate || '',
                 });
               }}
-              options={schedulesList.map((sch) => ({
-                value: sch.id,
-                label: `${sch.engineerName} - ${sch.supportType} (${sch.fabSite || ''})`,
-              }))}
+              options={schedulesList
+                .filter((sch) => !sch.supportType?.toUpperCase().includes('PTO') && sch.supportType !== 'Time Off' && sch.supportType !== 'Leave')
+                .map((sch) => ({
+                  value: sch.id,
+                  label: `${sch.engineerName} - ${sch.supportType} (${sch.fabSite || ''})`,
+                }))}
               placeholder="Select a schedule assignment..."
               searchPlaceholder="Search engineer name, support type..."
               required

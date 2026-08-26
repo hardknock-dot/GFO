@@ -33,9 +33,10 @@ export const TravelPage: React.FC = () => {
   const travelList = res?.data || [];
 
   // Query company-filtered schedules list for creation dropdown
-  const { data: schedulesRes } = useSchedule(
-    companyId ? { companyId } : undefined
-  );
+  const { data: schedulesRes } = useSchedule({
+    companyId: companyId || undefined,
+    pageSize: 1000,
+  });
   const schedulesList = schedulesRes?.data || [];
 
   // Mutations
@@ -270,12 +271,14 @@ export const TravelPage: React.FC = () => {
               label="Schedule Assignment"
               value={formData.scheduleId}
               onChange={(val) => setFormData({ ...formData, scheduleId: val })}
-              options={schedulesList.map((sch) => ({
-                value: sch.id,
-                label: `${sch.engineerName} - ${sch.supportType} (${sch.fabSite || ''} - ${sch.country})`,
-              }))}
+              options={schedulesList
+                .filter((sch) => !sch.supportType?.toUpperCase().includes('PTO') && sch.supportType !== 'Time Off' && sch.supportType !== 'Leave')
+                .map((sch) => ({
+                  value: sch.id,
+                  label: `${sch.engineerName || 'Engineer'} | ${sch.fabSite || sch.siteLocation || sch.country || 'Site'} (${sch.startDate || 'N/A'} - ${sch.endDate || 'N/A'})`,
+                }))}
               placeholder="Select a schedule assignment..."
-              searchPlaceholder="Search engineer name, support type..."
+              searchPlaceholder="Search engineer name, location, dates..."
               required
               error={formErrors.scheduleId}
             />

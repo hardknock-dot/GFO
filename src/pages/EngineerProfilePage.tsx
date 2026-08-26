@@ -33,6 +33,7 @@ import { TextInput } from '../components/forms/TextInput';
 import { Dropdown } from '../components/forms/Dropdown';
 import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
+import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import { ErrorState } from '../components/common/ErrorState';
 import { ScheduleCommentsCard } from '../components/schedule/ScheduleCommentsCard';
@@ -234,9 +235,15 @@ export const EngineerProfilePage: React.FC = () => {
     );
   };
 
-  const { data: engAlerts } = useEngineerOperationalAlerts(engineerId);
-  const { data: skills } = useEngineerSkills(engineerId);
-  const { data: schedulesRes } = useSchedule({ engineerId });
+  const targetEngineerId = engineer?.id || (isEngineerUser && meEngineer ? meEngineer.id : id);
+  const { data: engAlerts } = useEngineerOperationalAlerts(targetEngineerId);
+  const { data: skills } = useEngineerSkills(targetEngineerId);
+  const { data: schedulesRes } = useSchedule({ engineerId: targetEngineerId, pageSize: 1000 });
+  const engineerSchedulesList = (schedulesRes?.data || []).filter((s) => {
+    const isPTO = s.supportType?.toUpperCase().includes('PTO') || s.supportType === 'Time Off' || s.supportType === 'Leave';
+    const isMatch = !targetEngineerId || s.engineerId === targetEngineerId || (engineer?.name && s.engineerName === engineer.name);
+    return isMatch && !isPTO;
+  });
   const { data: travelRes } = useTravel({ engineerId });
   const { data: visaRes } = useVisa({ engineerId });
   const { data: perfRes } = usePerformance({ engineerId });
@@ -355,6 +362,7 @@ export const EngineerProfilePage: React.FC = () => {
   const [perfFormErrors, setPerfFormErrors] = useState<Record<string, string>>({});
   const [perfApiError, setPerfApiError] = useState<string | null>(null);
   const [perfSuccessMessage, setPerfSuccessMessage] = useState<string | null>(null);
+  const [isAddPerfModalOpen, setIsAddPerfModalOpen] = useState(false);
 
   // Leave Mutations
   const createLeaveMutation = useCreateLeave();
@@ -955,7 +963,6 @@ export const EngineerProfilePage: React.FC = () => {
     });
   };
 
-  const [isAddPerfModalOpen, setIsAddPerfModalOpen] = useState(false);
 
   // Performance logic functions
   const handleOpenAddPerfModal = () => {
@@ -1798,7 +1805,7 @@ export const EngineerProfilePage: React.FC = () => {
             </div>
             <Table
               columns={scheduleColumns}
-              data={schedulesRes?.data || []}
+              data={engineerSchedulesList}
               onRowClick={(s) => {
                 if (missedScheduleIds.has(s.id)) {
                   navigate(`/missed-schedules?search=${s.id}`);
@@ -2393,27 +2400,19 @@ export const EngineerProfilePage: React.FC = () => {
           )}
 
           {!selectedTravel && (
-            <div className="w-full flex flex-col space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Schedule Assignment
-              </label>
-              <select
-                value={travelFormData.scheduleId}
-                onChange={(e) => setTravelFormData({ ...travelFormData, scheduleId: e.target.value })}
-                className="w-full rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 px-3.5 py-2 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
-                required
-              >
-                <option value="" disabled>Select a schedule assignment...</option>
-                {schedulesRes?.data?.map((sch) => (
-                  <option key={sch.id} value={sch.id}>
-                    {sch.supportType} ({sch.fabSite} - {sch.country})
-                  </option>
-                ))}
-              </select>
-              {travelFormErrors.scheduleId && (
-                <span className="text-xs text-rose-500">{travelFormErrors.scheduleId}</span>
-              )}
-            </div>
+            <SearchableDropdown
+              label="Schedule Assignment"
+              value={travelFormData.scheduleId}
+              onChange={(val) => setTravelFormData({ ...travelFormData, scheduleId: val })}
+              options={engineerSchedulesList.map((sch) => ({
+                value: sch.id,
+                label: `${sch.engineerName || engineer?.name || 'Engineer'} | ${sch.fabSite || sch.siteLocation || sch.country || 'Site'} (${sch.startDate || 'N/A'} - ${sch.endDate || 'N/A'})`,
+              }))}
+              placeholder="Select a schedule assignment..."
+              searchPlaceholder="Search location, dates..."
+              required
+              error={travelFormErrors.scheduleId}
+            />
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -3093,7 +3092,7 @@ export const EngineerProfilePage: React.FC = () => {
       <AddPerformanceModal
         isOpen={isAddPerfModalOpen}
         onClose={() => setIsAddPerfModalOpen(false)}
-        schedulesList={schedulesRes?.data || []}
+        schedulesList={engineerSchedulesList}
         engineerName={engineer?.name}
         orbitId={engineer?.orbitId}
         onSuccess={() => refetch()}

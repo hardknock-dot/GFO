@@ -134,8 +134,8 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                       onClick={() => handleSelect(opt.value)}
                       className={`w-full text-left px-3.5 py-2 text-xs transition-colors duration-100 ${
                         isSelected
-                          ? 'bg-slate-100 dark:bg-slate-800 text-[var(--color-secondary)] font-bold'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'
+                          ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-900 dark:text-sky-200 font-bold hover:bg-sky-200 dark:hover:bg-sky-900/70'
+                          : 'hover:bg-sky-50 dark:hover:bg-sky-950/40 text-slate-700 dark:text-slate-300 hover:text-sky-900 dark:hover:text-sky-200'
                       }`}
                     >
                       {opt.label}

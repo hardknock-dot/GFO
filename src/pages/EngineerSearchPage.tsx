@@ -30,10 +30,7 @@ export const EngineerSearchPage: React.FC = () => {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
   const { data: res, isLoading, isError, refetch } = useEngineers({
-    search: search || undefined,
-    status: statusFilter !== 'All' ? statusFilter : undefined,
-    country: countryFilter !== 'All' ? countryFilter : undefined,
-    limit: 100, // Search gallery page size
+    limit: 1000, // Fetch full talent pool for instant multi-attribute search & filtering
   });
   const rawEngineers = useMemo(() => res?.data || [], [res]);
 
@@ -76,29 +73,30 @@ export const EngineerSearchPage: React.FC = () => {
       // Keyword search
       if (search.trim()) {
         const q = search.toLowerCase().trim();
-        const matchName = eng.name?.toLowerCase().includes(q);
-        const matchGoesBy = eng.goesBy?.toLowerCase().includes(q);
-        const matchEmail = eng.email?.toLowerCase().includes(q);
-        const matchOrbit = eng.orbitId?.toLowerCase().includes(q);
-        const matchCustomer = eng.customerId?.toLowerCase().includes(q);
-        const matchTool = eng.primaryTool?.toLowerCase().includes(q);
-        const matchCountry = eng.country?.toLowerCase().includes(q);
-        const matchCity = eng.city?.toLowerCase().includes(q);
-        const matchLevel = eng.level?.toLowerCase().includes(q);
-        const matchSite = eng.assignedSite?.toLowerCase().includes(q);
+        const matchName = Boolean(eng.name?.toLowerCase().includes(q));
+        const matchGoesBy = Boolean(eng.goesBy?.toLowerCase().includes(q));
+        const matchEmail = Boolean(eng.email?.toLowerCase().includes(q));
+        const matchOrbit = Boolean(eng.orbitId?.toLowerCase().includes(q));
+        const matchCustomer = Boolean(eng.customerId?.toLowerCase().includes(q));
+        const matchTool = Boolean(eng.primaryTool?.toLowerCase().includes(q));
+        const matchCountry = Boolean(eng.country?.toLowerCase().includes(q));
+        const matchCity = Boolean(eng.city?.toLowerCase().includes(q));
+        const matchLevel = Boolean(eng.level?.toLowerCase().includes(q));
+        const matchSite = Boolean(eng.assignedSite?.toLowerCase().includes(q));
 
-        if (
-          !matchName &&
-          !matchGoesBy &&
-          !matchEmail &&
-          !matchOrbit &&
-          !matchCustomer &&
-          !matchTool &&
-          !matchCountry &&
-          !matchCity &&
-          !matchLevel &&
-          !matchSite
-        ) {
+        const matchesSearch =
+          matchName ||
+          matchGoesBy ||
+          matchEmail ||
+          matchOrbit ||
+          matchCustomer ||
+          matchTool ||
+          matchCountry ||
+          matchCity ||
+          matchLevel ||
+          matchSite;
+
+        if (!matchesSearch) {
           return false;
         }
       }

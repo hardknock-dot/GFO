@@ -281,13 +281,20 @@ export const AddPerformanceModal: React.FC<AddPerformanceModalProps> = ({
                 Select Schedule <span className="text-rose-500">*</span>
               </label>
               <SearchableDropdown
-                options={(schedulesList || []).map((s) => ({
-                  value: s.id,
-                  label: `Schedule #${s.id.slice(0, 8)}... | ${s.fabSite || s.country || 'Site'} (${s.startDate || 'N/A'} - ${s.endDate || 'N/A'})`,
-                }))}
+                options={(schedulesList || [])
+                  .filter((s) => {
+                    const isPTO = s.supportType?.toUpperCase().includes('PTO') || s.supportType === 'Time Off' || s.supportType === 'Leave';
+                    const matchesEngineer = !engineerName ? true : (s.engineerName === engineerName || (orbitId && s.engineerOrbitId === orbitId));
+                    return !isPTO && matchesEngineer;
+                  })
+                  .map((s) => ({
+                    value: s.id,
+                    label: `${s.engineerName || engineerName || 'Engineer'} | ${s.fabSite || s.siteLocation || s.country || 'Site'} (${s.startDate || 'N/A'} - ${s.endDate || 'N/A'})`,
+                  }))}
                 value={selectedScheduleId}
                 onChange={handleSelectSchedule}
                 placeholder="Search and select schedule..."
+                searchPlaceholder="Search engineer name, location, dates..."
               />
               {formErrors.scheduleId && (
                 <p className="text-xs text-rose-500 mt-1">{formErrors.scheduleId}</p>

@@ -33,7 +33,7 @@ export const PerformancePage: React.FC = () => {
   // Query company-filtered schedules list for creation dropdown (up to 200 schedules)
   const { data: schedulesRes } = useSchedule({
     companyId: companyId || undefined,
-    pageSize: 200,
+    pageSize: 1000,
   });
   const schedulesList = schedulesRes?.data || [];
 
@@ -284,13 +284,15 @@ export const PerformancePage: React.FC = () => {
               label="Schedule Assignment"
               value={formData.scheduleId}
               onChange={(val) => setFormData({ ...formData, scheduleId: val })}
-              options={schedulesList.map((sch) => {
-                const fabInfo = [sch.fabCity, sch.fabSite || sch.country].filter(Boolean).join(', ');
-                return {
-                  value: sch.id,
-                  label: `${sch.engineerName} | ${sch.supportType} - ${fabInfo} (Start Date: ${sch.startDate || 'N/A'})`,
-                };
-              })}
+              options={schedulesList
+                .filter((sch) => !sch.supportType?.toUpperCase().includes('PTO') && sch.supportType !== 'Time Off' && sch.supportType !== 'Leave')
+                .map((sch) => {
+                  const fabInfo = [sch.fabCity, sch.fabSite || sch.country].filter(Boolean).join(', ');
+                  return {
+                    value: sch.id,
+                    label: `${sch.engineerName} | ${sch.supportType} - ${fabInfo} (Start Date: ${sch.startDate || 'N/A'})`,
+                  };
+                })}
               placeholder="Select a schedule assignment..."
               searchPlaceholder="Search engineer name, support type..."
               required

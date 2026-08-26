@@ -19,6 +19,7 @@ export const useSchedule = (params?: any) => {
   const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
 
   const targetCompanyId = params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId);
+  const engineerId = params?.engineerId || params?.engineer_id || undefined;
   const currentPage = params?.page || 1;
   const pageSize = params?.pageSize || params?.page_size || 20;
   const search = params?.search || '';
@@ -30,10 +31,11 @@ export const useSchedule = (params?: any) => {
     search: search || undefined,
     schedule_status: status || undefined,
     company_id: targetCompanyId,
+    engineer_id: engineerId,
   };
 
   const query = useQuery({
-    queryKey: ['schedules', targetCompanyId, currentPage, pageSize, search, status],
+    queryKey: ['schedules', targetCompanyId, engineerId, currentPage, pageSize, search, status],
     queryFn: () => getSchedules(queryParams),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
@@ -43,12 +45,12 @@ export const useSchedule = (params?: any) => {
     if (query.data && currentPage < query.data.totalPages) {
       const nextPageParams = { ...queryParams, page: currentPage + 1 };
       queryClient.prefetchQuery({
-        queryKey: ['schedules', targetCompanyId, currentPage + 1, pageSize, search, status],
+        queryKey: ['schedules', targetCompanyId, engineerId, currentPage + 1, pageSize, search, status],
         queryFn: () => getSchedules(nextPageParams),
         staleTime: 1000 * 60 * 5,
       });
     }
-  }, [query.data?.totalPages, currentPage, targetCompanyId, pageSize, search, status, queryClient]);
+  }, [query.data?.totalPages, currentPage, targetCompanyId, engineerId, pageSize, search, status, queryClient]);
 
   return query;
 };
