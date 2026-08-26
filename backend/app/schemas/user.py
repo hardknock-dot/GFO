@@ -19,7 +19,7 @@ class UserMeResponse(BaseModel):
     email: str
     avatar: Optional[str] = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
     role: str
-    currentCompanyId: UUID
+    currentCompanyId: Optional[UUID] = None
     engineer_id: Optional[UUID] = None
     engineerId: Optional[UUID] = None
     accessibleCompanies: List[str] = []
@@ -33,7 +33,7 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     user_id: UUID
-    company_id: UUID
+    company_id: Optional[UUID] = None
     company_name: Optional[str] = None
     full_name: str
     email: str

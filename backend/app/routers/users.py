@@ -39,11 +39,18 @@ def get_all_users(current_user: User = Depends(get_current_user), db: Session = 
     result = []
     for u in users:
         summaries = get_user_company_summaries(db, u)
-        comp_obj = companies_map.get(u.company_id)
+        comp_obj = companies_map.get(u.company_id) if u.company_id else None
+        
+        eff_company_id = u.company_id
+        eff_company_name = comp_obj.company_name if comp_obj else "Unknown"
+        if not eff_company_id and summaries:
+            eff_company_id = summaries[0].get("company_id")
+            eff_company_name = summaries[0].get("company_name", "Unknown")
+
         result.append(UserResponse(
             user_id=u.user_id,
-            company_id=u.company_id,
-            company_name=comp_obj.company_name if comp_obj else "Unknown",
+            company_id=eff_company_id,
+            company_name=eff_company_name,
             full_name=u.full_name,
             email=u.email,
             role=u.role,
