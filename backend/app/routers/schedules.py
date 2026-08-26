@@ -77,9 +77,14 @@ def update_existing_schedule(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update an existing schedule record.
+    Update an existing schedule record. Strictly restricted to Manager and Admin roles.
     """
     try:
+        if is_engineer_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Engineers are not permitted to edit schedule assignment details."
+            )
         enforce_write_permission(current_user)
         get_schedule_and_verify(db, schedule_id, current_user)
         return schedule_service.update_schedule(db, schedule_id, schedule_data)

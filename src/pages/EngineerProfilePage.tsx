@@ -256,9 +256,19 @@ export const EngineerProfilePage: React.FC = () => {
   const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const currentOngoingSchedule = useMemo(() => {
-    if (!schedulesRes?.data || schedulesRes.data.length === 0) return null;
+    const targetId = engineer?.id || targetEngineerId || engineerId;
+    const targetName = engineer?.name;
 
-    return schedulesRes.data.find((s) => {
+    // Filter schedules strictly for the specific engineer being viewed
+    const targetEngineerSchedules = (schedulesRes?.data || []).filter((s) => {
+      if (targetId && s.engineerId && s.engineerId === targetId) return true;
+      if (targetName && s.engineerName && s.engineerName.toLowerCase() === targetName.toLowerCase()) return true;
+      return false;
+    });
+
+    if (targetEngineerSchedules.length === 0) return null;
+
+    return targetEngineerSchedules.find((s) => {
       const supportUpper = (s.supportType || '').toUpperCase();
       const projUpper = (s.projectCode || '').toUpperCase();
       const isPTO = supportUpper.includes('PTO') || supportUpper === 'TIME OFF' || supportUpper === 'LEAVE' || projUpper === 'PTO';
@@ -274,7 +284,7 @@ export const EngineerProfilePage: React.FC = () => {
 
       return isActiveStatus || isCurrentDate;
     });
-  }, [schedulesRes, todayDateStr]);
+  }, [schedulesRes, engineer, targetEngineerId, engineerId, todayDateStr]);
 
   const currentScheduleSite = currentOngoingSchedule
     ? `${currentOngoingSchedule.fabSite || currentOngoingSchedule.siteLocation || currentOngoingSchedule.country || 'Customer Site'}${currentOngoingSchedule.supportType ? ` (${currentOngoingSchedule.supportType})` : ''}`
@@ -1391,26 +1401,25 @@ export const EngineerProfilePage: React.FC = () => {
             </Button>
           )}
 
-          {(canEdit || isEngineerUser) && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleOpenEditScheduleModal(s)}
-              icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
-            >
-              Edit
-            </Button>
-          )}
-
           {canEdit && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleOpenDeleteScheduleModal(s)}
-              icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-            >
-              Delete
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenEditScheduleModal(s)}
+                icon={<Edit className="w-3.5 h-3.5 text-blue-500" />}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenDeleteScheduleModal(s)}
+                icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+              >
+                Delete
+              </Button>
+            </>
           )}
         </div>
       ),
