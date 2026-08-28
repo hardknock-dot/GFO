@@ -21,6 +21,9 @@ export const UploadPage: React.FC = () => {
     success: boolean;
     rowsProcessed: number;
     errorsCount: number;
+    inserted?: number;
+    updated?: number;
+    unchanged?: number;
     message: string;
     report_url?: string;
   } | null>(null);
@@ -325,9 +328,23 @@ export const UploadPage: React.FC = () => {
                   <span>Validation & Ingestion Complete</span>
                 </div>
                 <p className="text-emerald-700 dark:text-emerald-400">{summaryResult.message}</p>
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-200/60 font-mono text-emerald-900 dark:text-emerald-200">
-                  <div>Rows Processed: {summaryResult.rowsProcessed}</div>
-                  <div>Schema Errors: {summaryResult.errorsCount}</div>
+                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-emerald-200/60 font-mono text-xs">
+                  <div className="bg-emerald-100/60 dark:bg-emerald-900/40 p-2 rounded-lg text-center">
+                    <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold uppercase">Inserted</div>
+                    <div className="font-bold text-emerald-900 dark:text-emerald-100 text-sm mt-0.5">{summaryResult.inserted ?? 0}</div>
+                  </div>
+                  <div className="bg-blue-100/60 dark:bg-blue-900/40 p-2 rounded-lg text-center">
+                    <div className="text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase">Updated</div>
+                    <div className="font-bold text-blue-900 dark:text-blue-100 text-sm mt-0.5">{summaryResult.updated ?? 0}</div>
+                  </div>
+                  <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg text-center">
+                    <div className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase">Unchanged</div>
+                    <div className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-0.5">{summaryResult.unchanged ?? 0}</div>
+                  </div>
+                  <div className="bg-rose-100/60 dark:bg-rose-950/40 p-2 rounded-lg text-center">
+                    <div className="text-[10px] text-rose-700 dark:text-rose-300 font-bold uppercase">Errors</div>
+                    <div className="font-bold text-rose-900 dark:text-rose-100 text-sm mt-0.5">{summaryResult.errorsCount ?? 0}</div>
+                  </div>
                 </div>
                 {summaryResult.report_url && (
                   <div className="pt-2 border-t border-emerald-200/60 flex justify-start">

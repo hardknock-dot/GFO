@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Header, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 
 from app.database import get_db
 from app.models.user import User
@@ -92,6 +92,30 @@ def normalize_header(name):
     if name is None:
         return ""
     return str(name).strip().lower().replace(" ", "").replace("_", "").replace("-", "").replace(".", "").replace("(", "").replace(")", "").replace("/", "").replace("#", "")
+
+def norm_str(v):
+    if v is None:
+        return ""
+    return str(v).strip().lower()
+
+def norm_date(v):
+    if v is None:
+        return ""
+    if isinstance(v, datetime):
+        return v.date().strftime("%Y-%m-%d")
+    if isinstance(v, date):
+        return v.strftime("%Y-%m-%d")
+    if isinstance(v, str):
+        try:
+            return parse_date(v).strftime("%Y-%m-%d")
+        except Exception:
+            return v.strip().lower()
+    return str(v).strip().lower()
+
+def norm_uuid(v):
+    if v is None:
+        return ""
+    return str(v).strip().lower()
 
 HEADER_MAP = {
     "engineername": "engineer_name",
@@ -514,22 +538,22 @@ async def bulk_upload(
 
             # Bulk Engineer Resolution
             unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
+                norm_str(row.get("orbit_id"))
                 for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
             }
 
             db_engineers = []
             if unique_orbit_ids:
                 db_engineers = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        func.lower(Engineer.orbit_id).in_(list(unique_orbit_ids)),
                         Engineer.company_id == target_company_id
                     )
                 ).all()
 
             orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                norm_str(eng.orbit_id): (eng.engineer_id, eng.engineer_name)
                 for eng in db_engineers
             }
             t_engineer = time.perf_counter()
@@ -547,23 +571,24 @@ async def bulk_upload(
                     )
                 ).all()
 
-            existing_skill_keys = set()
+            existing_skill_map = {}
             for s in db_skills:
                 existing_key = (
-                    s.engineer_id,
-                    s.country,
-                    s.fab,
-                    s.wafer_size,
-                    s.tool_type,
-                    s.start_date,
-                    s.end_date
+                    norm_uuid(s.engineer_id),
+                    norm_str(s.country),
+                    norm_str(s.fab),
+                    norm_str(s.wafer_size),
+                    norm_str(s.tool_type),
+                    norm_date(s.start_date),
+                    norm_date(s.end_date)
                 )
-                existing_skill_keys.add(existing_key)
+                existing_skill_map[existing_key] = s
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_keys = set()
 
@@ -585,11 +610,11 @@ async def bulk_upload(
                     continue
 
                 # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
+                eng_info = orbit_to_engineer.get(norm_str(orbit_id))
                 if not eng_info:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
+                        "value": str(orbit_id),
                         "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
                     })
                     row_dict["errors"] = row_errors
@@ -704,13 +729,13 @@ async def bulk_upload(
                 tool_type = row_dict.get("tool_type")
 
                 row_key = (
-                    engineer_id,
-                    country,
-                    fab,
-                    wafer_size,
-                    tool_type,
-                    start_date,
-                    end_date
+                    norm_uuid(engineer_id),
+                    norm_str(country),
+                    norm_str(fab),
+                    norm_str(wafer_size),
+                    norm_str(tool_type),
+                    norm_date(start_date),
+                    norm_date(end_date)
                 )
 
                 if row_key in seen_keys:
@@ -719,9 +744,45 @@ async def bulk_upload(
                     continue
                 seen_keys.add(row_key)
 
-                # 7. Check if already exists in DB (in-memory lookup)
-                if row_key in existing_skill_keys:
-                    existing_list.append(row_dict)
+                # 7. Check if already exists in DB for Row-Level Upsert & Change Detection
+                if row_key in existing_skill_map:
+                    db_skill = existing_skill_map[row_key]
+                    row_dict["existing_skill"] = db_skill
+                    changes = []
+
+                    if "number_of_tools" in col_indices and row_dict.get("number_of_tools") != db_skill.number_of_tools:
+                        changes.append(f"Number of Tools: '{db_skill.number_of_tools}' -> '{row_dict.get('number_of_tools')}'")
+                        db_skill.number_of_tools = row_dict.get("number_of_tools")
+
+                    if "role" in col_indices and row_dict.get("role") != db_skill.role:
+                        changes.append(f"Role: '{db_skill.role}' -> '{row_dict.get('role')}'")
+                        db_skill.role = row_dict.get("role")
+
+                    if "previous_process_startup" in col_indices and row_dict.get("previous_process_startup") != db_skill.previous_process_startup:
+                        changes.append(f"Previous Process Startup: '{db_skill.previous_process_startup}' -> '{row_dict.get('previous_process_startup')}'")
+                        db_skill.previous_process_startup = row_dict.get("previous_process_startup")
+
+                    if "previous_cm_pm" in col_indices and row_dict.get("previous_cm_pm") != db_skill.previous_cm_pm:
+                        changes.append(f"Previous CM/PM: '{db_skill.previous_cm_pm}' -> '{row_dict.get('previous_cm_pm')}'")
+                        db_skill.previous_cm_pm = row_dict.get("previous_cm_pm")
+
+                    if "ready_for_primary_role" in col_indices and row_dict.get("ready_for_primary_role") != db_skill.ready_for_primary_role:
+                        changes.append(f"Ready for Primary Role: '{db_skill.ready_for_primary_role}' -> '{row_dict.get('ready_for_primary_role')}'")
+                        db_skill.ready_for_primary_role = row_dict.get("ready_for_primary_role")
+
+                    if "comments" in col_indices and row_dict.get("comments") != db_skill.comments:
+                        changes.append(f"Comments: '{db_skill.comments}' -> '{row_dict.get('comments')}'")
+                        db_skill.comments = row_dict.get("comments")
+
+                    if changes:
+                        db_skill.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -750,7 +811,6 @@ async def bulk_upload(
             imported_count = 0
             failed_count = 0
             try:
-                # Bulk add
                 skills_to_add = []
                 for item in valid_rows_to_insert:
                     db_skill = Skill(
@@ -775,10 +835,10 @@ async def bulk_upload(
                 if skills_to_add:
                     db.add_all(skills_to_add)
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
-                failed_count = len(valid_rows_to_insert)
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
                 bulk_upload_service.update_bulk_upload(
                     db,
                     upload_id=upload_id,
@@ -805,10 +865,11 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["Valid Rows", len(valid_rows_to_insert)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
-            ws_summary.append(["Existing Rows", len(existing_list)])
             ws_summary.append(["Warning Rows", 0])
             
             for col in ws_summary.columns:
@@ -841,10 +902,44 @@ async def bulk_upload(
                     "Yes" if r.get("previous_cm_pm") else ("No" if r.get("previous_cm_pm") is False else ""),
                     "Yes" if r.get("ready_for_primary_role") else ("No" if r.get("ready_for_primary_role") is False else ""),
                     r.get("comments"),
-                    "VALID"
+                    "INSERTED"
                 ])
 
-            # Errors Sheet: Excel Row | Orbit ID | Field | Value | Error
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Country", "Fab", "Tool Type", "Role", "Comments"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    r.get("country"),
+                    r.get("fab"),
+                    r.get("tool_type"),
+                    r.get("role"),
+                    r.get("comments")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details", "Country", "Fab", "Tool Type", "Role", "Comments"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    r.get("country"),
+                    r.get("fab"),
+                    r.get("tool_type"),
+                    r.get("role"),
+                    r.get("comments")
+                ])
+
+            # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
             ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
             for r in errors_list:
@@ -857,7 +952,7 @@ async def bulk_upload(
                         err.get("error") or ""
                     ])
 
-            # Duplicates Sheet: Excel Row | Orbit ID | Duplicate Key | Duplicate Rows | Reason
+            # Duplicates Sheet
             ws_dups = report_wb.create_sheet(title="Duplicates")
             ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Duplicate Rows", "Reason"])
             for r in duplicates_list:
@@ -869,22 +964,11 @@ async def bulk_upload(
                     "Duplicate Skill row in Excel sheet"
                 ])
 
-            # Existing Records Sheet: Excel Row | Orbit ID | Engineer Name | Reason
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(["Excel Row", "Orbit ID", "Engineer Name", "Reason"])
-            for r in existing_list:
-                ws_exist.append([
-                    r["excel_row"],
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    "Skill already exists in database."
-                ])
-
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -896,7 +980,7 @@ async def bulk_upload(
             t_report = time.perf_counter()
 
             final_status = "COMPLETED"
-            if len(errors_list) > 0 or len(duplicates_list) > 0 or len(existing_list) > 0:
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
                 final_status = "COMPLETED_WITH_ERRORS"
 
             bulk_upload_service.update_bulk_upload(
@@ -908,35 +992,17 @@ async def bulk_upload(
                 failed_rows=failed_count
             )
 
-            total_time = time.perf_counter() - start_time
-            logger.info(
-                "\nSkill upload:\n"
-                "Rows detected: %d\n"
-                "Excel parsing: %.4fs\n"
-                "Engineer lookup: %.4fs\n"
-                "Existing skill lookup: %.4fs\n"
-                "Validation & Duplicate detection: %.4fs\n"
-                "Database insert & commit: %.4fs\n"
-                "Report generation: %.4fs\n"
-                "Total: %.4fs",
-                total_rows,
-                t_excel - start_time,
-                t_engineer - t_excel,
-                t_existing_lookup - t_engineer,
-                t_validation - t_existing_lookup,
-                t_insert - t_validation,
-                t_report - t_insert,
-                total_time
-            )
-
-            ingested_msg = f"Ingested {len(valid_rows_to_insert)} valid records successfully."
-            if errors_list or duplicates_list or existing_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new skill records. Updated {len(existing_list)} existing skill records. {len(unchanged_list)} records were unchanged."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
@@ -1043,22 +1109,22 @@ async def bulk_upload(
 
             # Bulk Engineer Resolution
             unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
+                norm_str(row.get("orbit_id"))
                 for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
             }
 
             db_engineers = []
             if unique_orbit_ids:
                 db_engineers = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        func.lower(Engineer.orbit_id).in_(list(unique_orbit_ids)),
                         Engineer.company_id == target_company_id
                     )
                 ).all()
 
             orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                norm_str(eng.orbit_id): (eng.engineer_id, eng.engineer_name)
                 for eng in db_engineers
             }
             t_engineer = time.perf_counter()
@@ -1076,23 +1142,24 @@ async def bulk_upload(
                     )
                 ).all()
 
-            existing_schedule_keys = set()
+            existing_schedule_map = {}
             for s in db_schedules:
                 existing_key = (
-                    s.engineer_id,
-                    s.support_type,
-                    s.country,
-                    s.fab_city,
-                    s.fab_site,
-                    s.start_date,
-                    s.end_date
+                    norm_uuid(s.engineer_id),
+                    norm_str(s.support_type),
+                    norm_str(s.country),
+                    norm_str(s.fab_city),
+                    norm_str(s.fab_site),
+                    norm_date(s.start_date),
+                    norm_date(s.end_date)
                 )
-                existing_schedule_keys.add(existing_key)
+                existing_schedule_map[existing_key] = s
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_keys = set()
 
@@ -1114,11 +1181,11 @@ async def bulk_upload(
                     continue
 
                 # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
+                eng_info = orbit_to_engineer.get(norm_str(orbit_id))
                 if not eng_info:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
+                        "value": str(orbit_id),
                         "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
                     })
                     row_dict["errors"] = row_errors
@@ -1201,13 +1268,13 @@ async def bulk_upload(
                 fab_site = row_dict.get("fab_site")
 
                 row_key = (
-                    engineer_id,
-                    support_type,
-                    country,
-                    fab_city,
-                    fab_site,
-                    start_date,
-                    end_date
+                    norm_uuid(engineer_id),
+                    norm_str(support_type),
+                    norm_str(country),
+                    norm_str(fab_city),
+                    norm_str(fab_site),
+                    norm_date(start_date),
+                    norm_date(end_date)
                 )
 
                 if row_key in seen_keys:
@@ -1216,9 +1283,29 @@ async def bulk_upload(
                     continue
                 seen_keys.add(row_key)
 
-                # 7. Check if already exists in DB (in-memory lookup)
-                if row_key in existing_schedule_keys:
-                    existing_list.append(row_dict)
+                # 7. Check if already exists in DB for Row-Level Upsert & Change Detection
+                if row_key in existing_schedule_map:
+                    db_sched = existing_schedule_map[row_key]
+                    row_dict["existing_schedule"] = db_sched
+                    changes = []
+
+                    if "schedule_status" in col_indices and row_dict.get("schedule_status") != db_sched.schedule_status:
+                        changes.append(f"Status: '{db_sched.schedule_status}' -> '{row_dict.get('schedule_status')}'")
+                        db_sched.schedule_status = row_dict.get("schedule_status")
+
+                    if "remarks" in col_indices and row_dict.get("remarks") != db_sched.remarks:
+                        changes.append(f"Remarks: '{db_sched.remarks}' -> '{row_dict.get('remarks')}'")
+                        db_sched.remarks = row_dict.get("remarks")
+
+                    if changes:
+                        db_sched.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -1247,7 +1334,6 @@ async def bulk_upload(
             imported_count = 0
             failed_count = 0
             try:
-                # Bulk add
                 schedules_to_add = []
                 for item in valid_rows_to_insert:
                     db_sched = Schedule(
@@ -1268,10 +1354,10 @@ async def bulk_upload(
                 if schedules_to_add:
                     db.add_all(schedules_to_add)
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
-                failed_count = len(valid_rows_to_insert)
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
                 bulk_upload_service.update_bulk_upload(
                     db,
                     upload_id=upload_id,
@@ -1299,10 +1385,11 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["Valid Rows", len(valid_rows_to_insert)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
-            ws_summary.append(["Existing Rows", len(existing_list)])
             ws_summary.append(["Warning Rows", 0])
             
             for col in ws_summary.columns:
@@ -1330,10 +1417,46 @@ async def bulk_upload(
                     str(r.get("end_date")) if r.get("end_date") else "",
                     r.get("schedule_status"),
                     r.get("remarks"),
-                    "VALID"
+                    "INSERTED"
                 ])
 
-            # Errors Sheet: Excel Row | Orbit ID | Field | Value | Error
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Support Type", "Country", "Fab City", "Fab Site", "Status", "Remarks"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    r.get("support_type"),
+                    r.get("country"),
+                    r.get("fab_city"),
+                    r.get("fab_site"),
+                    r.get("schedule_status"),
+                    r.get("remarks")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details", "Support Type", "Country", "Fab City", "Fab Site", "Status", "Remarks"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    r.get("support_type"),
+                    r.get("country"),
+                    r.get("fab_city"),
+                    r.get("fab_site"),
+                    r.get("schedule_status"),
+                    r.get("remarks")
+                ])
+
+            # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
             ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
             for r in errors_list:
@@ -1346,7 +1469,7 @@ async def bulk_upload(
                         err.get("error") or ""
                     ])
 
-            # Duplicates Sheet: Excel Row | Orbit ID | Duplicate Key | Duplicate Rows | Reason
+            # Duplicates Sheet
             ws_dups = report_wb.create_sheet(title="Duplicates")
             ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Duplicate Rows", "Reason"])
             for r in duplicates_list:
@@ -1358,24 +1481,11 @@ async def bulk_upload(
                     "Duplicate Schedule row in Excel sheet"
                 ])
 
-            # Existing Records Sheet: Excel Row | Orbit ID | Engineer Name | Reason
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(["Excel Row", "Orbit ID", "Engineer Name", "Reason"])
-            for r in existing_list:
-                desc = f"{r.get('support_type')} / {r.get('country')} / {str(r.get('start_date'))}"
-                ws_exist.append([
-                    r["excel_row"],
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    desc,
-                    "Schedule already exists in database."
-                ])
-
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -1387,7 +1497,7 @@ async def bulk_upload(
             t_report = time.perf_counter()
 
             final_status = "COMPLETED"
-            if len(errors_list) > 0 or len(duplicates_list) > 0 or len(existing_list) > 0:
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
                 final_status = "COMPLETED_WITH_ERRORS"
 
             bulk_upload_service.update_bulk_upload(
@@ -1399,35 +1509,17 @@ async def bulk_upload(
                 failed_rows=failed_count
             )
 
-            total_time = time.perf_counter() - start_time
-            logger.info(
-                "\nSchedule upload:\n"
-                "Rows detected: %d\n"
-                "Excel parsing: %.4fs\n"
-                "Engineer lookup: %.4fs\n"
-                "Existing schedule lookup: %.4fs\n"
-                "Validation & Duplicate detection: %.4fs\n"
-                "Database insert & commit: %.4fs\n"
-                "Report generation: %.4fs\n"
-                "Total: %.4fs",
-                total_rows,
-                t_excel - start_time,
-                t_engineer - t_excel,
-                t_existing_lookup - t_engineer,
-                t_validation - t_existing_lookup,
-                t_insert - t_validation,
-                t_report - t_insert,
-                total_time
-            )
-
-            ingested_msg = f"Ingested {len(valid_rows_to_insert)} valid records successfully."
-            if errors_list or duplicates_list or existing_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new schedule records. Updated {len(existing_list)} existing schedule records. {len(unchanged_list)} records were unchanged."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
@@ -1532,22 +1624,22 @@ async def bulk_upload(
 
             # Bulk Engineer Resolution
             unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
+                norm_str(row.get("orbit_id"))
                 for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
             }
 
             db_engineers = []
             if unique_orbit_ids:
                 db_engineers = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        func.lower(Engineer.orbit_id).in_(list(unique_orbit_ids)),
                         Engineer.company_id == target_company_id
                     )
                 ).all()
 
             orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                norm_str(eng.orbit_id): (eng.engineer_id, eng.engineer_name)
                 for eng in db_engineers
             }
             t_engineer = time.perf_counter()
@@ -1576,15 +1668,16 @@ async def bulk_upload(
             # Map existing visas by (engineer_id, country_lower, visa_type_lower)
             existing_visa_map = {}
             for v in db_visas:
-                c_key = (v.country or "").strip().lower()
-                vt_key = (v.visa_type or "").strip().lower()
-                existing_visa_map[(v.engineer_id, c_key, vt_key)] = v
+                c_key = norm_str(v.country)
+                vt_key = norm_str(v.visa_type)
+                existing_visa_map[(norm_uuid(v.engineer_id), c_key, vt_key)] = v
 
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_keys = set()
 
@@ -1606,11 +1699,11 @@ async def bulk_upload(
                     continue
 
                 # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
+                eng_info = orbit_to_engineer.get(norm_str(orbit_id))
                 if not eng_info:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
+                        "value": str(orbit_id),
                         "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
                     })
                     row_dict["errors"] = row_errors
@@ -1702,7 +1795,7 @@ async def bulk_upload(
                 country_clean = (country or "").strip().lower()
                 visa_type_clean = (visa_type or "").strip().lower()
 
-                row_key = (engineer_id, country_clean, visa_type_clean)
+                row_key = (norm_uuid(engineer_id), country_clean, visa_type_clean)
 
                 if row_key in seen_keys:
                     row_dict["duplicate_key"] = f"EngineerID: {engineer_id}, Country: {country}, Type: {visa_type}"
@@ -1713,8 +1806,39 @@ async def bulk_upload(
                 # 7. Upsert check: existing DB record vs new record
                 existing_visa_record = existing_visa_map.get(row_key)
                 if existing_visa_record:
-                    row_dict["existing_visa"] = existing_visa_record
-                    existing_list.append(row_dict)
+                    ev = existing_visa_record
+                    row_dict["existing_visa"] = ev
+                    changes = []
+
+                    if "applied_on" in col_indices and row_dict.get("applied_on") != ev.applied_on:
+                        changes.append(f"Applied On: '{ev.applied_on}' -> '{row_dict.get('applied_on')}'")
+                        ev.applied_on = row_dict.get("applied_on")
+
+                    if "visa_start_date" in col_indices and row_dict.get("visa_start_date") != ev.visa_start_date:
+                        changes.append(f"Start Date: '{ev.visa_start_date}' -> '{row_dict.get('visa_start_date')}'")
+                        ev.visa_start_date = row_dict.get("visa_start_date")
+
+                    if "visa_end_date" in col_indices and row_dict.get("visa_end_date") != ev.visa_end_date:
+                        changes.append(f"End Date: '{ev.visa_end_date}' -> '{row_dict.get('visa_end_date')}'")
+                        ev.visa_end_date = row_dict.get("visa_end_date")
+
+                    if "comments" in col_indices and row_dict.get("comments") != ev.comments:
+                        changes.append(f"Comments: '{ev.comments}' -> '{row_dict.get('comments')}'")
+                        ev.comments = row_dict.get("comments")
+
+                    if "owner" in col_indices and row_dict.get("owner_id") != ev.owner_id:
+                        changes.append(f"Owner: '{ev.owner_id}' -> '{row_dict.get('owner_id')}'")
+                        ev.owner_id = row_dict.get("owner_id")
+
+                    if changes:
+                        ev.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -1741,7 +1865,6 @@ async def bulk_upload(
             )
 
             imported_count = 0
-            updated_count = 0
             failed_count = 0
             try:
                 # 1. Bulk Insert New Visas
@@ -1765,29 +1888,8 @@ async def bulk_upload(
                 if visas_to_add:
                     db.add_all(visas_to_add)
 
-                # 2. Update Existing Visas
-                for item in existing_list:
-                    ev = item["existing_visa"]
-                    if item.get("country"):
-                        ev.country = item["country"]
-                    if item.get("visa_type") is not None:
-                        ev.visa_type = item["visa_type"]
-                    if item.get("applied_on") is not None:
-                        ev.applied_on = item["applied_on"]
-                    if item.get("visa_start_date") is not None:
-                        ev.visa_start_date = item["visa_start_date"]
-                    if item.get("visa_end_date") is not None:
-                        ev.visa_end_date = item["visa_end_date"]
-                    if item.get("comments") is not None:
-                        ev.comments = item["comments"]
-                    if item.get("owner_id") is not None:
-                        ev.owner_id = item["owner_id"]
-                    ev.updated_at = datetime.utcnow()
-                    ev.updated_at = datetime.utcnow()
-
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
-                updated_count = len(existing_list)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
                 failed_count = len(valid_rows_to_insert) + len(existing_list)
@@ -1818,8 +1920,9 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
-            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
             ws_summary.append(["Warning Rows", 0])
@@ -1850,6 +1953,36 @@ async def bulk_upload(
                     "INSERTED"
                 ])
 
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Country", "Visa Type", "Comments"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    r.get("country"),
+                    r.get("visa_type"),
+                    r.get("comments")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details", "Country", "Visa Type", "Comments"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    r.get("country"),
+                    r.get("visa_type"),
+                    r.get("comments")
+                ])
+
             # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
             ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
@@ -1874,28 +2007,11 @@ async def bulk_upload(
                     "Duplicate Visa row within Excel sheet"
                 ])
 
-            # Existing Records Sheet (Updated)
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(headers_valid)
-            for r in existing_list:
-                ws_exist.append([
-                    r["excel_row"],
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    r.get("country"),
-                    r.get("visa_type"),
-                    str(r.get("applied_on")) if r.get("applied_on") else "",
-                    str(r.get("visa_start_date")) if r.get("visa_start_date") else "",
-                    str(r.get("visa_end_date")) if r.get("visa_end_date") else "",
-                    r.get("comments"),
-                    "UPDATED"
-                ])
-
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -1915,7 +2031,7 @@ async def bulk_upload(
                 upload_id=upload_id,
                 status=final_status,
                 report_file=report_filename,
-                imported_rows=imported_count + updated_count,
+                imported_rows=imported_count,
                 failed_rows=failed_count
             )
 
@@ -1940,14 +2056,17 @@ async def bulk_upload(
                 total_time
             )
 
-            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new visa records and updated {updated_count} existing visa records."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new visa records. Updated {len(existing_list)} existing visa records. {len(unchanged_list)} records were unchanged."
             if errors_list or duplicates_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
@@ -2046,22 +2165,22 @@ async def bulk_upload(
 
             # Bulk Engineer Resolution
             unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
+                norm_str(row.get("orbit_id"))
                 for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
             }
 
             db_engineers = []
             if unique_orbit_ids:
                 db_engineers = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        func.lower(Engineer.orbit_id).in_(list(unique_orbit_ids)),
                         Engineer.company_id == target_company_id
                     )
                 ).all()
 
             orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                norm_str(eng.orbit_id): (eng.engineer_id, eng.engineer_name)
                 for eng in db_engineers
             }
             t_engineer = time.perf_counter()
@@ -2097,14 +2216,15 @@ async def bulk_upload(
             # Map existing travel records by (schedule_id, travel_date, purpose_lower)
             existing_travel_map = {}
             for tr in db_travels:
-                p_key = (tr.purpose or "").strip().lower()
-                existing_travel_map[(tr.schedule_id, tr.travel_date, p_key)] = tr
+                p_key = norm_str(tr.purpose)
+                existing_travel_map[(norm_uuid(tr.schedule_id), norm_date(tr.travel_date), p_key)] = tr
 
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             new_schedules_created = []
             seen_keys = set()
@@ -2127,11 +2247,11 @@ async def bulk_upload(
                     continue
 
                 # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
+                eng_info = orbit_to_engineer.get(norm_str(orbit_id))
                 if not eng_info:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
+                        "value": str(orbit_id),
                         "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
                     })
                     row_dict["errors"] = row_errors
@@ -2213,7 +2333,7 @@ async def bulk_upload(
 
                 # 5. Duplicate row detection in Excel sheet
                 purpose_clean = (purpose or "").strip().lower()
-                row_key = (schedule_id, travel_date, purpose_clean)
+                row_key = (norm_uuid(schedule_id), norm_date(travel_date), purpose_clean)
 
                 if row_key in seen_keys:
                     row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, TravelDate: {travel_date}, Purpose: {purpose}"
@@ -2224,8 +2344,35 @@ async def bulk_upload(
                 # 6. Upsert check: existing DB record vs new record
                 existing_travel_record = existing_travel_map.get(row_key)
                 if existing_travel_record:
-                    row_dict["existing_travel"] = existing_travel_record
-                    existing_list.append(row_dict)
+                    etr = existing_travel_record
+                    row_dict["existing_travel"] = etr
+                    changes = []
+
+                    if "booking_date" in col_indices and row_dict.get("booking_date") != etr.booking_date:
+                        changes.append(f"Booking Date: '{etr.booking_date}' -> '{row_dict.get('booking_date')}'")
+                        etr.booking_date = row_dict.get("booking_date")
+
+                    if "travel_date" in col_indices and row_dict.get("travel_date") != etr.travel_date:
+                        changes.append(f"Travel Date: '{etr.travel_date}' -> '{row_dict.get('travel_date')}'")
+                        etr.travel_date = row_dict.get("travel_date")
+
+                    if "purpose" in col_indices and row_dict.get("purpose") != etr.purpose:
+                        changes.append(f"Purpose: '{etr.purpose}' -> '{row_dict.get('purpose')}'")
+                        etr.purpose = row_dict.get("purpose")
+
+                    if "comments" in col_indices and row_dict.get("comments") != etr.comments:
+                        changes.append(f"Comments: '{etr.comments}' -> '{row_dict.get('comments')}'")
+                        etr.comments = row_dict.get("comments")
+
+                    if changes:
+                        etr.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -2252,7 +2399,6 @@ async def bulk_upload(
             )
 
             imported_count = 0
-            updated_count = 0
             failed_count = 0
             try:
                 # Add baseline schedules if any created
@@ -2276,22 +2422,8 @@ async def bulk_upload(
                 if travels_to_add:
                     db.add_all(travels_to_add)
 
-                # 2. Update Existing Travels
-                for item in existing_list:
-                    etr = item["existing_travel"]
-                    if item.get("booking_date") is not None:
-                        etr.booking_date = item["booking_date"]
-                    if item.get("travel_date") is not None:
-                        etr.travel_date = item["travel_date"]
-                    if item.get("purpose") is not None:
-                        etr.purpose = item["purpose"]
-                    if item.get("comments") is not None:
-                        etr.comments = item["comments"]
-                    etr.updated_at = datetime.utcnow()
-
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
-                updated_count = len(existing_list)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
                 failed_count = len(valid_rows_to_insert) + len(existing_list)
@@ -2322,8 +2454,9 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
-            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
             ws_summary.append(["Warning Rows", 0])
@@ -2333,8 +2466,8 @@ async def bulk_upload(
                 ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
 
             headers_valid = [
-                "Excel Row", "Orbit ID", "Engineer Name", "Booking Date", 
-                "Travel Date", "Purpose", "Comments", "Status"
+                "Excel Row", "Orbit ID", "Engineer Name", "Booking Date", "Travel Date", 
+                "Purpose", "Comments", "Status"
             ]
 
             # Valid Records Sheet (Inserted)
@@ -2350,6 +2483,38 @@ async def bulk_upload(
                     r.get("purpose"),
                     r.get("comments"),
                     "INSERTED"
+                ])
+
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Booking Date", "Travel Date", "Purpose", "Comments"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    str(r.get("booking_date")) if r.get("booking_date") else "",
+                    str(r.get("travel_date")) if r.get("travel_date") else "",
+                    r.get("purpose"),
+                    r.get("comments")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details", "Booking Date", "Travel Date", "Purpose", "Comments"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    str(r.get("booking_date")) if r.get("booking_date") else "",
+                    str(r.get("travel_date")) if r.get("travel_date") else "",
+                    r.get("purpose"),
+                    r.get("comments")
                 ])
 
             # Errors Sheet
@@ -2376,26 +2541,11 @@ async def bulk_upload(
                     "Duplicate Travel row within Excel sheet"
                 ])
 
-            # Existing Records Sheet (Updated)
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(headers_valid)
-            for r in existing_list:
-                ws_exist.append([
-                    r["excel_row"],
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    str(r.get("booking_date")) if r.get("booking_date") else "",
-                    str(r.get("travel_date")) if r.get("travel_date") else "",
-                    r.get("purpose"),
-                    r.get("comments"),
-                    "UPDATED"
-                ])
-
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -2415,7 +2565,7 @@ async def bulk_upload(
                 upload_id=upload_id,
                 status=final_status,
                 report_file=report_filename,
-                imported_rows=imported_count + updated_count,
+                imported_rows=imported_count,
                 failed_rows=failed_count
             )
 
@@ -2440,14 +2590,17 @@ async def bulk_upload(
                 total_time
             )
 
-            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new travel records and updated {updated_count} existing travel records."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new travel records. Updated {len(existing_list)} existing travel records. {len(unchanged_list)} records were unchanged."
             if errors_list or duplicates_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
@@ -2579,13 +2732,14 @@ async def bulk_upload(
                     select(Performance).where(Performance.schedule_id.in_(list(raw_sch_ids)))
                 ).all()
                 for p in perfs:
-                    existing_perf_map[(p.schedule_id, p.actual_start_date)] = p
+                    existing_perf_map[(norm_uuid(p.schedule_id), norm_date(p.actual_start_date))] = p
 
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_keys = set()
 
@@ -2772,7 +2926,7 @@ async def bulk_upload(
                 row_dict["attachment"] = row_dict.get("attachment")
 
                 # 7. Duplicate row detection in Excel sheet
-                row_key = (target_sch.schedule_id, actual_start_date)
+                row_key = (norm_uuid(target_sch.schedule_id), norm_date(actual_start_date))
 
                 if row_key in seen_keys:
                     row_dict["duplicate_key"] = f"ScheduleID: {target_sch.schedule_id}, ActualStartDate: {actual_start_date}"
@@ -2780,11 +2934,46 @@ async def bulk_upload(
                     continue
                 seen_keys.add(row_key)
 
-                # 8. Upsert check
+                # 8. Upsert check for Row-Level Upsert & Change Detection
                 existing_perf_record = existing_perf_map.get(row_key)
                 if existing_perf_record:
-                    row_dict["existing_perf"] = existing_perf_record
-                    existing_list.append(row_dict)
+                    epf = existing_perf_record
+                    row_dict["existing_perf"] = epf
+                    changes = []
+
+                    if "actual_end_date" in col_indices and row_dict.get("actual_end_date") != epf.actual_end_date:
+                        changes.append(f"Actual End Date: '{epf.actual_end_date}' -> '{row_dict.get('actual_end_date')}'")
+                        epf.actual_end_date = row_dict.get("actual_end_date")
+
+                    if "score" in col_indices and row_dict.get("score") != epf.score:
+                        changes.append(f"Score: '{epf.score}' -> '{row_dict.get('score')}'")
+                        epf.score = row_dict.get("score")
+
+                    if "escalation" in col_indices and row_dict.get("escalation") != epf.escalation:
+                        changes.append(f"Escalation: '{epf.escalation}' -> '{row_dict.get('escalation')}'")
+                        epf.escalation = row_dict.get("escalation")
+
+                    if "escalation_reason" in col_indices and row_dict.get("escalation_reason") != epf.escalation_reason:
+                        changes.append(f"Escalation Reason: '{epf.escalation_reason}' -> '{row_dict.get('escalation_reason')}'")
+                        epf.escalation_reason = row_dict.get("escalation_reason")
+
+                    if "feedback" in col_indices and row_dict.get("feedback") != epf.feedback:
+                        changes.append(f"Feedback: '{epf.feedback}' -> '{row_dict.get('feedback')}'")
+                        epf.feedback = row_dict.get("feedback")
+
+                    if "attachment" in col_indices and row_dict.get("attachment") != epf.attachment:
+                        changes.append(f"Attachment: '{epf.attachment}' -> '{row_dict.get('attachment')}'")
+                        epf.attachment = row_dict.get("attachment")
+
+                    if changes:
+                        epf.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -2811,7 +3000,6 @@ async def bulk_upload(
             )
 
             imported_count = 0
-            updated_count = 0
             failed_count = 0
             try:
                 # 1. Bulk Insert New Performance evaluations
@@ -2834,28 +3022,8 @@ async def bulk_upload(
                 if perfs_to_add:
                     db.add_all(perfs_to_add)
 
-                # 2. Update Existing Performance evaluations
-                for item in existing_list:
-                    epf = item["existing_perf"]
-                    if item.get("actual_start_date") is not None:
-                        epf.actual_start_date = item["actual_start_date"]
-                    if item.get("actual_end_date") is not None:
-                        epf.actual_end_date = item["actual_end_date"]
-                    if item.get("escalation") is not None:
-                        epf.escalation = item["escalation"]
-                    if item.get("escalation_reason") is not None:
-                        epf.escalation_reason = item["escalation_reason"]
-                    if item.get("feedback") is not None:
-                        epf.feedback = item["feedback"]
-                    if item.get("score") is not None:
-                        epf.score = item["score"]
-                    if item.get("attachment") is not None:
-                        epf.attachment = item["attachment"]
-                    epf.updated_at = datetime.utcnow()
-
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
-                updated_count = len(existing_list)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
                 failed_count = len(valid_rows_to_insert) + len(existing_list)
@@ -2886,8 +3054,9 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
-            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
             ws_summary.append(["Warning Rows", 0])
@@ -2919,14 +3088,47 @@ async def bulk_upload(
                     "INSERTED"
                 ])
 
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Schedule ID", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Score", "Escalation", "Escalation Reason", "Feedback"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    str(r.get("schedule_id") or ""),
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    r.get("score"),
+                    "Yes" if r.get("escalation") else "No",
+                    r.get("escalation_reason"),
+                    r.get("feedback")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Schedule ID", "Orbit ID", "Engineer Name", "Action Status", "Details", "Score", "Escalation", "Escalation Reason", "Feedback"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    str(r.get("schedule_id") or ""),
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    r.get("score"),
+                    "Yes" if r.get("escalation") else "No",
+                    r.get("escalation_reason"),
+                    r.get("feedback")
+                ])
+
             # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
-            ws_errors.append(["Excel Row", "Schedule ID", "Orbit ID", "Field", "Value", "Error"])
+            ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
             for r in errors_list:
                 for err in r.get("errors", []):
                     ws_errors.append([
                         r["excel_row"],
-                        str(r.get("schedule_id") or ""),
                         r.get("orbit_id") or "",
                         err.get("field") or "",
                         err.get("value") or "",
@@ -2935,39 +3137,20 @@ async def bulk_upload(
 
             # Duplicates Sheet
             ws_dups = report_wb.create_sheet(title="Duplicates")
-            ws_dups.append(["Excel Row", "Schedule ID", "Orbit ID", "Duplicate Key", "Reason"])
+            ws_dups.append(["Excel Row", "Orbit ID", "Duplicate Key", "Reason"])
             for r in duplicates_list:
                 ws_dups.append([
                     r["excel_row"],
-                    str(r.get("schedule_id") or ""),
                     r.get("orbit_id") or "",
                     r.get("duplicate_key") or "",
                     "Duplicate Performance row within Excel sheet"
-                ])
-
-            # Existing Records Sheet (Updated)
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(headers_valid)
-            for r in existing_list:
-                ws_exist.append([
-                    r["excel_row"],
-                    str(r.get("schedule_id") or ""),
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    r.get("score"),
-                    str(r.get("actual_start_date")) if r.get("actual_start_date") else "",
-                    str(r.get("actual_end_date")) if r.get("actual_end_date") else "",
-                    "Yes" if r.get("escalation") else "No",
-                    r.get("escalation_reason"),
-                    r.get("feedback"),
-                    "UPDATED"
                 ])
 
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Schedule ID", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -2987,7 +3170,7 @@ async def bulk_upload(
                 upload_id=upload_id,
                 status=final_status,
                 report_file=report_filename,
-                imported_rows=imported_count + updated_count,
+                imported_rows=imported_count,
                 failed_rows=failed_count
             )
 
@@ -3012,17 +3195,17 @@ async def bulk_upload(
                 total_time
             )
 
-            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new performance records and updated {updated_count} existing performance records."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new performance records. Updated {len(existing_list)} existing performance records. {len(unchanged_list)} records were unchanged."
             if errors_list or duplicates_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
-                "uploadId": str(upload_id),
-                "upload_id": str(upload_id),
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
-                "existingCount": len(existing_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
@@ -3126,22 +3309,22 @@ async def bulk_upload(
 
             # Bulk Engineer Resolution
             unique_orbit_ids = {
-                str(row.get("orbit_id")).strip()
+                norm_str(row.get("orbit_id"))
                 for row in raw_rows
-                if row.get("orbit_id") and str(row.get("orbit_id")).strip() != ""
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
             }
 
             db_engineers = []
             if unique_orbit_ids:
                 db_engineers = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id.in_(list(unique_orbit_ids)),
+                        func.lower(Engineer.orbit_id).in_(list(unique_orbit_ids)),
                         Engineer.company_id == target_company_id
                     )
                 ).all()
 
             orbit_to_engineer = {
-                eng.orbit_id: (eng.engineer_id, eng.engineer_name)
+                norm_str(eng.orbit_id): (eng.engineer_id, eng.engineer_name)
                 for eng in db_engineers
             }
             t_engineer = time.perf_counter()
@@ -3159,14 +3342,15 @@ async def bulk_upload(
             # Map existing leave records by (engineer_id, requested_date, leave_type_lower)
             existing_leave_map = {}
             for lv in db_leaves:
-                lt_key = (lv.leave_type or "Annual Leave").strip().lower()
-                existing_leave_map[(lv.engineer_id, lv.requested_date, lt_key)] = lv
+                lt_key = norm_str(lv.leave_type or "Annual Leave")
+                existing_leave_map[(norm_uuid(lv.engineer_id), norm_date(lv.requested_date), lt_key)] = lv
 
             t_existing_lookup = time.perf_counter()
 
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_keys = set()
 
@@ -3188,11 +3372,11 @@ async def bulk_upload(
                     continue
 
                 # 2. Resolve engineer using bulk lookup
-                eng_info = orbit_to_engineer.get(orbit_id)
+                eng_info = orbit_to_engineer.get(norm_str(orbit_id))
                 if not eng_info:
                     row_errors.append({
                         "field": "Orbit ID",
-                        "value": orbit_id,
+                        "value": str(orbit_id),
                         "error": f"Engineer with Orbit ID '{orbit_id}' does not exist in the selected company."
                     })
                     row_dict["errors"] = row_errors
@@ -3263,8 +3447,8 @@ async def bulk_upload(
                 row_dict["approval_status"] = approval_status
 
                 # 4. Duplicate row detection in Excel sheet
-                lt_clean = (leave_type or "").strip().lower()
-                row_key = (engineer_id, requested_date, lt_clean)
+                lt_clean = norm_str(leave_type or "Annual Leave")
+                row_key = (norm_uuid(engineer_id), norm_date(requested_date), lt_clean)
 
                 if row_key in seen_keys:
                     row_dict["duplicate_key"] = f"OrbitID: {orbit_id}, RequestedDate: {requested_date}, LeaveType: {leave_type}"
@@ -3272,11 +3456,30 @@ async def bulk_upload(
                     continue
                 seen_keys.add(row_key)
 
-                # 5. Upsert check: existing DB record vs new record
+                # 5. Upsert check for Row-Level Upsert & Change Detection
                 existing_leave_record = existing_leave_map.get(row_key)
                 if existing_leave_record:
-                    row_dict["existing_leave"] = existing_leave_record
-                    existing_list.append(row_dict)
+                    elv = existing_leave_record
+                    row_dict["existing_leave"] = elv
+                    changes = []
+
+                    if "requested_on" in col_indices and row_dict.get("requested_on") != elv.requested_on:
+                        changes.append(f"Requested On: '{elv.requested_on}' -> '{row_dict.get('requested_on')}'")
+                        elv.requested_on = row_dict.get("requested_on")
+
+                    if "approval_status" in col_indices and row_dict.get("approval_status") != elv.approval_status:
+                        changes.append(f"Approval Status: '{elv.approval_status}' -> '{row_dict.get('approval_status')}'")
+                        elv.approval_status = row_dict.get("approval_status")
+
+                    if changes:
+                        elv.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -3303,7 +3506,6 @@ async def bulk_upload(
             )
 
             imported_count = 0
-            updated_count = 0
             failed_count = 0
             try:
                 # 1. Bulk Insert New Leave records
@@ -3323,22 +3525,8 @@ async def bulk_upload(
                 if leaves_to_add:
                     db.add_all(leaves_to_add)
 
-                # 2. Update Existing Leave records
-                for item in existing_list:
-                    elv = item["existing_leave"]
-                    if item.get("leave_type") is not None:
-                        elv.leave_type = item["leave_type"]
-                    if item.get("requested_date") is not None:
-                        elv.requested_date = item["requested_date"]
-                    if item.get("requested_on") is not None:
-                        elv.requested_on = item["requested_on"]
-                    if item.get("approval_status") is not None:
-                        elv.approval_status = item["approval_status"]
-                    elv.updated_at = datetime.utcnow()
-
                 db.commit()
-                imported_count = len(valid_rows_to_insert)
-                updated_count = len(existing_list)
+                imported_count = len(valid_rows_to_insert) + len(existing_list)
             except Exception as insert_err:
                 db.rollback()
                 failed_count = len(valid_rows_to_insert) + len(existing_list)
@@ -3369,8 +3557,9 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
-            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Inserted Records", len(valid_rows_to_insert)])
+            ws_summary.append(["Updated Records", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
             ws_summary.append(["Warning Rows", 0])
@@ -3399,6 +3588,38 @@ async def bulk_upload(
                     "INSERTED"
                 ])
 
+            # Updated Records Sheet
+            ws_updated = report_wb.create_sheet(title="Updated Records")
+            ws_updated.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Columns", "Leave Type", "Requested Date", "Requested On", "Approval Status"])
+            for r in existing_list:
+                ws_updated.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UPDATED",
+                    r.get("changed_fields") or "",
+                    r.get("leave_type"),
+                    str(r.get("requested_date")) if r.get("requested_date") else "",
+                    str(r.get("requested_on")) if r.get("requested_on") else "",
+                    r.get("approval_status")
+                ])
+
+            # Unchanged Records Sheet
+            ws_unchanged = report_wb.create_sheet(title="Unchanged Records")
+            ws_unchanged.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details", "Leave Type", "Requested Date", "Requested On", "Approval Status"])
+            for r in unchanged_list:
+                ws_unchanged.append([
+                    r["excel_row"],
+                    r.get("orbit_id") or "",
+                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
+                    "UNCHANGED",
+                    "All supplied values match database",
+                    r.get("leave_type"),
+                    str(r.get("requested_date")) if r.get("requested_date") else "",
+                    str(r.get("requested_on")) if r.get("requested_on") else "",
+                    r.get("approval_status")
+                ])
+
             # Errors Sheet
             ws_errors = report_wb.create_sheet(title="Errors")
             ws_errors.append(["Excel Row", "Orbit ID", "Field", "Value", "Error"])
@@ -3423,26 +3644,11 @@ async def bulk_upload(
                     "Duplicate Leave row within Excel sheet"
                 ])
 
-            # Existing Records Sheet (Updated)
-            ws_exist = report_wb.create_sheet(title="Existing Records")
-            ws_exist.append(headers_valid)
-            for r in existing_list:
-                ws_exist.append([
-                    r["excel_row"],
-                    r.get("orbit_id") or "",
-                    r.get("resolved_engineer_name") or r.get("original_engineer_name") or "",
-                    r.get("leave_type"),
-                    str(r.get("requested_date")) if r.get("requested_date") else "",
-                    str(r.get("requested_on")) if r.get("requested_on") else "",
-                    r.get("approval_status"),
-                    "UPDATED"
-                ])
-
             # Warnings Sheet
             ws_warn = report_wb.create_sheet(title="Warnings")
             ws_warn.append(["Excel Row", "Orbit ID", "Field", "Value", "Warning"])
 
-            for sheet_obj in (ws_valid, ws_errors, ws_dups, ws_exist, ws_warn):
+            for sheet_obj in (ws_valid, ws_updated, ws_unchanged, ws_errors, ws_dups, ws_warn):
                 for col in sheet_obj.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     sheet_obj.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
@@ -3462,9 +3668,24 @@ async def bulk_upload(
                 upload_id=upload_id,
                 status=final_status,
                 report_file=report_filename,
-                imported_rows=imported_count + updated_count,
+                imported_rows=imported_count,
                 failed_rows=failed_count
             )
+
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new leave records. Updated {len(existing_list)} existing leave records. {len(unchanged_list)} records were unchanged."
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
+
+            return {
+                "success": True,
+                "rowsProcessed": total_rows,
+                "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
+                "message": ingested_msg,
+                "report_url": f"/api/upload/download-report/{report_filename}"
+            }
 
             total_time = time.perf_counter() - start_time
             logger.info(
@@ -3487,9 +3708,9 @@ async def bulk_upload(
                 total_time
             )
 
-            ingested_msg = f"Processed {total_rows} rows: inserted {imported_count} new leave records and updated {updated_count} existing leave records."
+            ingested_msg = f"Ingested {len(valid_rows_to_insert)} new leave records. Updated {len(existing_list)} existing leave records. {len(unchanged_list)} records were unchanged."
             if errors_list or duplicates_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,
@@ -3564,6 +3785,7 @@ async def bulk_upload(
             errors_list = []
             duplicates_list = []
             existing_list = []
+            unchanged_list = []
             valid_rows_to_insert = []
             seen_orbit_ids = set()
 
@@ -3655,13 +3877,73 @@ async def bulk_upload(
                 # Check existing in DB
                 db_exist = db.scalars(
                     select(Engineer).where(
-                        Engineer.orbit_id == o_id,
+                        func.lower(Engineer.orbit_id) == norm_str(o_id),
                         Engineer.company_id == target_company_id
                     )
                 ).first()
                 if db_exist:
                     row_dict["existing_engineer"] = db_exist
-                    existing_list.append(row_dict)
+                    changes = []
+                    
+                    if "engineer_name" in col_indices and row_dict["engineer_name"] != db_exist.engineer_name:
+                        changes.append(f"Name: '{db_exist.engineer_name}' -> '{row_dict['engineer_name']}'")
+                        db_exist.engineer_name = row_dict["engineer_name"]
+
+                    if "goes_by" in col_indices and row_dict["goes_by"] != db_exist.goes_by:
+                        changes.append(f"Goes By: '{db_exist.goes_by}' -> '{row_dict['goes_by']}'")
+                        db_exist.goes_by = row_dict["goes_by"]
+
+                    if "employee_id" in col_indices and row_dict["employee_id"] != db_exist.lam_id:
+                        changes.append(f"Employee ID: '{db_exist.lam_id}' -> '{row_dict['employee_id']}'")
+                        db_exist.lam_id = row_dict["employee_id"]
+
+                    if "level" in col_indices and row_dict["level"] != db_exist.level:
+                        changes.append(f"Level: '{db_exist.level}' -> '{row_dict['level']}'")
+                        db_exist.level = row_dict["level"]
+
+                    if "date_of_joining" in col_indices and norm_date(row_dict["date_of_joining"]) != norm_date(db_exist.date_of_joining):
+                        changes.append(f"Date of Joining: '{db_exist.date_of_joining}' -> '{row_dict['date_of_joining']}'")
+                        db_exist.date_of_joining = row_dict["date_of_joining"]
+
+                    if "primary_tool" in col_indices and row_dict["primary_tool"] != db_exist.primary_tool_type:
+                        changes.append(f"Primary Tool: '{db_exist.primary_tool_type}' -> '{row_dict['primary_tool']}'")
+                        db_exist.primary_tool_type = row_dict["primary_tool"]
+
+                    if "customer_experience" in col_indices:
+                        cust_exp_new = row_dict["customer_experience"]
+                        cust_exp_cur = float(db_exist.lam_experience) if db_exist.lam_experience is not None else None
+                        if cust_exp_new != cust_exp_cur:
+                            changes.append(f"Customer Exp: '{cust_exp_cur}' -> '{cust_exp_new}'")
+                            db_exist.lam_experience = cust_exp_new
+
+                    if "industry_experience" in col_indices:
+                        ind_exp_new = row_dict["industry_experience"]
+                        ind_exp_cur = float(db_exist.industry_experience) if db_exist.industry_experience is not None else None
+                        if ind_exp_new != ind_exp_cur:
+                            changes.append(f"Industry Exp: '{ind_exp_cur}' -> '{ind_exp_new}'")
+                            db_exist.industry_experience = ind_exp_new
+
+                    if "status" in col_indices and row_dict["status"] and row_dict["status"] != db_exist.status:
+                        changes.append(f"Status: '{db_exist.status}' -> '{row_dict['status']}'")
+                        db_exist.status = row_dict["status"]
+
+                    if "email" in col_indices and row_dict["email"] != db_exist.email:
+                        changes.append(f"Email: '{db_exist.email}' -> '{row_dict['email']}'")
+                        db_exist.email = row_dict["email"]
+
+                    if "phone_number" in col_indices and row_dict["phone_number"] != db_exist.phone_number:
+                        changes.append(f"Phone: '{db_exist.phone_number}' -> '{row_dict['phone_number']}'")
+                        db_exist.phone_number = row_dict["phone_number"]
+
+                    if changes:
+                        db_exist.updated_at = datetime.utcnow()
+                        row_dict["update_status"] = "UPDATED"
+                        row_dict["changed_fields"] = "; ".join(changes)
+                        existing_list.append(row_dict)
+                    else:
+                        row_dict["update_status"] = "UNCHANGED"
+                        row_dict["changed_fields"] = "No fields modified"
+                        unchanged_list.append(row_dict)
                 else:
                     valid_rows_to_insert.append(row_dict)
 
@@ -3685,20 +3967,7 @@ async def bulk_upload(
                 status="IMPORTING"
             )
 
-            def remove_engineer_records(eid: UUID):
-                db.execute(text("DELETE FROM skills WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM visa_details WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM leaves WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM performances WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
-                db.execute(text("DELETE FROM travel_arrangements WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
-                db.execute(text("DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
-                db.execute(text("DELETE FROM schedules WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM engineer_deletion_requests WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM delete_requests WHERE entity_type = 'Engineer' AND entity_id = :eid"), {"eid": eid})
-                db.execute(text("UPDATE users SET engineer_id = NULL WHERE engineer_id = :eid"), {"eid": eid})
-                db.execute(text("DELETE FROM engineers WHERE engineer_id = :eid"), {"eid": eid})
-
-            # 3. Create NEW rows and replace EXISTING rows (Transaction safe rollback)
+            # 3. Create NEW rows and update EXISTING rows (Transaction safe rollback)
             imported_count = 0
             updated_count = 0
             failed_count = 0
@@ -3724,37 +3993,6 @@ async def bulk_upload(
                         updated_at=datetime.utcnow()
                     )
                     db.add(db_engineer)
-
-                # Delete previous engineer records and add latest uploaded record
-                for item in existing_list:
-                    old_eng = item["existing_engineer"]
-                    old_eid = old_eng.engineer_id
-                    
-                    # Completely purge previous engineer record
-                    remove_engineer_records(old_eid)
-
-                    # Insert fresh engineer record from latest upload row
-                    new_engineer = Engineer(
-                        engineer_id=uuid_pkg.uuid4(),
-                        company_id=target_company_id,
-                        engineer_name=item["engineer_name"],
-                        goes_by=item["goes_by"],
-                        lam_id=item["employee_id"],
-                        orbit_id=item["orbit_id"],
-                        level=item["level"],
-                        date_of_joining=item["date_of_joining"],
-                        primary_tool_type=item["primary_tool"],
-                        lam_experience=item["customer_experience"],
-                        industry_experience=item["industry_experience"],
-                        status=item["status"] or "Active",
-                        email=item["email"],
-                        phone_number=item["phone_number"],
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                    db.add(new_engineer)
-                    item["update_status"] = "REPLACED"
-                    item["updated_fields"] = f"Previous record (ID: {old_eid}) deleted & replaced with latest upload data"
 
                 db.commit()
                 imported_count = len(valid_rows_to_insert)
@@ -3790,7 +4028,8 @@ async def bulk_upload(
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
             ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
-            ws_summary.append(["Existing Rows Replaced", len(existing_list)])
+            ws_summary.append(["Existing Rows Updated", len(existing_list)])
+            ws_summary.append(["Unchanged Records", len(unchanged_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
             ws_summary.append(["Warning Rows", 0])
@@ -3838,9 +4077,9 @@ async def bulk_upload(
             add_sheet_data("Duplicates", duplicates_list)
             
             # Detailed Existing Records Sheet
-            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist = report_wb.create_sheet(title="Updated Records")
             ws_exist.append([
-                "Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details",
+                "Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Changed Diffs",
                 "Goes By", "Employee ID", "Level", "Date of Joining", "Primary Tool",
                 "Customer Exp", "Industry Exp", "Status", "Email", "Phone Number"
             ])
@@ -3849,8 +4088,8 @@ async def bulk_upload(
                     r.get("excel_row"),
                     r.get("orbit_id"),
                     r.get("engineer_name"),
-                    r.get("update_status", "REPLACED"),
-                    r.get("updated_fields", "Previous record deleted, replaced with latest uploaded row data."),
+                    r.get("update_status", "UPDATED"),
+                    r.get("changed_fields", "Modified values updated in database"),
                     r.get("goes_by"),
                     r.get("employee_id"),
                     r.get("level"),
@@ -3865,6 +4104,21 @@ async def bulk_upload(
             for col in ws_exist.columns:
                 max_len = max(len(str(cell.value or '')) for cell in col)
                 ws_exist.column_dimensions[col[0].column_letter].width = max(max_len + 3, 14)
+
+            # Unchanged Records Sheet
+            ws_un = report_wb.create_sheet(title="Unchanged Records")
+            ws_un.append(["Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details"])
+            for r in unchanged_list:
+                ws_un.append([
+                    r.get("excel_row"),
+                    r.get("orbit_id"),
+                    r.get("engineer_name"),
+                    "UNCHANGED",
+                    "All supplied engineer fields match database record"
+                ])
+            for col in ws_un.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_un.column_dimensions[col[0].column_letter].width = max(max_len + 3, 14)
 
             add_sheet_data("Warnings", [])
 
@@ -3891,7 +4145,9 @@ async def bulk_upload(
             if len(valid_rows_to_insert) > 0:
                 msg_parts.append(f"Ingested {len(valid_rows_to_insert)} new engineer records.")
             if len(existing_list) > 0:
-                msg_parts.append(f"Replaced {len(existing_list)} existing engineer records with latest uploaded data.")
+                msg_parts.append(f"Updated {len(existing_list)} existing engineer records with latest uploaded data.")
+            if len(unchanged_list) > 0:
+                msg_parts.append(f"Preserved {len(unchanged_list)} unchanged engineer records.")
             if not msg_parts:
                 ingested_msg = "No engineer records processed."
             else:
@@ -3904,6 +4160,9 @@ async def bulk_upload(
                 "success": True,
                 "rowsProcessed": total_rows,
                 "errorsCount": len(errors_list),
+                "inserted": len(valid_rows_to_insert),
+                "updated": len(existing_list),
+                "unchanged": len(unchanged_list),
                 "message": ingested_msg,
                 "report_url": f"/api/upload/download-report/{report_filename}"
             }
