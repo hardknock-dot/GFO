@@ -3,12 +3,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, DeclarativeBase, Session
 from app.config import settings
 
-# Create engine with pool_pre_ping=True and increased pool_size to prevent pool exhaustion
+# Create engine with strict small pool size to fit within Supabase session pooler limits
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=30
+    pool_size=2,
+    max_overflow=0,
+    pool_timeout=10
 )
 
 # Configure session factory

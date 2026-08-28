@@ -11,6 +11,13 @@ from app.routers import (
     admin, delete_requests
 )
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 # Startup table initialization & safe column migrations
 try:
     Base.metadata.create_all(bind=engine)
@@ -33,14 +40,6 @@ try:
         conn.commit()
 except Exception as err:
     logger.warning("Startup DB table initialization notice: %s", err)
-
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 # Initialize FastAPI Application
 app = FastAPI(

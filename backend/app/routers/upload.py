@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Header, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.database import get_db
 from app.models.user import User
@@ -64,8 +64,10 @@ def parse_experience(v):
     v_str = str(v).strip()
     if not v_str:
         return None
-    # Check if ends with "years" or "year" (case-insensitive)
-    match = re.match(r"^([\d.]+)\s*years?$", v_str, re.IGNORECASE)
+    # Strip trailing + or whitespace or dots
+    v_clean = v_str.rstrip("+").rstrip(".").strip()
+    # Check if ends with "years", "year", "yrs", "yr" (case-insensitive)
+    match = re.match(r"^([\d.]+)\s*(?:years?|yrs?\.?)$", v_clean, re.IGNORECASE)
     if match:
         try:
             return float(match.group(1))
@@ -73,7 +75,7 @@ def parse_experience(v):
             pass
     # Otherwise check if it can be directly cast to float
     try:
-        return float(v_str)
+        return float(v_clean)
     except ValueError:
         raise ValueError("Must be a valid numeric experience value")
 
@@ -85,29 +87,89 @@ def clean_val(v):
         return v_stripped if v_stripped != "" else None
     return v
 
-# Normalize names (strip, lowercase, replace spaces/underscores)
+# Normalize names (strip, lowercase, replace punctuation/spaces/underscores)
 def normalize_header(name):
     if name is None:
         return ""
-    return str(name).strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+    return str(name).strip().lower().replace(" ", "").replace("_", "").replace("-", "").replace(".", "").replace("(", "").replace(")", "").replace("/", "").replace("#", "")
 
 HEADER_MAP = {
     "engineername": "engineer_name",
+    "name": "engineer_name",
+    "engineer": "engineer_name",
     "goesby": "goes_by",
+    "preferredname": "goes_by",
     "lamid": "employee_id",
+    "employeeid": "employee_id",
+    "empid": "employee_id",
     "orbitid": "orbit_id",
+    "orbit": "orbit_id",
     "level": "level",
+    "engineerlevel": "level",
     "dateofjoining": "date_of_joining",
+    "joiningdate": "date_of_joining",
+    "doj": "date_of_joining",
     "primarytooltype": "primary_tool",
     "primarytool": "primary_tool",
+    "tooltype": "primary_tool",
+    "tool": "primary_tool",
     "lamexperience": "customer_experience",
     "customerexperience": "customer_experience",
     "industryexperience": "industry_experience",
     "status": "status",
+    "engineerstatus": "status",
     "email": "email",
+    "emailaddress": "email",
     "phonenumber": "phone_number",
-    "phone": "phone_number"
+    "phone": "phone_number",
+    "mobile": "phone_number",
+    "contact": "phone_number",
+    "contactnumber": "phone_number"
 }
+
+def map_engineer_header(raw_header: str) -> Optional[str]:
+    if not raw_header:
+        return None
+    norm = normalize_header(raw_header)
+    
+    if norm in HEADER_MAP:
+        return HEADER_MAP[norm]
+        
+    # Pattern matching for experience columns
+    if ("customer" in norm or "lam" in norm or "cust" in norm) and ("exp" in norm or "experience" in norm):
+        return "customer_experience"
+        
+    if ("industry" in norm or "ind" in norm) and ("exp" in norm or "experience" in norm):
+        return "industry_experience"
+        
+    if "date" in norm and ("join" in norm or "doj" in norm):
+        return "date_of_joining"
+        
+    if "orbit" in norm:
+        return "orbit_id"
+        
+    if "email" in norm:
+        return "email"
+        
+    if "phone" in norm or "mobile" in norm or "contact" in norm:
+        return "phone_number"
+        
+    if "level" in norm:
+        return "level"
+        
+    if "status" in norm:
+        return "status"
+        
+    if "tool" in norm:
+        return "primary_tool"
+        
+    if ("employee" in norm or "emp" in norm or "lam" in norm) and ("id" in norm or "num" in norm):
+        return "employee_id"
+        
+    if "name" in norm and "engineer" in norm:
+        return "engineer_name"
+        
+    return None
 
 def parse_boolean(v):
     if v is None:
@@ -3486,8 +3548,7 @@ async def bulk_upload(
             col_indices = {}
             for idx, val in enumerate(first_row):
                 if val is not None:
-                    norm = normalize_header(val)
-                    mapped_field = HEADER_MAP.get(norm)
+                    mapped_field = map_engineer_header(val)
                     if mapped_field:
                         col_indices[mapped_field] = idx + 1
 
@@ -3508,13 +3569,20 @@ async def bulk_upload(
 
             total_rows = last_data_row - 1
 
+            all_fields = {
+                "engineer_name", "goes_by", "employee_id", "orbit_id", "level",
+                "date_of_joining", "primary_tool", "customer_experience",
+                "industry_experience", "status", "email", "phone_number"
+            }
+
             for r in range(2, last_data_row + 1):
                 row_dict = {}
+                row_dict["excel_row"] = r
                 for field, col_idx in col_indices.items():
                     row_dict[field] = clean_val(sheet.cell(row=r, column=col_idx).value)
 
                 # Fill missing columns
-                for field in HEADER_MAP.values():
+                for field in all_fields:
                     if field not in row_dict:
                         row_dict[field] = None
 
@@ -3580,6 +3648,10 @@ async def bulk_upload(
                     continue
                 seen_orbit_ids.add(o_id)
 
+                row_dict["date_of_joining"] = normalized_date
+                row_dict["customer_experience"] = normalized_cust_exp
+                row_dict["industry_experience"] = normalized_ind_exp
+
                 # Check existing in DB
                 db_exist = db.scalars(
                     select(Engineer).where(
@@ -3588,12 +3660,9 @@ async def bulk_upload(
                     )
                 ).first()
                 if db_exist:
-                    row_dict["errors"] = ["Orbit ID already exists in DB"]
+                    row_dict["existing_engineer"] = db_exist
                     existing_list.append(row_dict)
                 else:
-                    row_dict["date_of_joining"] = normalized_date
-                    row_dict["customer_experience"] = normalized_cust_exp
-                    row_dict["industry_experience"] = normalized_ind_exp
                     valid_rows_to_insert.append(row_dict)
 
             # Update BulkUpload details and status to READY
@@ -3616,10 +3685,25 @@ async def bulk_upload(
                 status="IMPORTING"
             )
 
-            # 3. Create only VALID rows (Transaction safe rollback)
+            def remove_engineer_records(eid: UUID):
+                db.execute(text("DELETE FROM skills WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM visa_details WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM leaves WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM performances WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
+                db.execute(text("DELETE FROM travel_arrangements WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
+                db.execute(text("DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id = :eid)"), {"eid": eid})
+                db.execute(text("DELETE FROM schedules WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM engineer_deletion_requests WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM delete_requests WHERE entity_type = 'Engineer' AND entity_id = :eid"), {"eid": eid})
+                db.execute(text("UPDATE users SET engineer_id = NULL WHERE engineer_id = :eid"), {"eid": eid})
+                db.execute(text("DELETE FROM engineers WHERE engineer_id = :eid"), {"eid": eid})
+
+            # 3. Create NEW rows and replace EXISTING rows (Transaction safe rollback)
             imported_count = 0
+            updated_count = 0
             failed_count = 0
             try:
+                # Add new engineers
                 for item in valid_rows_to_insert:
                     db_engineer = Engineer(
                         engineer_id=uuid_pkg.uuid4(),
@@ -3633,18 +3717,51 @@ async def bulk_upload(
                         primary_tool_type=item["primary_tool"],
                         lam_experience=item["customer_experience"],
                         industry_experience=item["industry_experience"],
-                        status=item["status"],
+                        status=item["status"] or "Active",
                         email=item["email"],
                         phone_number=item["phone_number"],
                         created_at=datetime.utcnow(),
                         updated_at=datetime.utcnow()
                     )
                     db.add(db_engineer)
+
+                # Delete previous engineer records and add latest uploaded record
+                for item in existing_list:
+                    old_eng = item["existing_engineer"]
+                    old_eid = old_eng.engineer_id
+                    
+                    # Completely purge previous engineer record
+                    remove_engineer_records(old_eid)
+
+                    # Insert fresh engineer record from latest upload row
+                    new_engineer = Engineer(
+                        engineer_id=uuid_pkg.uuid4(),
+                        company_id=target_company_id,
+                        engineer_name=item["engineer_name"],
+                        goes_by=item["goes_by"],
+                        lam_id=item["employee_id"],
+                        orbit_id=item["orbit_id"],
+                        level=item["level"],
+                        date_of_joining=item["date_of_joining"],
+                        primary_tool_type=item["primary_tool"],
+                        lam_experience=item["customer_experience"],
+                        industry_experience=item["industry_experience"],
+                        status=item["status"] or "Active",
+                        email=item["email"],
+                        phone_number=item["phone_number"],
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    db.add(new_engineer)
+                    item["update_status"] = "REPLACED"
+                    item["updated_fields"] = f"Previous record (ID: {old_eid}) deleted & replaced with latest upload data"
+
                 db.commit()
                 imported_count = len(valid_rows_to_insert)
+                updated_count = len(existing_list)
             except Exception as insert_err:
                 db.rollback()
-                failed_count = len(valid_rows_to_insert)
+                failed_count = len(valid_rows_to_insert) + len(existing_list)
                 bulk_upload_service.update_bulk_upload(
                     db,
                     upload_id=upload_id,
@@ -3653,7 +3770,7 @@ async def bulk_upload(
                 )
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Database insertion failed: {str(insert_err)}"
+                    detail=f"Database ingestion failed: {str(insert_err)}"
                 )
 
             # 4. Generate report workbook
@@ -3672,15 +3789,15 @@ async def bulk_upload(
             ws_summary.append([])
             ws_summary.append(["Metric", "Count"])
             ws_summary.append(["Total Rows", total_rows])
-            ws_summary.append(["Valid Rows", len(valid_rows_to_insert)])
+            ws_summary.append(["New Valid Rows Inserted", len(valid_rows_to_insert)])
+            ws_summary.append(["Existing Rows Replaced", len(existing_list)])
             ws_summary.append(["Error Rows", len(errors_list)])
             ws_summary.append(["Duplicate Rows", len(duplicates_list)])
-            ws_summary.append(["Existing Rows", len(existing_list)])
             ws_summary.append(["Warning Rows", 0])
             
             for col in ws_summary.columns:
                 max_len = max(len(str(cell.value or '')) for cell in col)
-                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 12)
+                ws_summary.column_dimensions[col[0].column_letter].width = max(max_len + 3, 14)
 
             headers = [
                 "engineer_name", "goes_by", "employee_id", "orbit_id", "level", 
@@ -3719,7 +3836,36 @@ async def bulk_upload(
             add_sheet_data("Valid Records", valid_rows_to_insert)
             add_sheet_data("Errors", errors_list, include_errors=True)
             add_sheet_data("Duplicates", duplicates_list)
-            add_sheet_data("Existing Records", existing_list)
+            
+            # Detailed Existing Records Sheet
+            ws_exist = report_wb.create_sheet(title="Existing Records")
+            ws_exist.append([
+                "Excel Row", "Orbit ID", "Engineer Name", "Action Status", "Details",
+                "Goes By", "Employee ID", "Level", "Date of Joining", "Primary Tool",
+                "Customer Exp", "Industry Exp", "Status", "Email", "Phone Number"
+            ])
+            for r in existing_list:
+                ws_exist.append([
+                    r.get("excel_row"),
+                    r.get("orbit_id"),
+                    r.get("engineer_name"),
+                    r.get("update_status", "REPLACED"),
+                    r.get("updated_fields", "Previous record deleted, replaced with latest uploaded row data."),
+                    r.get("goes_by"),
+                    r.get("employee_id"),
+                    r.get("level"),
+                    str(r.get("date_of_joining")) if r.get("date_of_joining") else "",
+                    r.get("primary_tool"),
+                    r.get("customer_experience"),
+                    r.get("industry_experience"),
+                    r.get("status"),
+                    r.get("email"),
+                    r.get("phone_number")
+                ])
+            for col in ws_exist.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws_exist.column_dimensions[col[0].column_letter].width = max(max_len + 3, 14)
+
             add_sheet_data("Warnings", [])
 
             os.makedirs(TEMP_REPORTS_DIR, exist_ok=True)
@@ -3729,7 +3875,7 @@ async def bulk_upload(
 
             # Update final audit status
             final_status = "COMPLETED"
-            if len(errors_list) > 0 or len(duplicates_list) > 0 or len(existing_list) > 0:
+            if len(errors_list) > 0 or len(duplicates_list) > 0:
                 final_status = "COMPLETED_WITH_ERRORS"
                 
             bulk_upload_service.update_bulk_upload(
@@ -3737,13 +3883,22 @@ async def bulk_upload(
                 upload_id=upload_id,
                 status=final_status,
                 report_file=report_filename,
-                imported_rows=imported_count,
+                imported_rows=imported_count + updated_count,
                 failed_rows=failed_count
             )
 
-            ingested_msg = f"Ingested {len(valid_rows_to_insert)} valid records successfully."
-            if errors_list or duplicates_list or existing_list:
-                ingested_msg += " Some rows were skipped due to validation errors. See the validation report for details."
+            msg_parts = []
+            if len(valid_rows_to_insert) > 0:
+                msg_parts.append(f"Ingested {len(valid_rows_to_insert)} new engineer records.")
+            if len(existing_list) > 0:
+                msg_parts.append(f"Replaced {len(existing_list)} existing engineer records with latest uploaded data.")
+            if not msg_parts:
+                ingested_msg = "No engineer records processed."
+            else:
+                ingested_msg = " ".join(msg_parts)
+
+            if errors_list or duplicates_list:
+                ingested_msg += " Some rows had validation errors or duplicates. See the validation report for details."
 
             return {
                 "success": True,

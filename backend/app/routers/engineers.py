@@ -43,23 +43,56 @@ router = APIRouter(prefix="/engineers", tags=["engineers"], dependencies=[Depend
 
 from app.schemas.pagination import PaginatedResponse
 
+@router.get("/options")
+def read_engineer_filter_options(
+    company_id: Optional[UUID] = Query(None),
+    company_ids: Optional[List[UUID]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve dynamic filter options metadata (distinct tool modules, distinct tool names, experience ranges).
+    Enforces multi-tenant company isolation.
+    """
+    try:
+        target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
+        validated_cids = enforce_company_isolation(db, current_user, target_cids)
+        return engineer_service.get_engineer_filter_options(db=db, company_id=validated_cids)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error retrieving engineer filter options: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve engineer filter options metadata"
+        )
+
 @router.get("", response_model=PaginatedResponse[EngineerResponse])
 def read_engineers(
     company_id: Optional[UUID] = Query(None),
     company_ids: Optional[List[UUID]] = Query(None),
     search: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
+    q: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
     level: Optional[str] = Query(None),
     primary_tool: Optional[str] = Query(None),
     tool_name: Optional[str] = Query(None),
+    tool_modules: Optional[List[str]] = Query(None),
+    tool_names: Optional[List[str]] = Query(None),
+    consumer_min: Optional[float] = Query(None),
+    consumer_max: Optional[float] = Query(None),
+    industry_min: Optional[float] = Query(None),
+    industry_max: Optional[float] = Query(None),
     country: Optional[str] = Query(None),
+    fab: Optional[str] = Query(None),
+    fabs: Optional[List[str]] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve paginated engineers from the database with optional search and filters.
+    Retrieve paginated engineers from the database with optional search and advanced filters.
     """
     try:
         target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
@@ -68,11 +101,20 @@ def read_engineers(
             db=db,
             company_id=validated_cids,
             search=search,
-            status_filter=status,
+            q=q,
+            status_filter=status_filter,
             level_filter=level,
             primary_tool_filter=primary_tool,
             tool_name_filter=tool_name,
+            tool_modules=tool_modules,
+            tool_names=tool_names,
+            consumer_min=consumer_min,
+            consumer_max=consumer_max,
+            industry_min=industry_min,
+            industry_max=industry_max,
             country_filter=country,
+            fab_filter=fab,
+            fabs=fabs,
             page=page,
             page_size=page_size
         )

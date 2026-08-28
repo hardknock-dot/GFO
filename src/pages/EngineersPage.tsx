@@ -358,6 +358,26 @@ export const EngineersPage: React.FC = () => {
       ),
     },
     {
+      key: 'customerExperience',
+      header: 'Customer Exp',
+      sortable: true,
+      render: (item) => (
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+          {item.customerExperience ?? 0} Yrs
+        </span>
+      ),
+    },
+    {
+      key: 'yearsExperience',
+      header: 'Industry Exp',
+      sortable: true,
+      render: (item) => (
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+          {item.yearsExperience ?? 0} Yrs
+        </span>
+      ),
+    },
+    {
       key: 'country',
       header: 'Country Location',
       sortable: true,

@@ -69,8 +69,23 @@ export const UploadPage: React.FC = () => {
       setSummaryResult(result);
 
       queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      if (selectedCard.id === 'up-engineers') {
+        queryClient.invalidateQueries({ queryKey: ['engineers'] });
+        queryClient.invalidateQueries({ queryKey: ['engineer'] });
+        queryClient.invalidateQueries({ queryKey: ['engineer-options'] });
+      }
+      if (selectedCard.id === 'up-skills') {
+        queryClient.invalidateQueries({ queryKey: ['skills'] });
+        queryClient.invalidateQueries({ queryKey: ['engineers'] });
+      }
+      if (selectedCard.id === 'up-schedule') {
+        queryClient.invalidateQueries({ queryKey: ['schedules'] });
+        queryClient.invalidateQueries({ queryKey: ['engineers'] });
+      }
       if (selectedCard.id === 'up-visa') {
         queryClient.invalidateQueries({ queryKey: ['visa'] });
+        queryClient.invalidateQueries({ queryKey: ['visas'] });
       }
       if (selectedCard.id === 'up-travel') {
         queryClient.invalidateQueries({ queryKey: ['travel'] });

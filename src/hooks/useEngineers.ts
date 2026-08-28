@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getEngineers,
   getEngineerById,
@@ -30,38 +30,34 @@ export const useEngineers = (params?: EngineerQueryParams) => {
   }
 
   const companyId = params?.company_id !== undefined ? params.company_id : activeCompanyId;
-  const currentPage = params?.page || 1;
-  const limit = params?.limit || 20;
-  const search = params?.search || '';
-  const status = params?.status || '';
-  const country = params?.country || '';
 
-  const queryParams = {
-    page: currentPage,
-    limit,
-    search: search || undefined,
-    status: status || undefined,
-    country: country || undefined,
+  const fullParams: EngineerQueryParams = {
+    ...params,
     company_id: companyId,
+    page: params?.page || 1,
+    pageSize: params?.pageSize || params?.limit || 20,
   };
 
+  const serializedKey = JSON.stringify(fullParams);
+
   const query = useQuery({
-    queryKey: ['engineers', companyId, currentPage, limit, search, status, country],
-    queryFn: () => getEngineers(queryParams),
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['engineers', serializedKey],
+    queryFn: () => getEngineers(fullParams),
+    staleTime: 0,
   });
+
+  const currentPage = fullParams.page || 1;
 
   useEffect(() => {
     if (query.data && currentPage < query.data.totalPages) {
-      const nextPageParams = { ...queryParams, page: currentPage + 1 };
+      const nextPageParams = { ...fullParams, page: currentPage + 1 };
       queryClient.prefetchQuery({
-        queryKey: ['engineers', companyId, currentPage + 1, limit, search, status, country],
+        queryKey: ['engineers', JSON.stringify(nextPageParams)],
         queryFn: () => getEngineers(nextPageParams),
-        staleTime: 1000 * 60 * 5,
+        staleTime: 0,
       });
     }
-  }, [query.data?.totalPages, currentPage, companyId, limit, search, status, country, queryClient]);
+  }, [query.data?.totalPages, currentPage, serializedKey, queryClient]);
 
   return query;
 };

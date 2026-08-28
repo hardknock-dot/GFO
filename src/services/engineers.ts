@@ -3,18 +3,37 @@ import type { Engineer, EngineerReportSummary } from '../types';
 
 
 
+export interface EngineerFilterOptions {
+  tool_modules: string[];
+  tool_names: string[];
+  countries: string[];
+  fabs: string[];
+  consumer_experience: { min: number; max: number };
+  industry_experience: { min: number; max: number };
+}
+
 export interface EngineerQueryParams {
   search?: string;
+  q?: string;
   status?: string;
   tool?: string;
   primaryTool?: string;
   toolName?: string;
+  tool_modules?: string[];
+  tool_names?: string[];
+  consumer_min?: number;
+  consumer_max?: number;
+  industry_min?: number;
+  industry_max?: number;
   country?: string;
+  fab?: string;
+  fabs?: string[];
   level?: string;
   minExperience?: number;
   maxExperience?: number;
   page?: number;
   limit?: number;
+  pageSize?: number;
   company_id?: string;
 }
 
@@ -86,26 +105,60 @@ export const resolveEngineerOrbitId = (engineerId?: string, apiOrbitId?: string)
   return apiOrbitId || 'N/A';
 };
 
+export const getEngineerFilterOptions = async (companyId?: string): Promise<EngineerFilterOptions> => {
+  try {
+    const params: any = {};
+    if (companyId) params.company_id = companyId;
+    const response = await api.get('/engineers/options', { params });
+    return response.data;
+  } catch (err) {
+    console.error('Error fetching engineer filter options:', err);
+    return {
+      tool_modules: [],
+      tool_names: [],
+      countries: [],
+      fabs: [],
+      consumer_experience: { min: 0, max: 20 },
+      industry_experience: { min: 0, max: 20 },
+    };
+  }
+};
+
 export const getEngineers = async (params?: EngineerQueryParams): Promise<PaginatedResponse<Engineer>> => {
   try {
-    const queryParams: any = { ...params };
-    if (queryParams.limit) {
-      queryParams.page_size = queryParams.limit;
-      delete queryParams.limit;
+    const urlParams = new URLSearchParams();
+    if (params) {
+      const p: any = { ...params };
+      if (p.limit && !p.pageSize) p.page_size = p.limit;
+      if (p.pageSize) p.page_size = p.pageSize;
+      delete p.limit;
+      delete p.pageSize;
+
+      if (p.tool && !p.primary_tool) p.primary_tool = p.tool;
+      delete p.tool;
+
+      if (p.primaryTool) {
+        p.primary_tool = p.primaryTool;
+        delete p.primaryTool;
+      }
+      if (p.toolName) {
+        p.tool_name = p.toolName;
+        delete p.toolName;
+      }
+
+      Object.entries(p).forEach(([key, val]) => {
+        if (val === undefined || val === null || val === '') return;
+        if (Array.isArray(val)) {
+          val.forEach((item) => {
+            if (item && item.trim()) urlParams.append(key, item.trim());
+          });
+        } else {
+          urlParams.append(key, String(val));
+        }
+      });
     }
-    if (queryParams.tool) {
-      queryParams.primary_tool = queryParams.tool;
-      delete queryParams.tool;
-    }
-    if (queryParams.primaryTool) {
-      queryParams.primary_tool = queryParams.primaryTool;
-      delete queryParams.primaryTool;
-    }
-    if (queryParams.toolName) {
-      queryParams.tool_name = queryParams.toolName;
-      delete queryParams.toolName;
-    }
-    const response = await api.get('/engineers', { params: queryParams });
+
+    const response = await api.get(`/engineers?${urlParams.toString()}`);
     const raw = response.data;
     if (raw && Array.isArray(raw.items)) {
       const data = raw.items.map(mapApiEngineerToFrontend);
@@ -125,7 +178,7 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
         data,
         total: data.length,
         page: params?.page || 1,
-        pageSize: params?.limit || 20,
+        pageSize: params?.limit || params?.pageSize || 20,
         totalPages: 1,
       };
     }
