@@ -9,7 +9,8 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_size=2,
     max_overflow=0,
-    pool_timeout=10
+    pool_timeout=10,
+    connect_args={"prepare_threshold": None}
 )
 
 # Configure session factory
