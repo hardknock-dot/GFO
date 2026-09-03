@@ -24,6 +24,8 @@ export const useSchedule = (params?: any) => {
   const pageSize = params?.pageSize || params?.page_size || 20;
   const search = params?.search || '';
   const status = params?.status || params?.schedule_status || '';
+  const hasComments = params?.hasComments !== undefined ? params.hasComments : (params?.has_comments !== undefined ? params.has_comments : undefined);
+  const commentAdressal = params?.commentAdressal !== undefined ? params.commentAdressal : (params?.comment_adressal !== undefined ? params.comment_adressal : undefined);
 
   const queryParams = {
     page: currentPage,
@@ -32,13 +34,15 @@ export const useSchedule = (params?: any) => {
     schedule_status: status || undefined,
     company_id: targetCompanyId,
     engineer_id: engineerId,
+    has_comments: hasComments,
+    comment_adressal: commentAdressal,
   };
 
   const query = useQuery({
-    queryKey: ['schedules', targetCompanyId, engineerId, currentPage, pageSize, search, status],
+    queryKey: ['schedules', targetCompanyId, engineerId, currentPage, pageSize, search, status, hasComments, commentAdressal],
     queryFn: () => getSchedules(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 
   useEffect(() => {
@@ -91,12 +95,17 @@ export const useUpdateSchedule = () => {
 export const useUpdateScheduleCommentStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, commentStatus }: { id: string; commentStatus: string }) =>
-      updateScheduleCommentStatus(id, commentStatus),
+    mutationFn: ({ id, commentStatus, commentAdressal }: { id: string; commentStatus?: string; commentAdressal?: boolean | null }) => {
+      const param = commentAdressal !== undefined ? commentAdressal : (commentStatus === 'UNADDRESSED' ? false : null);
+      return updateScheduleCommentStatus(id, param);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['company-operational-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-me'] });
     },
   });
 };

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
-from sqlalchemy import String, Date, DateTime, Text, ForeignKey, UUID as SQLAlchemyUUID
+from sqlalchemy import String, Date, DateTime, Text, ForeignKey, Boolean, UUID as SQLAlchemyUUID
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -21,6 +21,7 @@ class Schedule(Base):
     schedule_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     comment_status: Mapped[Optional[str]] = mapped_column(String(30), default="UNADDRESSED", nullable=True)
+    comment_adressal: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=None)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 

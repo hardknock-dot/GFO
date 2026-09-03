@@ -3,15 +3,15 @@ export type CompetencyLevel = 'L1 Junior' | 'L2 Specialist' | 'L3 Senior' | 'L4 
 export type VisaStatus = 'Valid' | 'Expiring Soon' | 'Expired' | 'In Progress' | 'Renewal Pending';
 export type TravelStatus = 'Confirmed' | 'Pending Approval' | 'In Transit' | 'Completed' | 'Cancelled';
 export type ScheduleStatus = 'Active Assignment' | 'Upcoming' | 'Completed' | 'Standby';
-export type UserRole = 
-  | 'Main Admin' 
-  | 'Manager' 
-  | 'Ops Executive' 
-  | 'Engineer' 
-  | 'Viewer' 
-  | 'Global Admin' 
-  | 'Company Admin' 
-  | 'Resource Manager' 
+export type UserRole =
+  | 'Main Admin'
+  | 'Manager'
+  | 'Ops Executive'
+  | 'Engineer'
+  | 'Viewer'
+  | 'Global Admin'
+  | 'Company Admin'
+  | 'Resource Manager'
   | 'Field Engineer';
 
 export interface AuditLog {
@@ -185,6 +185,7 @@ export interface Schedule {
   scheduleStatus?: string;
   remarks?: string;
   commentStatus?: string;
+  commentAdressal?: boolean | null;
   ownerId?: string;
   owner_id?: string;
 }

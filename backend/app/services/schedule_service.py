@@ -20,6 +20,8 @@ def get_schedules_paginated(
     search: Optional[str] = None,
     schedule_status: Optional[str] = None,
     comment_status: Optional[str] = None,
+    has_comments: Optional[bool] = None,
+    comment_adressal: Optional[bool] = None,
     page: int = 1,
     page_size: int = 20
 ) -> Dict[str, Any]:
@@ -38,8 +40,28 @@ def get_schedules_paginated(
     if schedule_status:
         conditions.append(Schedule.schedule_status == schedule_status)
 
-    if comment_status:
-        conditions.append(Schedule.comment_status == comment_status)
+    if comment_adressal is False or (comment_status and str(comment_status).upper().strip() in ("UNADDRESSED", "FALSE", "PENDING")):
+        conditions.append(
+            and_(
+                Schedule.remarks.isnot(None),
+                Schedule.remarks != '',
+                Schedule.remarks != 'None',
+                or_(
+                    Schedule.comment_adressal == False,
+                    and_(
+                        Schedule.comment_adressal.is_(None),
+                        Schedule.comment_status == 'UNADDRESSED'
+                    )
+                )
+            )
+        )
+    elif comment_adressal is True or (comment_status and str(comment_status).upper().strip() in ("ADDRESSED", "TRUE")):
+        conditions.append(or_(Schedule.comment_adressal == True, Schedule.comment_status == 'ADDRESSED'))
+
+    if has_comments is True:
+        conditions.append(and_(Schedule.remarks.isnot(None), Schedule.remarks != ''))
+    elif has_comments is False:
+        conditions.append(or_(Schedule.remarks.is_(None), Schedule.remarks == ''))
 
     if search:
         search_pattern = f"%{search.strip()}%"
@@ -100,6 +122,10 @@ def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreat
             detail="Engineer not found"
         )
 
+    initial_adressal = schedule_data.comment_adressal
+    if initial_adressal is None and schedule_data.remarks and schedule_data.remarks.strip():
+        initial_adressal = False
+
     # 2. Create schedule
     db_schedule = Schedule(
         schedule_id=uuid.uuid4(),
@@ -112,6 +138,8 @@ def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreat
         end_date=schedule_data.end_date,
         schedule_status=schedule_data.schedule_status or "Upcoming",
         remarks=schedule_data.remarks,
+        comment_adressal=initial_adressal,
+        comment_status="UNADDRESSED" if initial_adressal is False else ("ADDRESSED" if initial_adressal is True else None),
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -159,6 +187,30 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
         db_schedule.schedule_status = schedule_data.schedule_status
     if schedule_data.remarks is not None:
         db_schedule.remarks = schedule_data.remarks
+        if "comment_adressal" not in schedule_data.model_fields_set:
+            if schedule_data.remarks and schedule_data.remarks.strip():
+                db_schedule.comment_adressal = False
+                db_schedule.comment_status = "UNADDRESSED"
+            else:
+                db_schedule.comment_adressal = None
+                db_schedule.comment_status = None
+    if "comment_adressal" in schedule_data.model_fields_set:
+        if schedule_data.comment_adressal is False:
+            db_schedule.comment_adressal = False
+            db_schedule.comment_status = "UNADDRESSED"
+        else:
+            db_schedule.comment_adressal = None
+            db_schedule.comment_status = "ADDRESSED"
+    elif "comment_status" in schedule_data.model_fields_set:
+        st = str(schedule_data.comment_status).upper().strip() if schedule_data.comment_status else ""
+        if st in ("ADDRESSED", "APPROVED", "TRUE"):
+            db_schedule.comment_adressal = None
+            db_schedule.comment_status = "ADDRESSED"
+        elif st in ("UNADDRESSED", "FALSE", "PENDING"):
+            db_schedule.comment_adressal = False
+            db_schedule.comment_status = "UNADDRESSED"
+        else:
+            db_schedule.comment_status = schedule_data.comment_status
 
     db_schedule.updated_at = datetime.utcnow()
     db.commit()

@@ -349,7 +349,8 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
 
     # 10. Unaddressed Field Engineer Comment Alerts (Feature 4 & 5)
     for s in schedules:
-        if s.remarks and (s.comment_status or '').strip().upper() == "UNADDRESSED":
+        is_pending = (s.comment_adressal is False) or (s.comment_adressal is None and (s.comment_status or '').strip().upper() == "UNADDRESSED")
+        if s.remarks and s.remarks.strip() and is_pending:
             eng = eng_map.get(s.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"
             c_id, c_name = get_comp_info(eng)

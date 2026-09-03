@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 try:
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE schedules ADD COLUMN IF NOT EXISTS comment_adressal BOOLEAN NULL;"))
+        try:
+            conn.execute(text("ALTER TABLE schedules ALTER COLUMN comment_adressal DROP DEFAULT;"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE schedules ALTER COLUMN comment_adressal DROP NOT NULL;"))
+        except Exception:
+            pass
+        conn.execute(text("UPDATE schedules SET comment_adressal = FALSE WHERE remarks IS NOT NULL AND TRIM(remarks) != '' AND comment_adressal IS NULL AND (comment_status IS NULL OR comment_status = 'UNADDRESSED');"))
         conn.execute(text("ALTER TABLE schedules ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE visa_details ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE engineer_deletion_requests ALTER COLUMN engineer_id DROP NOT NULL;"))
@@ -72,6 +82,24 @@ app.include_router(schedules.router, prefix="/api")
 app.include_router(visa.router, prefix="/api")
 app.include_router(travel.router, prefix="/api")
 app.include_router(performance.router, prefix="/api")
+app.include_router(leave.router, prefix="/api")
+app.include_router(missed_schedule.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(operational.router, prefix="/api")
+app.include_router(reports.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
+
+
+
+
+@app.get("/")
+def read_root():
+    """
+    Root endpoint redirecting or pointing to API docs.
+    """
+    return {
+        "message": "Welcome to the ORBIT Resource Management Portal API. Please visit /docs for Swagger API documentation."
+    }
 app.include_router(leave.router, prefix="/api")
 app.include_router(missed_schedule.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")

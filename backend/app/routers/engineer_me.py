@@ -209,7 +209,12 @@ def update_my_schedule_comments(
         )
     
     sch.remarks = payload.remarks
-    sch.comment_status = "UNADDRESSED"
+    if payload.remarks and payload.remarks.strip():
+        sch.comment_adressal = False
+        sch.comment_status = "UNADDRESSED"
+    else:
+        sch.comment_adressal = None
+        sch.comment_status = None
     sch.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(sch)

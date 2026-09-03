@@ -12,6 +12,7 @@ class ScheduleCreate(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = "Upcoming"
     remarks: str | None = None
+    comment_adressal: bool | None = None
     owner_id: UUID | None = None
 
     @model_validator(mode="after")
@@ -30,6 +31,8 @@ class ScheduleUpdate(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = None
     remarks: str | None = None
+    comment_adressal: bool | None = None
+    comment_status: str | None = None
     owner_id: UUID | None = None
 
     @model_validator(mode="after")
@@ -43,7 +46,8 @@ class ScheduleCommentUpdate(BaseModel):
     remarks: str
 
 class ScheduleCommentStatusUpdate(BaseModel):
-    comment_status: str
+    comment_status: str | None = None
+    comment_adressal: bool | None = None
 
 class ScheduleResponse(BaseModel):
     schedule_id: UUID
@@ -59,7 +63,8 @@ class ScheduleResponse(BaseModel):
     end_date: date | None = None
     schedule_status: str | None = None
     remarks: str | None = None
-    comment_status: str | None = "UNADDRESSED"
+    comment_status: str | None = None
+    comment_adressal: bool | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

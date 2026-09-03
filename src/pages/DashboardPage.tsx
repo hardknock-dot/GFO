@@ -349,45 +349,6 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-[var(--color-secondary)]" />
-            <span>Recent Field Operations Activity</span>
-          </h3>
-          <button
-            onClick={() => navigate('/schedule')}
-            className="text-xs text-[var(--color-secondary)] font-medium hover:underline flex items-center"
-          >
-            View All <ArrowUpRight className="w-3 h-3 ml-0.5" />
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {recentActivity.length === 0 ? (
-            <p className="text-xs text-slate-400 py-4 text-center">No recent field operations activity recorded.</p>
-          ) : (
-            recentActivity.map((eng, idx) => (
-              <div
-                key={eng.id || idx}
-                className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60"
-              >
-                <img src={eng.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover mt-0.5" />
-                <div className="flex-1 text-xs space-y-0.5">
-                  <p className="font-medium text-slate-800 dark:text-slate-200">
-                    <span className="font-bold text-slate-900 dark:text-white">{eng.name}</span> assigned to{' '}
-                    <span className="text-[var(--color-secondary)] font-semibold">{eng.assignedSite || 'Fab Site'}</span>
-                  </p>
-                  <p className="text-slate-400">Primary Chamber: {eng.primaryTool} • {eng.country}</p>
-                </div>
-                <span className="text-[10px] text-slate-400 font-mono">{eng.timeAgo}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
       {/* Schedule Comments Card */}
       <ScheduleCommentsCard />
 

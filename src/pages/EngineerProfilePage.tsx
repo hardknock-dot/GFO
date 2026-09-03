@@ -242,9 +242,8 @@ export const EngineerProfilePage: React.FC = () => {
   const { data: skills } = useEngineerSkills(targetEngineerId);
   const { data: schedulesRes } = useSchedule({ engineerId: targetEngineerId, pageSize: 1000 });
   const engineerSchedulesList = (schedulesRes?.data || []).filter((s) => {
-    const isPTO = s.supportType?.toUpperCase().includes('PTO') || s.supportType === 'Time Off' || s.supportType === 'Leave';
     const isMatch = !targetEngineerId || s.engineerId === targetEngineerId || (engineer?.name && s.engineerName === engineer.name);
-    return isMatch && !isPTO;
+    return isMatch;
   });
   const { data: travelRes } = useTravel({ engineerId });
   const { data: visaRes } = useVisa({ engineerId });
@@ -1339,12 +1338,20 @@ export const EngineerProfilePage: React.FC = () => {
       sortable: true,
       render: (s) => {
         const isMissed = missedScheduleIds.has(s.id);
+        const supportUpper = (s.supportType || '').toUpperCase();
+        const isPTO = supportUpper.includes('PTO') || supportUpper.includes('LEAVE') || supportUpper.includes('TIME OFF');
         return (
           <div className="flex items-center space-x-2">
             {isMissed && (
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 border border-yellow-500 shadow-sm flex-shrink-0 animate-pulse" title="Missed Schedule Assignment" />
             )}
-            <span>{s.supportType}</span>
+            {isPTO ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800">
+                {s.supportType}
+              </span>
+            ) : (
+              <span>{s.supportType}</span>
+            )}
           </div>
         );
       }
@@ -1379,6 +1386,23 @@ export const EngineerProfilePage: React.FC = () => {
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border ${colors[displayStatus] || 'bg-slate-100 text-slate-800'}`}>
             {displayStatus}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'commentStatus',
+      header: 'Comment Status',
+      sortable: true,
+      render: (s) => {
+        if (!s.remarks || !s.remarks.trim()) return <span className="text-xs text-slate-400">—</span>;
+        const isPending = s.commentAdressal === false || s.commentStatus === 'UNADDRESSED';
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${isPending
+              ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+            }`}>
+            {isPending ? 'Pending (FALSE)' : 'Approved (NULL)'}
           </span>
         );
       }
@@ -1820,147 +1844,156 @@ export const EngineerProfilePage: React.FC = () => {
         </div>
       )}
 
-        {activeTab === 'skills' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Competency Skill-Matrix
-              </h3>
-              {(canEdit || isEngineerUser) && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddModal}>
-                  Add Skill
-                </Button>
-              )}
+      {activeTab === 'skills' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Competency Skill-Matrix
+            </h3>
+            {(canEdit || isEngineerUser) && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddModal}>
+                Add Skill
+              </Button>
+            )}
 
-            </div>
-            <Table
-              columns={skillColumns}
-              data={skills || []}
-              emptyTitle="No Specific Skills Logged"
-              emptyDescription="Click Add Skill to record equipment competency records for this engineer."
+          </div>
+          <Table
+            columns={skillColumns}
+            data={skills || []}
+            emptyTitle="No Specific Skills Logged"
+            emptyDescription="Click Add Skill to record equipment competency records for this engineer."
+          />
+        </div>
+      )}
+
+      {activeTab === 'schedule' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Operation Schedules
+            </h3>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddScheduleModal}>
+                Add Schedule
+              </Button>
+            )}
+          </div>
+          <Table
+            columns={scheduleColumns}
+            data={engineerSchedulesList}
+            onRowClick={(s) => {
+              if (missedScheduleIds.has(s.id)) {
+                navigate(`/missed-schedules?search=${s.id}`);
+              }
+            }}
+            rowClassName={(s) => {
+              const hasAlert = engAlerts?.some(alt => alt.schedule_id === s.id);
+              return hasAlert
+                ? 'bg-yellow-50/85 dark:bg-yellow-950/20 hover:bg-yellow-100/90 dark:hover:bg-yellow-900/30 border-l-4 border-yellow-400'
+                : '';
+            }}
+            emptyTitle="No Schedule Assignments"
+            emptyDescription="Click Add Schedule to record deployment roster assignments for this engineer."
+          />
+
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800">
+            <ScheduleCommentsCard
+              engineerId={targetEngineerId}
+              engineerName={engineer?.name}
+              hideShowMore
+              hideViewProfile
             />
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'schedule' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Operation Schedules
-              </h3>
-              {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddScheduleModal}>
-                  Add Schedule
-                </Button>
-              )}
-            </div>
-            <Table
-              columns={scheduleColumns}
-              data={engineerSchedulesList}
-              onRowClick={(s) => {
-                if (missedScheduleIds.has(s.id)) {
-                  navigate(`/missed-schedules?search=${s.id}`);
-                }
-              }}
-              rowClassName={(s) => {
-                const hasAlert = engAlerts?.some(alt => alt.schedule_id === s.id);
-                return hasAlert
-                  ? 'bg-yellow-50/85 dark:bg-yellow-950/20 hover:bg-yellow-100/90 dark:hover:bg-yellow-900/30 border-l-4 border-yellow-400'
-                  : '';
-              }}
-              emptyTitle="No Schedule Assignments"
-              emptyDescription="Click Add Schedule to record deployment roster assignments for this engineer."
-            />
+      {activeTab === 'travel' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Travel Operations
+            </h3>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal}>
+                Book Field Travel
+              </Button>
+            )}
           </div>
-        )}
+          <Table
+            columns={travelColumns}
+            data={travelRes?.data || []}
+            emptyTitle="No Travel Records"
+            emptyDescription="Click Book Field Travel to record itinerary details for this engineer."
+          />
+        </div>
+      )}
 
-        {activeTab === 'travel' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Travel Operations
-              </h3>
-              {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddTravelModal}>
-                  Book Field Travel
-                </Button>
-              )}
-            </div>
-            <Table
-              columns={travelColumns}
-              data={travelRes?.data || []}
-              emptyTitle="No Travel Records"
-              emptyDescription="Click Book Field Travel to record itinerary details for this engineer."
-            />
+      {activeTab === 'visa' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Visas & Permits
+            </h3>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddVisaModal}>
+                Add Visa Record
+              </Button>
+            )}
           </div>
-        )}
+          <Table
+            columns={visaColumns}
+            data={visaRes?.data || []}
+            emptyTitle="No Visa Records Logged"
+            emptyDescription="Click Add Visa Record to log a new jurisdiction permit for this engineer."
+          />
+        </div>
+      )}
 
-        {activeTab === 'visa' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Visas & Permits
-              </h3>
-              {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddVisaModal}>
-                  Add Visa Record
-                </Button>
-              )}
-            </div>
-            <Table
-              columns={visaColumns}
-              data={visaRes?.data || []}
-              emptyTitle="No Visa Records Logged"
-              emptyDescription="Click Add Visa Record to log a new jurisdiction permit for this engineer."
-            />
+      {activeTab === 'performance' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Performance Evaluation Records
+            </h3>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal}>
+                Record Performance Evaluation
+              </Button>
+            )}
           </div>
-        )}
+          <Table
+            columns={perfColumns}
+            data={perfRes?.data || []}
+            emptyTitle="No Performance Evaluations Logged"
+            emptyDescription="Click Record Performance Evaluation to log a new schedule feedback for this engineer."
+          />
+        </div>
+      )}
 
-        {activeTab === 'performance' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Performance Evaluation Records
-              </h3>
-              {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddPerfModal}>
-                  Record Performance Evaluation
-                </Button>
-              )}
-            </div>
-            <Table
-              columns={perfColumns}
-              data={perfRes?.data || []}
-              emptyTitle="No Performance Evaluations Logged"
-              emptyDescription="Click Record Performance Evaluation to log a new schedule feedback for this engineer."
-            />
+      {activeTab === 'leaves' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Leaves & Absence Records
+            </h3>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddLeaveModal}>
+                Request Leave
+              </Button>
+            )}
           </div>
-        )}
+          <Table
+            columns={leaveColumns}
+            data={leavesRes?.data || []}
+            emptyTitle="No Leave Records Logged"
+            emptyDescription="Click Request Leave to log a new absence record for this engineer."
+          />
+        </div>
+      )}
 
-        {activeTab === 'leaves' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Leaves & Absence Records
-              </h3>
-              {canEdit && (
-                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAddLeaveModal}>
-                  Request Leave
-                </Button>
-              )}
-            </div>
-            <Table
-              columns={leaveColumns}
-              data={leavesRes?.data || []}
-              emptyTitle="No Leave Records Logged"
-              emptyDescription="Click Request Leave to log a new absence record for this engineer."
-            />
-          </div>
-        )}
-
-        {activeTab === 'reports' && (
-          <EngineerIndividualReportView engineerId={targetReportEngineerId} />
-        )}
+      {activeTab === 'reports' && (
+        <EngineerIndividualReportView engineerId={targetReportEngineerId} />
+      )}
 
       {/* Add / Edit Skill Modal */}
       <Modal

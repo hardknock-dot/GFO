@@ -32,6 +32,8 @@ def read_schedules(
     search: Optional[str] = Query(None),
     schedule_status: Optional[str] = Query(None),
     comment_status: Optional[str] = Query(None),
+    has_comments: Optional[bool] = Query(None),
+    comment_adressal: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     db: Session = Depends(get_db),
@@ -50,6 +52,8 @@ def read_schedules(
             search=search,
             schedule_status=schedule_status,
             comment_status=comment_status,
+            has_comments=has_comments,
+            comment_adressal=comment_adressal,
             page=page,
             page_size=page_size
         )
@@ -288,6 +292,7 @@ def create_schedule_missed_schedule(
         )
 
 @router.patch("/{schedule_id}/comments/status", response_model=ScheduleResponse)
+@router.put("/{schedule_id}/comments/status", response_model=ScheduleResponse)
 def update_schedule_comment_status(
     schedule_id: UUID,
     payload: ScheduleCommentStatusUpdate,
@@ -305,7 +310,25 @@ def update_schedule_comment_status(
         )
     enforce_write_permission(current_user)
     sch = get_schedule_and_verify(db, schedule_id, current_user)
-    sch.comment_status = payload.comment_status
+    if payload.comment_adressal is False:
+        sch.comment_adressal = False
+        sch.comment_status = "UNADDRESSED"
+    elif payload.comment_adressal is True or payload.comment_adressal is None:
+        sch.comment_adressal = None
+        sch.comment_status = "ADDRESSED"
+    elif payload.comment_status:
+        st = str(payload.comment_status).upper().strip()
+        if st in ("ADDRESSED", "APPROVED", "TRUE"):
+            sch.comment_adressal = None
+            sch.comment_status = "ADDRESSED"
+        elif st in ("UNADDRESSED", "FALSE", "PENDING"):
+            sch.comment_adressal = False
+            sch.comment_status = "UNADDRESSED"
+        else:
+            sch.comment_status = payload.comment_status
+    else:
+        sch.comment_adressal = None
+        sch.comment_status = "ADDRESSED"
     sch.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(sch)

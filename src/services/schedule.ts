@@ -8,20 +8,24 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   const resolvedName = resolveEngineerName(engId, orbitId || apiSch.orbit_id, engineerName || apiSch.engineer_name);
   const resolvedOrbit = resolveEngineerOrbitId(engId, orbitId || apiSch.orbit_id);
 
+  const commentAdressal = apiSch.comment_adressal !== undefined ? apiSch.comment_adressal : null;
+  const commentStatus = commentAdressal === false ? 'UNADDRESSED' : (apiSch.comment_status || null);
+
   return {
     id: apiSch.schedule_id,
     engineerId: engId,
     engineerName: resolvedName,
     engineerOrbitId: resolvedOrbit,
     country: apiSch.country || '',
-    
+
     // Core DB fields:
     supportType: apiSch.support_type || '',
     fabCity: apiSch.fab_city || '',
     fabSite: apiSch.fab_site || '',
     scheduleStatus: apiSch.schedule_status || 'Upcoming',
     remarks: apiSch.remarks || '',
-    commentStatus: apiSch.comment_status || 'UNADDRESSED',
+    commentStatus: commentStatus,
+    commentAdressal: commentAdressal,
     startDate: apiSch.start_date || '',
     endDate: apiSch.end_date || '',
 
@@ -34,8 +38,12 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   };
 };
 
-export const updateScheduleCommentStatus = async (scheduleId: string, commentStatus: string): Promise<Schedule> => {
-  const res = await api.patch(`/schedules/${scheduleId}/comments/status`, { comment_status: commentStatus });
+export const updateScheduleCommentStatus = async (scheduleId: string, commentAdressal: boolean | null = null): Promise<Schedule> => {
+  const payload = { 
+    comment_adressal: commentAdressal === false ? false : null,
+    comment_status: commentAdressal === false ? 'UNADDRESSED' : 'ADDRESSED'
+  };
+  const res = await api.put(`/schedules/${scheduleId}/comments/status`, payload);
   return mapApiScheduleToFrontend(res.data);
 };
 
@@ -65,6 +73,12 @@ export const getSchedules = async (params?: any): Promise<PaginatedResponse<Sche
     if (params?.engineerId) queryParams.engineer_id = params.engineerId;
     if (params?.search) queryParams.search = params.search;
     if (params?.status && params.status !== 'All') queryParams.schedule_status = params.status;
+    if (params?.hasComments !== undefined || params?.has_comments !== undefined) {
+      queryParams.has_comments = params.hasComments ?? params.has_comments;
+    }
+    if (params?.commentAdressal !== undefined || params?.comment_adressal !== undefined) {
+      queryParams.comment_adressal = params.commentAdressal ?? params.comment_adressal;
+    }
 
     const res = await api.get('/schedules', { params: queryParams });
     const raw = res.data;
