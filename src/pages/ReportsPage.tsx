@@ -76,17 +76,17 @@ export const ReportsPage: React.FC = () => {
       />
 
       {/* Global Filter Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[#FEFADC] p-5 rounded-2xl border border-[#E8DEC8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4 text-xs">
           {/* Company Filter */}
           {isMainAdmin ? (
             <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-indigo-600" />
-              <span className="font-semibold text-slate-700">Company Scope:</span>
+              <Building2 className="w-4 h-4 text-[#527E3A]" />
+              <span className="font-semibold text-stone-700">Company Scope:</span>
               <select
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="px-3 py-1.5 rounded-xl border border-[#E8DEC8] bg-white text-stone-800 font-semibold focus:outline-none"
               >
                 <option value="all-data">All Companies (Global)</option>
                 {companiesList.map((c) => (
@@ -98,9 +98,9 @@ export const ReportsPage: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-indigo-600" />
-              <span className="font-semibold text-slate-700">Company Scope:</span>
-              <span className="px-3 py-1 bg-slate-100 rounded-xl font-bold text-slate-800">
+              <Building2 className="w-4 h-4 text-[#527E3A]" />
+              <span className="font-semibold text-stone-700">Company Scope:</span>
+              <span className="px-3 py-1 bg-white rounded-xl font-bold text-stone-800 border border-[#E8DEC8]">
                 {currentCompany.name}
               </span>
             </div>
@@ -108,21 +108,21 @@ export const ReportsPage: React.FC = () => {
 
           {/* Date Range Pickers */}
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-slate-700">Date From:</span>
+            <span className="font-semibold text-stone-700">Date From:</span>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none"
+              className="px-3 py-1.5 rounded-xl border border-[#E8DEC8] bg-white text-stone-800 focus:outline-none"
             />
           </div>
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-slate-700">Date To:</span>
+            <span className="font-semibold text-stone-700">Date To:</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none"
+              className="px-3 py-1.5 rounded-xl border border-[#E8DEC8] bg-white text-stone-800 focus:outline-none"
             />
           </div>
         </div>
@@ -168,35 +168,35 @@ export const ReportsPage: React.FC = () => {
 
       {/* REPORT CONTENT DISPLAY */}
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400">Loading report analytics...</div>
+        <div className="p-12 text-center text-xs text-stone-400">Loading report analytics...</div>
       ) : !reportData ? (
-        <div className="p-12 text-center text-xs text-slate-400">No report records found matching criteria.</div>
+        <div className="p-12 text-center text-xs text-stone-400">No report records found matching criteria.</div>
       ) : (
         <div className="space-y-6">
           {/* TAB: FEEDBACK REPORT */}
           {activeTab === 'feedback' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                  <span className="text-xs font-semibold text-slate-400">Total Feedback Items</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{reportData.total_feedback ?? reportData.total_feedback_count ?? 0}</p>
+                <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
+                  <span className="text-xs font-semibold text-stone-500">Total Feedback Items</span>
+                  <p className="text-2xl font-bold text-stone-900 mt-1">{reportData.total_feedback ?? reportData.total_feedback_count ?? 0}</p>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                  <span className="text-xs font-semibold text-slate-400">Positive Feedback</span>
-                  <p className="text-2xl font-bold text-emerald-600 mt-1">{reportData.positive_feedback_count}</p>
+                <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
+                  <span className="text-xs font-semibold text-stone-500">Positive Feedback</span>
+                  <p className="text-2xl font-bold text-[#527E3A] mt-1">{reportData.positive_feedback_count}</p>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                  <span className="text-xs font-semibold text-slate-400">Negative Feedback</span>
+                <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
+                  <span className="text-xs font-semibold text-stone-500">Negative Feedback</span>
                   <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.negative_feedback_count}</p>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                  <span className="text-xs font-semibold text-slate-400">Average Rating Score</span>
-                  <p className="text-2xl font-bold text-indigo-600 mt-1">{reportData.average_score} / 5.0</p>
+                <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
+                  <span className="text-xs font-semibold text-stone-500">Average Rating Score</span>
+                  <p className="text-2xl font-bold text-[#527E3A] mt-1">{reportData.average_score} / 5.0</p>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="p-4 border-b border-slate-100 font-bold text-slate-800 text-sm">
+              <div className="bg-[#FEFADC] rounded-2xl border border-[#E8DEC8] shadow-xs overflow-hidden">
+                <div className="p-4 border-b border-[#E8DEC8] font-bold text-stone-800 text-sm">
                   Customer & Manager Feedback Log
                 </div>
                 <table className="w-full text-left text-xs">

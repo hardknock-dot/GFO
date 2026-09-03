@@ -12,8 +12,8 @@
     --color-accent-soft: #F6D4BA;
     --color-accent-green: #A8BC8B;
     --color-accent-transparent: rgba(241, 166, 126, 0.15);
-    --color-bg: #FEFADC;
-    --color-card: #FFFFFF;
+    --color-bg: #FFFFFF;
+    --color-card: #FEFADC;
     --color-sidebar: #F1A67E;
     --color-sidebar-active: #E5956D;
     --color-text-primary: #1C1917;
@@ -35,13 +35,13 @@
 
 /* Harmonious warm styling overrides for cards and panels in dark mode */
 .dark .dark\:bg-slate-900 {
-  background-color: #FFFFFF !important;
-}
-.dark .dark\:bg-slate-950 {
   background-color: #FEFADC !important;
 }
+.dark .dark\:bg-slate-950 {
+  background-color: #FFFFFF !important;
+}
 .dark .dark\:bg-slate-950\/50 {
-  background-color: rgba(254, 250, 220, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.5) !important;
 }
 .dark .dark\:bg-slate-800\/80 {
   background-color: #FEFADC !important;

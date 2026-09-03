@@ -168,7 +168,7 @@ export const DashboardPage: React.FC = () => {
       {/* Charts Visualization Section */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Deployment Chart */}
-        <div className="lg:col-span-2 p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="lg:col-span-2 p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-stone-900">
@@ -227,7 +227,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Workforce Status Distribution Donut Chart */}
-        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div>
             <h3 className="text-base font-semibold text-stone-900">
               Workforce Status Distribution
@@ -288,7 +288,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Country Distribution Donut Chart */}
-        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div>
             <h3 className="text-base font-semibold text-stone-900">
               Fab Site Country Distribution
@@ -353,15 +353,15 @@ export const DashboardPage: React.FC = () => {
       {/* Operational Intelligence Summary Card */}
       {user?.role !== 'Viewer' && (
 
-        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-[#FEFADC] rounded-xl border border-[#E8DEC8]">
+            <div className="p-3 bg-white rounded-xl border border-[#E8DEC8]">
               <ShieldAlert className="w-6 h-6 text-[#527E3A]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
                 <span>Operational Intelligence & Deterministic Exceptions</span>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-[#FEFADC] text-[#527E3A] border border-[#E8DEC8] rounded-full">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[#527E3A] border border-[#E8DEC8] rounded-full">
                   {opAlerts?.length || 0}
                 </span>
               </h3>

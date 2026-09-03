@@ -23,7 +23,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   onClick,
 }) => {
   const variantStyles = {
-    default: 'bg-white border border-[#E8DEC8] text-stone-900',
+    default: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
     cream: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
     ice: 'bg-[#A8BC8B]/50 border border-[#A8BC8B] text-stone-900',
     sand: 'bg-[#F6D4BA]/80 border border-[#F6D4BA] text-stone-900',

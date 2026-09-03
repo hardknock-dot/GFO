@@ -82,11 +82,11 @@ export function Table<T extends { id?: string | number }>({
   }
 
   return (
-    <div className="w-full bg-white border border-[#E8DEC8] rounded-xl shadow-xs overflow-hidden">
+    <div className="w-full bg-[#FEFADC] border border-[#E8DEC8] rounded-xl shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="bg-[#FEFADC]/50 border-b border-[#E8DEC8] text-xs font-semibold text-stone-600 uppercase tracking-wider">
+            <tr className="bg-white/60 border-b border-[#E8DEC8] text-xs font-semibold text-stone-600 uppercase tracking-wider">
               {columns.map((col) => (
                 <th
                   key={col.key}

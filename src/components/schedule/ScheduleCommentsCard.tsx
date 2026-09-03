@@ -69,34 +69,34 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
   };
 
   return (
-    <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 relative">
+    <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4 relative">
       {toastMessage && (
-        <div className="flex items-center justify-between px-3.5 py-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-semibold shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{toastMessage}</span>
           </div>
           <button
             onClick={() => setToastMessage(null)}
-            className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100 p-0.5"
+            className="text-emerald-600 hover:text-emerald-800 p-0.5"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E8DEC8]">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
+          <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
             <MessageSquare className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
+            <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
               <span>Pending Operational Remarks Requiring Addressal</span>
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-full">
+              <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full">
                 {pendingComments.length}
               </span>
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-stone-500">
               {engineerName
                 ? `Pending operational comments requiring management review for ${engineerName}`
                 : 'Field Engineer remarks requiring operational addressal (comment_adressal = FALSE)'}
@@ -107,7 +107,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
         {!hideShowMore && pendingComments.length > 0 && (
           <button
             onClick={handleNavigateToComments}
-            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
+            className="text-xs font-bold text-amber-700 hover:underline flex items-center space-x-1"
           >
             <span>Show More</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -116,7 +116,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
       </div>
 
       {pendingComments.length === 0 ? (
-        <div className="p-4 text-center text-xs text-slate-400 bg-slate-50/60 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+        <div className="p-4 text-center text-xs text-stone-500 bg-white/70 rounded-xl border border-[#E8DEC8]">
           No pending engineer comments requiring addressal.
         </div>
       ) : (
@@ -126,34 +126,34 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
               <div
                 key={sch.id}
                 onClick={() => setSelectedPendingComment(sch)}
-                className="p-3.5 bg-amber-50/40 dark:bg-slate-800/40 border border-amber-200/60 dark:border-slate-800 rounded-xl space-y-2 flex flex-col justify-between transition-all duration-150 hover:bg-white dark:hover:bg-slate-900 hover:border-amber-500 cursor-pointer shadow-none hover:shadow-sm group"
+                className="p-3.5 bg-white border border-[#E8DEC8] rounded-xl space-y-2 flex flex-col justify-between transition-all duration-150 hover:border-amber-500 cursor-pointer shadow-xs group"
                 title="Click to view full comment addressal details"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white flex items-center space-x-1.5 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    <span className="font-bold text-stone-900 flex items-center space-x-1.5 group-hover:text-amber-700 transition-colors">
                       {sch.engineerName && (
-                        <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center mr-1">
+                        <span className="text-[#527E3A] font-bold flex items-center mr-1">
                           <User className="w-3 h-3 mr-1 inline" />
                           {sch.engineerName} ({sch.engineerOrbitId || sch.engineerId?.slice(0, 8)}) •
                         </span>
                       )}
-                      <Building2 className="w-3.5 h-3.5 text-slate-400 inline" />
+                      <Building2 className="w-3.5 h-3.5 text-stone-400 inline" />
                       <span>{sch.supportType || 'Assignment'}</span>
                     </span>
                     
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded border flex items-center space-x-1 bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded border flex items-center space-x-1 bg-amber-100 text-amber-900 border-amber-300">
                       <Clock className="w-2.5 h-2.5 inline mr-1 text-amber-600" />
                       <span>Pending Addressal</span>
                     </span>
                   </div>
 
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200 italic font-normal line-clamp-2">
+                  <div className="p-2.5 bg-[#FEFADC]/50 rounded-lg border border-[#E8DEC8] text-stone-800 italic font-normal line-clamp-2">
                     "{sch.remarks}"
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between pt-1 text-[10px] text-stone-500 border-t border-[#E8DEC8]">
                   <span className="flex items-center space-x-1">
                     <Calendar className="w-3 h-3" />
                     <span>{sch.startDate} - {sch.endDate || 'Ongoing'}</span>
@@ -168,7 +168,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                           e.stopPropagation();
                           handleMarkAddressed(sch.id);
                         }}
-                        className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-300 transition-colors shadow-xs flex items-center space-x-1 disabled:opacity-50"
+                        className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded border border-emerald-300 transition-colors shadow-xs flex items-center space-x-1 disabled:opacity-50"
                       >
                         {markAddressedMutation.isPending && markAddressedMutation.variables === sch.id && (
                           <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />
@@ -178,7 +178,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                     )}
 
                     {!hideViewProfile && (
-                      <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 flex items-center space-x-0.5">
+                      <span className="font-mono font-semibold text-amber-700 flex items-center space-x-0.5">
                         <span>Details</span>
                         <ArrowUpRight className="w-3 h-3" />
                       </span>
@@ -194,15 +194,15 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
       {/* Pending Comment Details Modal */}
       {selectedPendingComment && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+          <div className="bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8DEC8]">
+              <h3 className="text-base font-bold text-stone-900 flex items-center space-x-2">
                 <MessageSquare className="w-5 h-5 text-amber-500" />
                 <span>Pending Comment Details</span>
               </h3>
               <button
                 onClick={() => setSelectedPendingComment(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold"
+                className="text-stone-400 hover:text-stone-600 text-lg font-bold"
               >
                 ✕
               </button>
