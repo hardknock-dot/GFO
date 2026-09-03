@@ -124,10 +124,11 @@ export const App: React.FC = () => {
                             <Route path="/upload" element={<UploadPage />} />
                           </Route>
 
-                          {/* Main Admin access: user management & audit */}
+                          {/* Main Admin access: user management, audit & settings */}
                           <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin']} />}>
                             <Route path="/settings" element={<SettingsPage />} />
-                            <Route path="/users" element={<UserManagementPage />} />
+                            <Route path="/users" element={<UserManagementPage defaultTab="users" />} />
+                            <Route path="/audit" element={<UserManagementPage defaultTab="audit" />} />
                           </Route>
                         </Route>
 

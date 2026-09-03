@@ -9,7 +9,9 @@ import {
   ChevronDown,
   LogOut,
   User as UserIcon,
-  Shield,
+  Users,
+  FileText,
+  Settings as SettingsIcon,
   Layers,
   Menu,
   Bell,
@@ -297,40 +299,76 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 py-1.5 text-xs text-slate-700 dark:text-slate-300">
-              <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800">
-                <p className="font-semibold text-slate-900 dark:text-white">{user?.name}</p>
-                <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 border border-[#E8DEC8] rounded-xl shadow-xl z-50 py-1.5 text-xs text-stone-700 dark:text-stone-300">
+              <div className="px-3.5 py-2 border-b border-[#E8DEC8]">
+                <p className="font-semibold text-stone-900 dark:text-white">{user?.name}</p>
+                <p className="text-[11px] text-stone-400 truncate">{user?.email}</p>
               </div>
+
+              {/* 1. My Profile */}
               <button
                 onClick={() => {
                   setDropdownOpen(false);
-                  navigate(user?.role === 'Field Engineer' || user?.role === 'Engineer' ? '/engineer/profile' : '/settings');
+                  navigate(user?.role === 'Field Engineer' || user?.role === 'Engineer' ? '/engineer/profile' : '/engineer/profile');
                 }}
-                className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2"
+                className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
               >
-                <UserIcon className="w-4 h-4 text-slate-400" />
-                <span>{user?.role === 'Field Engineer' || user?.role === 'Engineer' ? 'My Profile' : 'Account Settings'}</span>
+                <UserIcon className="w-4 h-4 text-[#527E3A]" />
+                <span>My Profile</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  navigate('/company-selection');
-                }}
-                className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2"
-              >
-                <Shield className="w-4 h-4 text-slate-400" />
-                <span>Company Selection</span>
-              </button>
-              <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
+              {/* 2. User Management (Authorized Admins Only) */}
+              {(user?.role === 'Main Admin' || user?.role === 'Global Admin') && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate('/users');
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                >
+                  <Users className="w-4 h-4 text-[#527E3A]" />
+                  <span>User Management</span>
+                </button>
+              )}
+
+              {/* 3. Audit (Authorized Admins Only) */}
+              {(user?.role === 'Main Admin' || user?.role === 'Global Admin') && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate('/audit');
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-[#527E3A]" />
+                  <span>Audit</span>
+                </button>
+              )}
+
+              {/* 4. Settings */}
+              {user?.role !== 'Viewer' && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate('/settings');
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                >
+                  <SettingsIcon className="w-4 h-4 text-[#527E3A]" />
+                  <span>Settings</span>
+                </button>
+              )}
+
+              <div className="border-t border-[#E8DEC8] my-1" />
+
+              {/* 5. Sign Out */}
               <button
                 onClick={() => {
                   setDropdownOpen(false);
                   logout();
                   navigate('/');
                 }}
-                className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center space-x-2"
+                className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 dark:text-rose-400 flex items-center space-x-2 font-medium transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>

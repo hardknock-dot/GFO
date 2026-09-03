@@ -21,7 +21,6 @@ import {
   Bell,
   User,
   CheckSquare,
-  ShieldAlert
 } from 'lucide-react';
 
 import logoImg from '../../assets/OIP.webp';
@@ -83,7 +82,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { label: 'Performance', path: '/performance', icon: TrendingUp },
       ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
       { label: 'Reports', path: '/reports', icon: BarChart3 },
-      ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
       ...(user?.role !== 'Viewer' ? [{ label: 'Data Upload', path: '/upload', icon: Upload }] : []),
       ...((user?.role !== 'Viewer' && !isOpsExec) ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
     ];

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
@@ -161,9 +162,29 @@ const MultiSelectCompanyPicker: React.FC<{
   );
 };
 
-export const UserManagementPage: React.FC = () => {
+interface UserManagementPageProps {
+  defaultTab?: 'users' | 'companies' | 'audit';
+}
+
+export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultTab }) => {
   const { user: currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'companies' | 'audit'>('users');
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+
+  const tabParam = searchParams.get('tab') as 'users' | 'companies' | 'audit' | null;
+  const initialTab = defaultTab || (location.pathname === '/audit' ? 'audit' : (tabParam || 'users'));
+
+  const [activeTab, setActiveTab] = useState<'users' | 'companies' | 'audit'>(initialTab);
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    } else if (location.pathname === '/audit') {
+      setActiveTab('audit');
+    } else if (tabParam && ['users', 'companies', 'audit'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [defaultTab, location.pathname, tabParam]);
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [dbCompanies, setDbCompanies] = useState<Company[]>([]);
@@ -297,6 +318,16 @@ export const UserManagementPage: React.FC = () => {
       setAuditLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs(1);
+    }
+  }, [activeTab]);
 
   const handleOpenAddCompanyModal = () => {
     setSelectedCompany(null);
