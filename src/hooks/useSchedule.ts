@@ -6,6 +6,7 @@ import {
   updateSchedule,
   deleteSchedule,
   updateScheduleCommentStatus,
+  markScheduleCommentAddressed,
 } from '../services/schedule';
 import type { Schedule } from '../types';
 import { useCompany } from '../context/CompanyContext';
@@ -95,7 +96,7 @@ export const useUpdateSchedule = () => {
 export const useMarkScheduleCommentAddressed = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (scheduleId: string) => updateScheduleCommentStatus(scheduleId, null),
+    mutationFn: (scheduleId: string) => markScheduleCommentAddressed(scheduleId),
     onSuccess: (_, scheduleId) => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });

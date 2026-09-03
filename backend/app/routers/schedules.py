@@ -5,7 +5,7 @@ from uuid import UUID
 from typing import List
 from datetime import datetime
 from app.database import get_db
-from app.schemas.schedule import ScheduleResponse, ScheduleUpdate, ScheduleCommentStatusUpdate
+from app.schemas.schedule import ScheduleResponse, ScheduleUpdate, ScheduleCommentStatusUpdate, ScheduleMarkAddressedResponse
 from app.schemas.travel import TravelResponse, TravelCreate
 from app.schemas.performance import PerformanceResponse, PerformanceCreate
 from app.schemas.missed_schedule import MissedScheduleResponse, MissedScheduleCreate
@@ -291,9 +291,9 @@ def create_schedule_missed_schedule(
             detail="Failed to create missed schedule record in database"
         )
 
-@router.post("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
-@router.put("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
-@router.patch("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
+@router.post("/{schedule_id}/mark-addressed", response_model=ScheduleMarkAddressedResponse)
+@router.put("/{schedule_id}/mark-addressed", response_model=ScheduleMarkAddressedResponse)
+@router.patch("/{schedule_id}/mark-addressed", response_model=ScheduleMarkAddressedResponse)
 def mark_schedule_comment_addressed(
     schedule_id: UUID,
     db: Session = Depends(get_db),
@@ -301,7 +301,7 @@ def mark_schedule_comment_addressed(
 ):
     """
     Mark schedule operational remark as addressed.
-    Sets comment_adressal cell in Supabase schedules table to NULL and comment_status to ADDRESSED.
+    Sets schedules.comment_adressal = NULL in database.
     Restricted to Managers / Admins.
     """
     if is_engineer_user(current_user):
@@ -312,11 +312,13 @@ def mark_schedule_comment_addressed(
     enforce_write_permission(current_user)
     sch = get_schedule_and_verify(db, schedule_id, current_user)
     sch.comment_adressal = None
-    sch.comment_status = "ADDRESSED"
-    sch.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(sch)
-    return sch
+    return {
+        "message": "Comment marked as addressed successfully",
+        "schedule_id": sch.schedule_id,
+        "comment_adressal": sch.comment_adressal
+    }
 
 
 @router.patch("/{schedule_id}/comments/status", response_model=ScheduleResponse)

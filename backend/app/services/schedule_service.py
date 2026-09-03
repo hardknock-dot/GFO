@@ -40,23 +40,33 @@ def get_schedules_paginated(
     if schedule_status:
         conditions.append(Schedule.schedule_status == schedule_status)
 
-    if comment_adressal is False or (comment_status and str(comment_status).upper().strip() in ("UNADDRESSED", "FALSE", "PENDING")):
+    if comment_adressal is False:
         conditions.append(
             and_(
                 Schedule.remarks.isnot(None),
                 Schedule.remarks != '',
                 Schedule.remarks != 'None',
-                or_(
-                    Schedule.comment_adressal == False,
-                    and_(
-                        Schedule.comment_adressal.is_(None),
+                Schedule.comment_adressal == False
+            )
+        )
+    elif comment_adressal is True:
+        conditions.append(Schedule.comment_adressal == True)
+    elif comment_status:
+        st = str(comment_status).upper().strip()
+        if st in ("UNADDRESSED", "FALSE", "PENDING"):
+            conditions.append(
+                and_(
+                    Schedule.remarks.isnot(None),
+                    Schedule.remarks != '',
+                    Schedule.remarks != 'None',
+                    or_(
+                        Schedule.comment_adressal == False,
                         Schedule.comment_status == 'UNADDRESSED'
                     )
                 )
             )
-        )
-    elif comment_adressal is True or (comment_status and str(comment_status).upper().strip() in ("ADDRESSED", "TRUE")):
-        conditions.append(or_(Schedule.comment_adressal == True, Schedule.comment_status == 'ADDRESSED'))
+        elif st in ("ADDRESSED", "TRUE"):
+            conditions.append(or_(Schedule.comment_adressal == True, Schedule.comment_status == 'ADDRESSED'))
 
     if has_comments is True:
         conditions.append(and_(Schedule.remarks.isnot(None), Schedule.remarks != ''))

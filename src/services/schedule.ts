@@ -38,21 +38,9 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   };
 };
 
-export const markScheduleCommentAddressed = async (scheduleId: string): Promise<Schedule> => {
-  try {
-    const res = await api.post(`/schedules/${scheduleId}/mark-addressed`);
-    return mapApiScheduleToFrontend(res.data);
-  } catch (err: any) {
-    if (err.response?.status === 404 || err.response?.status === 405) {
-      const payload = { 
-        comment_adressal: null,
-        comment_status: 'ADDRESSED'
-      };
-      const res = await api.patch(`/schedules/${scheduleId}/comments/status`, payload);
-      return mapApiScheduleToFrontend(res.data);
-    }
-    throw err;
-  }
+export const markScheduleCommentAddressed = async (scheduleId: string): Promise<any> => {
+  const res = await api.post(`/schedules/${scheduleId}/mark-addressed`);
+  return res.data;
 };
 
 export const updateScheduleCommentStatus = async (scheduleId: string, commentAdressal: boolean | null = null): Promise<Schedule> => {

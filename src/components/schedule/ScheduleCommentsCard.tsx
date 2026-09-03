@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSchedule, useMarkScheduleCommentAddressed } from '../../hooks/useSchedule';
 import { useAuth } from '../../context/AuthContext';
-import { MessageSquare, Calendar, Building2, User, ArrowUpRight, Clock, Loader2 } from 'lucide-react';
+import { MessageSquare, Calendar, Building2, User, ArrowUpRight, Clock, Loader2, CheckCircle2, X } from 'lucide-react';
 import { CardSkeleton } from '../common/LoadingSkeleton';
 
 interface ScheduleCommentsCardProps {
@@ -27,6 +27,19 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
     engineerId ? { engineerId, commentAdressal: false, pageSize: 50 } : { companyId: 'all-data', commentAdressal: false, pageSize: 50 }
   );
   const markAddressedMutation = useMarkScheduleCommentAddressed();
+
+  // Toast notification state
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+
+  const handleMarkAddressed = (id: string, onDone?: () => void) => {
+    markAddressedMutation.mutate(id, {
+      onSuccess: () => {
+        setToastMessage('Comment marked as addressed.');
+        setTimeout(() => setToastMessage(null), 4000);
+        if (onDone) onDone();
+      },
+    });
+  };
 
   // Filter schedules returned by commentAdressal=false query for valid non-empty remarks and matching engineerId if provided
   const pendingComments = (scheduleRes?.data || []).filter(
@@ -56,7 +69,21 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
   };
 
   return (
-    <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+    <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 relative">
+      {toastMessage && (
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-semibold shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100 p-0.5"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
@@ -139,7 +166,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                         disabled={markAddressedMutation.isPending && markAddressedMutation.variables === sch.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          markAddressedMutation.mutate(sch.id);
+                          handleMarkAddressed(sch.id);
                         }}
                         className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-300 transition-colors shadow-xs flex items-center space-x-1 disabled:opacity-50"
                       >
@@ -235,9 +262,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                   <button
                     disabled={markAddressedMutation.isPending}
                     onClick={() => {
-                      markAddressedMutation.mutate(selectedPendingComment.id, {
-                        onSuccess: () => setSelectedPendingComment(null),
-                      });
+                      handleMarkAddressed(selectedPendingComment.id, () => setSelectedPendingComment(null));
                     }}
                     className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
                   >
