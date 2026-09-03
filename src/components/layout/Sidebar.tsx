@@ -50,26 +50,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = isEngineerUser
     ? [
-        { label: 'Dashboard', path: '/engineer/dashboard', icon: LayoutDashboard },
-        { label: 'My Profile', path: '/engineer/profile', icon: User },
-      ]
+      { label: 'Dashboard', path: '/engineer/dashboard', icon: LayoutDashboard },
+      { label: 'My Profile', path: '/engineer/profile', icon: User },
+    ]
     : [
-        { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
-        { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
-        { label: 'Engineers', path: '/engineers', icon: Users },
-        { label: 'Schedule', path: '/schedule', icon: Calendar },
-        { label: 'Travel Operations', path: '/travel', icon: Plane },
-        { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
-        { label: 'Performance', path: '/performance', icon: TrendingUp },
-        { label: 'Leave Operations', path: '/leaves', icon: Clock },
-        { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
-        ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
-        { label: 'Reports', path: '/reports', icon: BarChart3 },
-        ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
-        ...(user?.role !== 'Viewer' ? [{ label: 'Data Upload', path: '/upload', icon: Upload }] : []),
-        ...((user?.role !== 'Viewer' && !isOpsExec) ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
-      ];
+      { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
+      { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
+      { label: 'Engineers', path: '/engineers', icon: Users },
+      { label: 'Schedule', path: '/schedule', icon: Calendar },
+      { label: 'Travel Operations', path: '/travel', icon: Plane },
+      { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
+      { label: 'Performance', path: '/performance', icon: TrendingUp },
+      { label: 'Leave Operations', path: '/leaves', icon: Clock },
+      { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
+      ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
+      { label: 'Reports', path: '/reports', icon: BarChart3 },
+      ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
+      ...(user?.role !== 'Viewer' ? [{ label: 'Data Upload', path: '/upload', icon: Upload }] : []),
+      ...((user?.role !== 'Viewer' && !isOpsExec) ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
+    ];
 
   return (
     <>
@@ -82,9 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 bg-[var(--color-sidebar)] text-stone-900 border-r border-[#E5956D]/50 transition-transform md:transition-all duration-300 flex flex-col justify-between ${
-          mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
-        } ${collapsed ? 'md:w-16' : 'md:w-60'}`}
+        className={`fixed top-0 left-0 bottom-0 z-50 bg-[var(--color-sidebar)] text-stone-900 border-r border-[#E5956D]/50 transition-transform md:transition-all duration-300 flex flex-col justify-between ${mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
+          } ${collapsed ? 'md:w-16' : 'md:w-60'}`}
       >
         {/* Company Header Branding at Top */}
         <div
@@ -92,24 +91,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             if (mobileOpen && onCloseMobile) onCloseMobile();
             navigate(isEngineerUser ? '/engineer/dashboard' : '/dashboard');
           }}
-          className={`h-16 flex items-center border-b border-[#E5956D]/40 cursor-pointer transition-colors hover:bg-black/5 ${
-            collapsed ? 'justify-center px-2' : 'px-4'
-          }`}
+          className={`h-16 flex items-center border-b border-[#E5956D]/40 cursor-pointer transition-colors hover:bg-black/5 ${collapsed ? 'justify-center px-2' : 'px-4 space-x-3'
+            }`}
           title={currentCompany.name}
         >
-          {collapsed ? (
-            <img
-              src={logoImg}
-              alt={currentCompany.name || 'Company Logo'}
-              className="w-10 h-10 rounded-xl object-contain shadow-xs bg-white/95 p-1 border border-black/5"
-            />
-          ) : (
-            <div className="w-full flex items-center">
-              <img
-                src={logoImg}
-                alt={currentCompany.name || 'Company Logo'}
-                className="h-11 w-auto max-w-[200px] object-contain rounded-xl bg-white/95 p-1.5 shadow-xs border border-black/5"
-              />
+          <img
+            src={logoImg}
+            alt={currentCompany.name || 'Company Logo'}
+            className="w-[4px] h-9 rounded-xl object-contain shadow-xs flex-shrink-0 bg-white/90 p-0.5 border border-black/5"
+          />
+          {(!collapsed || mobileOpen) && (
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm sm:text-base font-black text-stone-950 truncate tracking-tight leading-tight">
+                {currentCompany.name}
+              </h1>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-stone-900/65 truncate">
+                Orbit Portal
+              </p>
             </div>
           )}
         </div>
@@ -123,19 +121,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 to={item.path}
                 onClick={onCloseMobile}
                 className={({ isActive }) =>
-                  `flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group ${
-                    isActive
-                      ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
-                      : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
+                  `flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group ${isActive
+                    ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
+                    : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
                   }`
                 }
                 title={collapsed ? item.label : undefined}
               >
                 {({ isActive }) => (
                   <>
-                    <Icon className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${
-                      isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
-                    }`} />
+                    <Icon className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
+                      }`} />
                     {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
                   </>
                 )}
