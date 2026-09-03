@@ -93,23 +93,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             navigate(isEngineerUser ? '/engineer/dashboard' : '/dashboard');
           }}
           className={`h-16 flex items-center border-b border-[#E5956D]/40 cursor-pointer transition-colors hover:bg-black/5 ${
-            collapsed ? 'justify-center px-2' : 'px-4 space-x-3'
+            collapsed ? 'justify-center px-2' : 'px-4'
           }`}
           title={currentCompany.name}
         >
-          <img
-            src={logoImg}
-            alt={currentCompany.name || 'Company Logo'}
-            className="w-9 h-9 rounded-xl object-contain shadow-xs flex-shrink-0 bg-white/90 p-0.5 border border-black/5"
-          />
-          {(!collapsed || mobileOpen) && (
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-base font-black text-stone-950 truncate tracking-tight leading-tight">
-                {currentCompany.name}
-              </h1>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-stone-900/65 truncate">
-                Orbit Portal
-              </p>
+          {collapsed ? (
+            <img
+              src={logoImg}
+              alt={currentCompany.name || 'Company Logo'}
+              className="w-10 h-10 rounded-xl object-contain shadow-xs bg-white/95 p-1 border border-black/5"
+            />
+          ) : (
+            <div className="w-full flex items-center">
+              <img
+                src={logoImg}
+                alt={currentCompany.name || 'Company Logo'}
+                className="h-11 w-auto max-w-[200px] object-contain rounded-xl bg-white/95 p-1.5 shadow-xs border border-black/5"
+              />
             </div>
           )}
         </div>
