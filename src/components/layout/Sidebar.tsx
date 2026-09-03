@@ -1,6 +1,7 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 import {
   LayoutDashboard,
   Users,
@@ -36,6 +37,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { user } = useAuth();
+  const { currentCompany } = useCompany();
+  const navigate = useNavigate();
+
   const isMainAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
   const isManager = user?.role === 'Manager' || user?.role === 'Company Admin';
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
@@ -76,10 +80,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed top-16 left-0 bottom-0 z-40 bg-[var(--color-sidebar)] text-stone-900 border-r border-[#E5956D]/50 transition-transform md:transition-all duration-300 flex flex-col justify-between ${
+        className={`fixed top-0 left-0 bottom-0 z-50 bg-[var(--color-sidebar)] text-stone-900 border-r border-[#E5956D]/50 transition-transform md:transition-all duration-300 flex flex-col justify-between ${
           mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
         } ${collapsed ? 'md:w-16' : 'md:w-60'}`}
       >
+        {/* Company Header Branding at Top */}
+        <div
+          onClick={() => {
+            if (mobileOpen && onCloseMobile) onCloseMobile();
+            navigate(isEngineerUser ? '/engineer/dashboard' : '/dashboard');
+          }}
+          className={`h-16 flex items-center border-b border-[#E5956D]/40 cursor-pointer transition-colors hover:bg-black/5 ${
+            collapsed ? 'justify-center px-2' : 'px-4 space-x-3'
+          }`}
+          title={currentCompany.name}
+        >
+          <div className="w-9 h-9 rounded-xl bg-stone-950 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-xs flex-shrink-0 tracking-wider">
+            {currentCompany.code?.slice(0, 4) || 'GFO'}
+          </div>
+          {(!collapsed || mobileOpen) && (
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm sm:text-base font-black text-stone-950 truncate tracking-tight leading-tight">
+                {currentCompany.name}
+              </h1>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-stone-900/65 truncate">
+                Orbit Portal
+              </p>
+            </div>
+          )}
+        </div>
         {/* Navigation Items */}
         <div className="py-4 space-y-1 px-2.5 overflow-y-auto flex-1">
           {navItems.map((item) => {
