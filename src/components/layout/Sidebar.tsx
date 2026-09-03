@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
 import {
@@ -17,6 +17,7 @@ import {
   Settings as SettingsIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Bell,
   User,
   CheckSquare,
@@ -41,6 +42,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { user } = useAuth();
   const { currentCompany } = useCompany();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isScheduleRoute = ['/schedule', '/visa', '/travel', '/leaves'].includes(location.pathname);
+  const [scheduleExpanded, setScheduleExpanded] = useState<boolean>(isScheduleRoute);
+
+  useEffect(() => {
+    if (isScheduleRoute) {
+      setScheduleExpanded(true);
+    }
+  }, [location.pathname, isScheduleRoute]);
 
   const isMainAdmin = user?.role === 'Main Admin' || user?.role === 'Global Admin';
   const isManager = user?.role === 'Manager' || user?.role === 'Company Admin';
@@ -58,11 +69,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
       { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
       { label: 'Engineers', path: '/engineers', icon: Users },
-      { label: 'Schedule', path: '/schedule', icon: Calendar },
-      { label: 'Travel Operations', path: '/travel', icon: Plane },
-      { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
+      {
+        label: 'Schedule',
+        path: '/schedule',
+        icon: Calendar,
+        children: [
+          { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
+          { label: 'Travel Operations', path: '/travel', icon: Plane },
+          { label: 'Leave Operations', path: '/leaves', icon: Clock },
+        ],
+      },
       { label: 'Performance', path: '/performance', icon: TrendingUp },
-      { label: 'Leave Operations', path: '/leaves', icon: Clock },
       { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
       ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
       { label: 'Reports', path: '/reports', icon: BarChart3 },
@@ -98,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <img
             src={logoImg}
             alt={currentCompany.name || 'Company Logo'}
-            className="w-[4px] h-9 rounded-xl object-contain shadow-xs flex-shrink-0 bg-white/90 p-0.5 border border-black/5"
+            className="w-[70px] h-9 rounded-xl object-contain shadow-xs flex-shrink-0 bg-white/90 p-0.5 border border-black/5"
           />
           {(!collapsed || mobileOpen) && (
             <div className="min-w-0 flex-1">
@@ -115,6 +132,104 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="py-4 space-y-1 px-2.5 overflow-y-auto flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+
+            if ('children' in item && item.children) {
+              const isChildActive = item.children.some((c) => location.pathname === c.path);
+              const isParentActive = location.pathname === item.path;
+              const isAnyActive = isParentActive || isChildActive;
+
+              return (
+                <div key={item.path} className="space-y-1">
+                  <div
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${
+                      isParentActive
+                        ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
+                        : isChildActive
+                        ? 'text-stone-950 font-bold bg-black/5'
+                        : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
+                    }`}
+                    title={collapsed ? item.label : undefined}
+                    onClick={() => {
+                      if (collapsed && !mobileOpen) {
+                        navigate(item.path);
+                      } else {
+                        setScheduleExpanded(!scheduleExpanded);
+                      }
+                    }}
+                  >
+                    <div
+                      className="flex items-center space-x-3 min-w-0 flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(item.path);
+                        if (mobileOpen && onCloseMobile) onCloseMobile();
+                        setScheduleExpanded(true);
+                      }}
+                    >
+                      <Icon
+                        className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${
+                          isAnyActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
+                        }`}
+                      />
+                      {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
+                    </div>
+
+                    {(!collapsed || mobileOpen) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScheduleExpanded(!scheduleExpanded);
+                        }}
+                        className="p-0.5 rounded hover:bg-black/10 transition-colors text-stone-900/70 hover:text-stone-950 ml-1"
+                        aria-label="Toggle Submenu"
+                      >
+                        {scheduleExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {scheduleExpanded && (!collapsed || mobileOpen) && (
+                    <div className="pl-3.5 pr-1 py-0.5 space-y-1 border-l-2 border-stone-950/15 ml-4 my-1">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon;
+                        return (
+                          <NavLink
+                            key={child.path}
+                            to={child.path}
+                            onClick={onCloseMobile}
+                            className={({ isActive }) =>
+                              `flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group ${
+                                isActive
+                                  ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
+                                  : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
+                              }`
+                            }
+                            title={child.label}
+                          >
+                            {({ isActive }) => (
+                              <>
+                                <ChildIcon
+                                  className={`w-3.5 h-3.5 flex-shrink-0 group-hover:scale-110 transition-transform ${
+                                    isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
+                                  }`}
+                                />
+                                <span className="truncate">{child.label}</span>
+                              </>
+                            )}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <NavLink
                 key={item.path}
