@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isScheduleRoute = ['/schedule', '/visa', '/travel', '/leaves'].includes(location.pathname);
+  const isScheduleRoute = ['/schedule', '/visa', '/travel', '/leaves', '/missed-schedules'].includes(location.pathname);
   const [scheduleExpanded, setScheduleExpanded] = useState<boolean>(isScheduleRoute);
 
   useEffect(() => {
@@ -77,10 +77,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { label: 'Visa Tracking', path: '/visa', icon: FileCheck },
           { label: 'Travel Operations', path: '/travel', icon: Plane },
           { label: 'Leave Operations', path: '/leaves', icon: Clock },
+          { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
         ],
       },
       { label: 'Performance', path: '/performance', icon: TrendingUp },
-      { label: 'Missed Schedules', path: '/missed-schedules', icon: CalendarX },
       ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
       { label: 'Reports', path: '/reports', icon: BarChart3 },
       ...(isMainAdmin ? [{ label: 'User Management & Audit', path: '/users', icon: ShieldAlert }] : []),
