@@ -18,7 +18,6 @@ import {
   AlertTriangle,
   FolderGit2,
   ArrowUpRight,
-  Clock,
   RefreshCw,
   ShieldAlert,
   Building2,
@@ -55,7 +54,6 @@ export const DashboardPage: React.FC = () => {
   const deploymentData = data?.deployment_trend || [];
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
-  const recentActivity = data?.recent_activity || [];
 
   const PIE_COLORS = ['#0F172A', '#334155', '#475569', '#64748B', '#94A3B8'];
 
