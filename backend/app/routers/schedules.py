@@ -291,6 +291,34 @@ def create_schedule_missed_schedule(
             detail="Failed to create missed schedule record in database"
         )
 
+@router.post("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
+@router.put("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
+@router.patch("/{schedule_id}/mark-addressed", response_model=ScheduleResponse)
+def mark_schedule_comment_addressed(
+    schedule_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Mark schedule operational remark as addressed.
+    Sets comment_adressal cell in Supabase schedules table to NULL and comment_status to ADDRESSED.
+    Restricted to Managers / Admins.
+    """
+    if is_engineer_user(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Engineers cannot mark comments as addressed."
+        )
+    enforce_write_permission(current_user)
+    sch = get_schedule_and_verify(db, schedule_id, current_user)
+    sch.comment_adressal = None
+    sch.comment_status = "ADDRESSED"
+    sch.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(sch)
+    return sch
+
+
 @router.patch("/{schedule_id}/comments/status", response_model=ScheduleResponse)
 @router.put("/{schedule_id}/comments/status", response_model=ScheduleResponse)
 def update_schedule_comment_status(

@@ -92,6 +92,21 @@ export const useUpdateSchedule = () => {
   });
 };
 
+export const useMarkScheduleCommentAddressed = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (scheduleId: string) => updateScheduleCommentStatus(scheduleId, null),
+    onSuccess: (_, scheduleId) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['company-operational-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer'] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-me'] });
+    },
+  });
+};
+
 export const useUpdateScheduleCommentStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({

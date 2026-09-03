@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSchedule, useUpdateScheduleCommentStatus } from '../../hooks/useSchedule';
+import { useSchedule, useMarkScheduleCommentAddressed } from '../../hooks/useSchedule';
 import { useAuth } from '../../context/AuthContext';
-import { MessageSquare, Calendar, Building2, User, ArrowUpRight, Clock } from 'lucide-react';
+import { MessageSquare, Calendar, Building2, User, ArrowUpRight, Clock, Loader2 } from 'lucide-react';
 import { CardSkeleton } from '../common/LoadingSkeleton';
 
 interface ScheduleCommentsCardProps {
@@ -26,7 +26,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
   const { data: scheduleRes, isLoading } = useSchedule(
     engineerId ? { engineerId, commentAdressal: false, pageSize: 50 } : { companyId: 'all-data', commentAdressal: false, pageSize: 50 }
   );
-  const updateCommentStatusMutation = useUpdateScheduleCommentStatus();
+  const markAddressedMutation = useMarkScheduleCommentAddressed();
 
   // Filter schedules returned by commentAdressal=false query for valid non-empty remarks and matching engineerId if provided
   const pendingComments = (scheduleRes?.data || []).filter(
@@ -136,13 +136,17 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                     {!isEngineerUser && canEdit && (
                       <button
                         type="button"
+                        disabled={markAddressedMutation.isPending && markAddressedMutation.variables === sch.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateCommentStatusMutation.mutate({ id: sch.id, commentAdressal: null });
+                          markAddressedMutation.mutate(sch.id);
                         }}
-                        className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-300 transition-colors shadow-xs"
+                        className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-300 transition-colors shadow-xs flex items-center space-x-1 disabled:opacity-50"
                       >
-                        Mark Addressed
+                        {markAddressedMutation.isPending && markAddressedMutation.variables === sch.id && (
+                          <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />
+                        )}
+                        <span>Mark Addressed</span>
                       </button>
                     )}
 
@@ -229,17 +233,18 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
               <div className="flex space-x-2">
                 {!isEngineerUser && canEdit && (
                   <button
+                    disabled={markAddressedMutation.isPending}
                     onClick={() => {
-                      updateCommentStatusMutation.mutate(
-                        { id: selectedPendingComment.id, commentAdressal: null },
-                        {
-                          onSuccess: () => setSelectedPendingComment(null),
-                        }
-                      );
+                      markAddressedMutation.mutate(selectedPendingComment.id, {
+                        onSuccess: () => setSelectedPendingComment(null),
+                      });
                     }}
-                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm"
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
                   >
-                    Mark as Addressed
+                    {markAddressedMutation.isPending && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                    )}
+                    <span>Mark as Addressed</span>
                   </button>
                 )}
                 <button
