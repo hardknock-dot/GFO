@@ -133,7 +133,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-stone-900 flex items-center space-x-1.5 group-hover:text-amber-700 transition-colors">
                       {sch.engineerName && (
-                        <span className="text-[#D2E5C7] font-bold flex items-center mr-1">
+                        <span className="text-[#78B654] font-bold flex items-center mr-1">
                           <User className="w-3 h-3 mr-1 inline" />
                           {sch.engineerName} ({sch.engineerOrbitId || sch.engineerId?.slice(0, 8)}) •
                         </span>

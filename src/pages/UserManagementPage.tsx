@@ -896,7 +896,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           onClick={() => setActiveTab('users')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'users'
-              ? 'border-[#D2E5C7] text-[#D2E5C7]'
+              ? 'border-[#78B654] text-[#78B654]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
@@ -908,7 +908,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           onClick={() => setActiveTab('companies')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'companies'
-              ? 'border-[#D2E5C7] text-[#D2E5C7]'
+              ? 'border-[#78B654] text-[#78B654]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
@@ -923,7 +923,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           }}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'audit'
-              ? 'border-[#D2E5C7] text-[#D2E5C7]'
+              ? 'border-[#78B654] text-[#78B654]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >

@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     cream: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
     ice: 'bg-[#A8BC8B]/50 border border-[#A8BC8B] text-stone-900',
     sand: 'bg-[#F6D4BA]/80 border border-[#F6D4BA] text-stone-900',
-    orange: 'bg-[#D2E5C7] text-white border border-[#436730]',
+    orange: 'bg-[#78B654] text-white border border-[#436730]',
   };
 
   const isForest = variant === 'orange';
@@ -54,7 +54,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             ? 'bg-white/20 text-white'
             : isColored
               ? 'bg-black/10 text-stone-900'
-              : 'bg-[#FEFADC] text-[#D2E5C7] border border-[#E8DEC8]'
+              : 'bg-[#FEFADC] text-[#78B654] border border-[#E8DEC8]'
             }`}
         >
           {icon}
@@ -75,7 +75,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               : isColored
                 ? 'bg-black/10 text-stone-900'
                 : changeType === 'positive'
-                  ? 'bg-[#A8BC8B]/40 text-[#D2E5C7]'
+                  ? 'bg-[#A8BC8B]/40 text-[#78B654]'
                   : changeType === 'negative'
                     ? 'bg-rose-100 text-rose-800'
                     : 'bg-[#F6D4BA] text-stone-800 font-bold'

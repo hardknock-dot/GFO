@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
           className={`h-16 flex items-center border-b border-[#E5956D]/40 cursor-pointer transition-colors hover:bg-black/5 ${collapsed ? 'justify-center px-2' : 'px-4 space-x-3'
             }`}
-          title={currentCompany.name}
+
         >
           <img
             src={logoImg}
@@ -139,13 +139,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div key={item.path} className="space-y-1">
                   <div
-                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${
-                      isParentActive
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${isParentActive
                         ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
                         : isChildActive
-                        ? 'text-stone-950 font-bold bg-black/5'
-                        : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
-                    }`}
+                          ? 'text-stone-950 font-bold bg-black/5'
+                          : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
+                      }`}
                     title={collapsed ? item.label : undefined}
                     onClick={() => {
                       if (collapsed && !mobileOpen) {
@@ -165,9 +164,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }}
                     >
                       <Icon
-                        className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${
-                          isAnyActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
-                        }`}
+                        className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${isAnyActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
+                          }`}
                       />
                       {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
                     </div>
@@ -201,10 +199,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             to={child.path}
                             onClick={onCloseMobile}
                             className={({ isActive }) =>
-                              `flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group ${
-                                isActive
-                                  ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
-                                  : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
+                              `flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group ${isActive
+                                ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
+                                : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
                               }`
                             }
                             title={child.label}
@@ -212,9 +209,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             {({ isActive }) => (
                               <>
                                 <ChildIcon
-                                  className={`w-3.5 h-3.5 flex-shrink-0 group-hover:scale-110 transition-transform ${
-                                    isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
-                                  }`}
+                                  className={`w-3.5 h-3.5 flex-shrink-0 group-hover:scale-110 transition-transform ${isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
+                                    }`}
                                 />
                                 <span className="truncate">{child.label}</span>
                               </>

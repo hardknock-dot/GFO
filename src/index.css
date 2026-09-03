@@ -5,9 +5,9 @@
 @layer base {
   :root {
     /* Warm Earth & Sage Palette */
-    --color-primary: #D2E5C7;
+    --color-primary: #78B654;
     --color-primary-hover: #43682F;
-    --color-secondary: #D2E5C7;
+    --color-secondary: #78B654;
     --color-accent: #F1A67E;
     --color-accent-soft: #F6D4BA;
     --color-accent-green: #A8BC8B;
@@ -18,7 +18,7 @@
     --color-sidebar-active: #E5956D;
     --color-text-primary: #1C1917;
     --color-text-secondary: #57534E;
-    --color-text-accent: #D2E5C7;
+    --color-text-accent: #78B654;
     --color-border: #E8DEC8;
   }
 
@@ -97,13 +97,13 @@
   color: #78716C !important;
 }
 .dark .dark\:text-emerald-300 {
-  color: #D2E5C7 !important;
+  color: #78B654 !important;
 }
 .dark .dark\:text-cyan-300 {
-  color: #D2E5C7 !important;
+  color: #78B654 !important;
 }
 .dark .dark\:text-cyan-200 {
-  color: #D2E5C7 !important;
+  color: #78B654 !important;
 }
 
 /* Scrollbar styling */
