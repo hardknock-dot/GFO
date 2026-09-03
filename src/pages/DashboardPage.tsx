@@ -55,7 +55,7 @@ export const DashboardPage: React.FC = () => {
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
 
-  const PIE_COLORS = ['#527E3A', '#A8BC8B', '#F1A67E', '#F6D4BA', '#3D5E2B'];
+  const PIE_COLORS = ['#D2E5C7', '#A8BC8B', '#F1A67E', '#F6D4BA', '#3D5E2B'];
 
   if (isError) {
     return (
@@ -178,7 +178,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2 text-xs font-semibold">
               <span className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#527E3A] inline-block" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D2E5C7] inline-block" />
                 <span>Deployed</span>
               </span>
             </div>
@@ -194,7 +194,7 @@ export const DashboardPage: React.FC = () => {
                 <AreaChart data={deploymentData}>
                   <defs>
                     <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#527E3A" stopOpacity={0.4} />
+                      <stop offset="5%" stopColor="#D2E5C7" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="#A8BC8B" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
@@ -215,7 +215,7 @@ export const DashboardPage: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="Deployed"
-                    stroke="#527E3A"
+                    stroke="#D2E5C7"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorDeployed)"
@@ -356,12 +356,12 @@ export const DashboardPage: React.FC = () => {
         <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
             <div className="p-3 bg-white rounded-xl border border-[#E8DEC8]">
-              <ShieldAlert className="w-6 h-6 text-[#527E3A]" />
+              <ShieldAlert className="w-6 h-6 text-[#D2E5C7]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
                 <span>Operational Intelligence & Deterministic Exceptions</span>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[#527E3A] border border-[#E8DEC8] rounded-full">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[#D2E5C7] border border-[#E8DEC8] rounded-full">
                   {opAlerts?.length || 0}
                 </span>
               </h3>

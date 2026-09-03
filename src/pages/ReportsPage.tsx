@@ -81,7 +81,7 @@ export const ReportsPage: React.FC = () => {
           {/* Company Filter */}
           {isMainAdmin ? (
             <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-[#527E3A]" />
+              <Building2 className="w-4 h-4 text-[#D2E5C7]" />
               <span className="font-semibold text-stone-700">Company Scope:</span>
               <select
                 value={companyId}
@@ -98,7 +98,7 @@ export const ReportsPage: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-[#527E3A]" />
+              <Building2 className="w-4 h-4 text-[#D2E5C7]" />
               <span className="font-semibold text-stone-700">Company Scope:</span>
               <span className="px-3 py-1 bg-white rounded-xl font-bold text-stone-800 border border-[#E8DEC8]">
                 {currentCompany.name}
@@ -129,7 +129,7 @@ export const ReportsPage: React.FC = () => {
 
         <button
           onClick={fetchCurrentReport}
-          className="flex items-center space-x-2 px-4 py-2 bg-[#527E3A] hover:bg-[#43682F] text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
+          className="flex items-center space-x-2 px-4 py-2 bg-[#D2E5C7] hover:bg-[#43682F] text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
         >
           <Filter className="w-3.5 h-3.5" />
           <span>Apply Filters</span>
@@ -155,7 +155,7 @@ export const ReportsPage: React.FC = () => {
               onClick={() => setActiveTab(t.id as any)}
               className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                 isActive
-                  ? 'border-[#527E3A] text-[#527E3A]'
+                  ? 'border-[#D2E5C7] text-[#D2E5C7]'
                   : 'border-transparent text-stone-500 hover:text-stone-800'
               }`}
             >
@@ -183,7 +183,7 @@ export const ReportsPage: React.FC = () => {
                 </div>
                 <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
                   <span className="text-xs font-semibold text-stone-500">Positive Feedback</span>
-                  <p className="text-2xl font-bold text-[#527E3A] mt-1">{reportData.positive_feedback_count}</p>
+                  <p className="text-2xl font-bold text-[#D2E5C7] mt-1">{reportData.positive_feedback_count}</p>
                 </div>
                 <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
                   <span className="text-xs font-semibold text-stone-500">Negative Feedback</span>
@@ -191,7 +191,7 @@ export const ReportsPage: React.FC = () => {
                 </div>
                 <div className="bg-[#FEFADC] p-4 rounded-2xl border border-[#E8DEC8] shadow-xs">
                   <span className="text-xs font-semibold text-stone-500">Average Rating Score</span>
-                  <p className="text-2xl font-bold text-[#527E3A] mt-1">{reportData.average_score} / 5.0</p>
+                  <p className="text-2xl font-bold text-[#D2E5C7] mt-1">{reportData.average_score} / 5.0</p>
                 </div>
               </div>
 

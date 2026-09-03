@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
             onClick={() => setCompanyMenuOpen(!companyMenuOpen)}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#FEFADC] text-stone-800 border border-[#E8DEC8] hover:bg-[#F6D4BA]/40 transition-colors shadow-2xs"
           >
-            <Building2 className="w-3.5 h-3.5 text-[#527E3A]" />
+            <Building2 className="w-3.5 h-3.5 text-[#D2E5C7]" />
             <span className="font-semibold hidden sm:inline">{currentCompany.name}</span>
             <span className="font-semibold sm:hidden">{currentCompany.code}</span>
             <ChevronDown className="w-3.5 h-3.5 text-stone-400 ml-0.5" />
@@ -313,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                 }}
                 className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
               >
-                <UserIcon className="w-4 h-4 text-[#527E3A]" />
+                <UserIcon className="w-4 h-4 text-[#D2E5C7]" />
                 <span>My Profile</span>
               </button>
 
@@ -326,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                   }}
                   className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
                 >
-                  <Users className="w-4 h-4 text-[#527E3A]" />
+                  <Users className="w-4 h-4 text-[#D2E5C7]" />
                   <span>User Management</span>
                 </button>
               )}
@@ -340,7 +340,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                   }}
                   className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
                 >
-                  <FileText className="w-4 h-4 text-[#527E3A]" />
+                  <FileText className="w-4 h-4 text-[#D2E5C7]" />
                   <span>Audit</span>
                 </button>
               )}
@@ -354,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                   }}
                   className="w-full text-left px-3.5 py-2 hover:bg-[#FEFADC] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
                 >
-                  <SettingsIcon className="w-4 h-4 text-[#527E3A]" />
+                  <SettingsIcon className="w-4 h-4 text-[#D2E5C7]" />
                   <span>Settings</span>
                 </button>
               )}

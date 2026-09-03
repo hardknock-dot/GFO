@@ -102,9 +102,9 @@ export function Table<T extends { id?: string | number }>({
                       <span className="text-stone-400">
                         {sortKey === col.key ? (
                           sortDirection === 'asc' ? (
-                            <ArrowUp className="w-3.5 h-3.5 text-[#527E3A]" />
+                            <ArrowUp className="w-3.5 h-3.5 text-[#D2E5C7]" />
                           ) : (
-                            <ArrowDown className="w-3.5 h-3.5 text-[#527E3A]" />
+                            <ArrowDown className="w-3.5 h-3.5 text-[#D2E5C7]" />
                           )
                         ) : (
                           <ArrowUpDown className="w-3 h-3 opacity-40 hover:opacity-100" />

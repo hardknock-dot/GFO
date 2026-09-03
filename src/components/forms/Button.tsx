@@ -24,11 +24,11 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary:
-      'bg-[#527E3A] hover:bg-[#43682F] text-white focus:ring-[#527E3A] shadow-xs',
+      'bg-[#D2E5C7] hover:bg-[#43682F] text-white focus:ring-[#D2E5C7] shadow-xs',
     secondary:
       'bg-[#F1A67E] hover:bg-[#E5956D] text-stone-900 focus:ring-[#F1A67E] shadow-xs',
     outline:
-      'border border-[#E8DEC8] bg-white hover:bg-[#FEFADC] text-stone-800 focus:ring-[#527E3A]',
+      'border border-[#E8DEC8] bg-white hover:bg-[#FEFADC] text-stone-800 focus:ring-[#D2E5C7]',
     danger:
       'bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500 shadow-xs',
     ghost:
