@@ -24,15 +24,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary:
-      'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white focus:ring-[var(--color-accent)] shadow-sm',
+      'bg-[#527E3A] hover:bg-[#43682F] text-white focus:ring-[#527E3A] shadow-xs',
     secondary:
-      'bg-[var(--color-secondary)] hover:opacity-90 text-white focus:ring-[var(--color-secondary)] shadow-sm',
+      'bg-[#F1A67E] hover:bg-[#E5956D] text-stone-900 focus:ring-[#F1A67E] shadow-xs',
     outline:
-      'border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200',
+      'border border-[#E8DEC8] bg-white hover:bg-[#FEFADC] text-stone-800 focus:ring-[#527E3A]',
     danger:
-      'bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500 shadow-sm',
+      'bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500 shadow-xs',
     ghost:
-      'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+      'bg-transparent hover:bg-[#F6D4BA]/40 text-stone-700',
   };
 
   const sizes = {

@@ -129,7 +129,7 @@ export const ReportsPage: React.FC = () => {
 
         <button
           onClick={fetchCurrentReport}
-          className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
+          className="flex items-center space-x-2 px-4 py-2 bg-[#527E3A] hover:bg-[#43682F] text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
         >
           <Filter className="w-3.5 h-3.5" />
           <span>Apply Filters</span>
@@ -137,7 +137,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 overflow-x-auto pb-1">
+      <div className="flex items-center space-x-2 border-b border-[#E8DEC8] overflow-x-auto pb-1">
         {[
           { id: 'feedback', label: 'Feedback Report', icon: Award },
           { id: 'escalations', label: 'Escalation Report', icon: AlertTriangle },
@@ -155,8 +155,8 @@ export const ReportsPage: React.FC = () => {
               onClick={() => setActiveTab(t.id as any)}
               className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                 isActive
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-[#527E3A] text-[#527E3A]'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
               }`}
             >
               <Icon className="w-4 h-4" />

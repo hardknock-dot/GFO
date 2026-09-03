@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed top-16 left-0 bottom-0 z-40 bg-[var(--color-sidebar)] text-slate-700 border-r border-slate-200 transition-transform md:transition-all duration-300 flex flex-col justify-between ${
+        className={`fixed top-16 left-0 bottom-0 z-40 bg-[var(--color-sidebar)] text-stone-900 border-r border-[#E5956D]/50 transition-transform md:transition-all duration-300 flex flex-col justify-between ${
           mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
         } ${collapsed ? 'md:w-16' : 'md:w-60'}`}
       >
@@ -92,8 +92,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={({ isActive }) =>
                   `flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group ${
                     isActive
-                      ? 'bg-[var(--color-sidebar-active)] text-slate-900 shadow-sm border border-slate-200/50'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      ? 'bg-black/10 text-stone-950 font-bold shadow-2xs border border-black/5'
+                      : 'text-stone-900/80 hover:text-stone-950 hover:bg-black/5'
                   }`
                 }
                 title={collapsed ? item.label : undefined}
@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {({ isActive }) => (
                   <>
                     <Icon className={`w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform ${
-                      isActive ? 'text-slate-800' : 'text-slate-400 group-hover:text-slate-700'
+                      isActive ? 'text-stone-950' : 'text-stone-900/75 group-hover:text-stone-950'
                     }`} />
                     {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
                   </>
@@ -112,15 +112,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Footer Collapse Toggle */}
-        <div className="p-3 border-t border-slate-200 flex items-center justify-between">
+        <div className="p-3 border-t border-[#E5956D]/50 flex items-center justify-between">
           {(!collapsed || mobileOpen) && (
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400">
+            <span className="text-[10px] uppercase font-mono tracking-widest text-stone-900/60 font-semibold">
               v2.0 Enterprise
             </span>
           )}
           <button
             onClick={onToggleCollapse}
-            className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors mx-auto"
+            className="hidden md:flex p-1.5 rounded-lg text-stone-900/70 hover:text-stone-950 hover:bg-black/5 transition-colors mx-auto"
             title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}

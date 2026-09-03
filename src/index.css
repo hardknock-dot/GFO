@@ -4,20 +4,22 @@
 
 @layer base {
   :root {
-    /* High Contrast Monochrome Theme Tokens */
-    --color-primary: #0F172A;
-    --color-primary-hover: #1E293B;
-    --color-secondary: #0F172A;
-    --color-accent: #0F172A;
-    --color-accent-transparent: rgba(15, 23, 42, 0.08);
-    --color-bg: #F1F5F9;
-    --color-card: #E0F2FE;
-    --color-sidebar: #FFFFFF;
-    --color-sidebar-active: #F1F5F9;
-    --color-text-primary: #0F172A;
-    --color-text-secondary: #475569;
-    --color-text-accent: #334155;
-    --color-border: #BAE6FD;
+    /* Warm Earth & Sage Palette */
+    --color-primary: #527E3A;
+    --color-primary-hover: #43682F;
+    --color-secondary: #527E3A;
+    --color-accent: #F1A67E;
+    --color-accent-soft: #F6D4BA;
+    --color-accent-green: #A8BC8B;
+    --color-accent-transparent: rgba(241, 166, 126, 0.15);
+    --color-bg: #FEFADC;
+    --color-card: #FFFFFF;
+    --color-sidebar: #F1A67E;
+    --color-sidebar-active: #E5956D;
+    --color-text-primary: #1C1917;
+    --color-text-secondary: #57534E;
+    --color-text-accent: #527E3A;
+    --color-border: #E8DEC8;
   }
 
   body {
@@ -31,80 +33,80 @@
   }
 }
 
-/* Custom premium light blue style overrides for cards and inputs in dark mode */
+/* Harmonious warm styling overrides for cards and panels in dark mode */
 .dark .dark\:bg-slate-900 {
-  background-color: #E0F2FE !important;
-}
-.dark .dark\:bg-slate-950 {
   background-color: #FFFFFF !important;
 }
+.dark .dark\:bg-slate-950 {
+  background-color: #FEFADC !important;
+}
 .dark .dark\:bg-slate-950\/50 {
-  background-color: rgba(255, 255, 255, 0.5) !important;
+  background-color: rgba(254, 250, 220, 0.5) !important;
 }
 .dark .dark\:bg-slate-800\/80 {
-  background-color: #F0F9FF !important;
+  background-color: #FEFADC !important;
 }
 .dark .dark\:border-slate-800 {
-  border-color: #BAE6FD !important;
+  border-color: #E8DEC8 !important;
 }
 .dark .dark\:border-slate-800\/60 {
-  border-color: rgba(186, 230, 253, 0.6) !important;
+  border-color: rgba(232, 222, 200, 0.6) !important;
 }
 .dark .dark\:bg-slate-800\/40 {
-  background-color: #F0F9FF !important;
+  background-color: #FEFADC !important;
 }
 .dark .dark\:bg-slate-800\/50 {
-  background-color: #F0F9FF !important;
+  background-color: #FEFADC !important;
 }
 .dark .dark\:bg-slate-800\/60 {
-  background-color: #F0F9FF !important;
+  background-color: #FEFADC !important;
 }
 .dark .dark\:bg-slate-50\/70 {
-  background-color: rgba(255, 255, 255, 0.7) !important;
+  background-color: rgba(254, 250, 220, 0.7) !important;
 }
 .dark .dark\:bg-slate-50\/60 {
-  background-color: rgba(255, 255, 255, 0.6) !important;
+  background-color: rgba(254, 250, 220, 0.6) !important;
 }
 .dark .dark\:bg-slate-50\/40 {
-  background-color: rgba(255, 255, 255, 0.4) !important;
+  background-color: rgba(254, 250, 220, 0.4) !important;
 }
 .dark .dark\:hover\:bg-slate-800\/50:hover {
-  background-color: #F0F9FF !important;
+  background-color: #F6D4BA !important;
 }
 .dark .dark\:hover\:bg-slate-800\/20:hover {
-  background-color: #F0F9FF !important;
+  background-color: #F6D4BA !important;
 }
 
-/* High contrast text overrides for light blue card backgrounds in dark mode */
+/* High contrast text overrides */
 .dark .dark\:text-white {
-  color: #0F172A !important;
+  color: #1C1917 !important;
 }
 .dark .dark\:text-slate-100 {
-  color: #0F172A !important;
+  color: #1C1917 !important;
 }
 .dark .dark\:text-slate-200 {
-  color: #1E293B !important;
+  color: #292524 !important;
 }
 .dark .dark\:text-slate-300 {
-  color: #334155 !important;
+  color: #44403C !important;
 }
 .dark .dark\:text-slate-400 {
-  color: #475569 !important;
+  color: #57534E !important;
 }
 .dark .dark\:text-slate-500 {
-  color: #64748B !important;
+  color: #78716C !important;
 }
 .dark .dark\:text-emerald-300 {
-  color: #065F46 !important;
+  color: #527E3A !important;
 }
 .dark .dark\:text-cyan-300 {
-  color: #0F766E !important;
+  color: #527E3A !important;
 }
 .dark .dark\:text-cyan-200 {
-  color: #0F766E !important;
+  color: #527E3A !important;
 }
 
-/* Scrollbar styling for enterprise UI */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -115,10 +117,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #E8DEC8;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #D5C9AE;
 }

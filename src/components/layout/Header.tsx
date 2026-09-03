@@ -81,13 +81,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200/80 z-50 px-3 sm:px-6 flex items-center justify-between shadow-xs">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-[#E8DEC8] z-50 px-3 sm:px-6 flex items-center justify-between shadow-xs">
       {/* Left: Mobile Menu Toggle & Company Branding */}
       <div className="flex items-center space-x-2 sm:space-x-4">
         {onToggleMobileSidebar && (
           <button
             onClick={onToggleMobileSidebar}
-            className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors"
+            className="md:hidden p-2 rounded-xl text-stone-700 hover:bg-[#FEFADC] transition-colors"
             aria-label="Toggle mobile menu"
           >
             <Menu className="w-5 h-5" />
@@ -95,18 +95,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
         )}
 
         <div className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer" onClick={() => navigate(user?.role === 'Field Engineer' || user?.role === 'Engineer' ? '/engineer/dashboard' : '/dashboard')}>
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[var(--color-primary)] to-[var(--color-secondary)] p-0.5 shadow-sm flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#527E3A] p-0.5 shadow-xs flex items-center justify-center flex-shrink-0">
             <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center overflow-hidden">
-              <span className="font-black text-xs sm:text-sm text-[var(--color-secondary)] tracking-wider">
+              <span className="font-black text-xs sm:text-sm text-[#527E3A] tracking-wider">
                 {currentCompany.code}
               </span>
             </div>
           </div>
           <div className="hidden sm:flex flex-col">
-            <span className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+            <span className="text-xs sm:text-sm font-bold text-stone-900 leading-tight">
               {currentCompany.name}
             </span>
-            <span className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider text-[var(--color-secondary)]">
+            <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[#527E3A]">
               Orbit Portal
             </span>
           </div>
@@ -116,16 +116,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
         <div className="relative" ref={companyMenuRef}>
           <button
             onClick={() => setCompanyMenuOpen(!companyMenuOpen)}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FEFADC] text-stone-800 border border-[#E8DEC8] hover:bg-[#F6D4BA]/40 transition-colors"
           >
-            <Building2 className="w-3.5 h-3.5 text-[var(--color-secondary)]" />
+            <Building2 className="w-3.5 h-3.5 text-[#527E3A]" />
             <span className="hidden sm:inline">Switch Tenant</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <ChevronDown className="w-3 h-3 text-stone-400" />
           </button>
 
           {companyMenuOpen && (
-            <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 py-1">
-              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+            <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-[#E8DEC8] rounded-xl shadow-xl z-50 py-1">
+              <div className="px-3 py-2 border-b border-[#E8DEC8] text-[10px] font-semibold text-stone-400 uppercase tracking-wider flex items-center space-x-1">
                 <Layers className="w-3 h-3" />
                 <span>Select Company Workspace</span>
               </div>

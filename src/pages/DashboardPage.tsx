@@ -55,7 +55,7 @@ export const DashboardPage: React.FC = () => {
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
 
-  const PIE_COLORS = ['#0F172A', '#334155', '#475569', '#64748B', '#94A3B8'];
+  const PIE_COLORS = ['#527E3A', '#A8BC8B', '#F1A67E', '#F6D4BA', '#3D5E2B'];
 
   if (isError) {
     return (
@@ -118,8 +118,8 @@ export const DashboardPage: React.FC = () => {
             value={kpi.total_engineers}
             change={`${kpi.total_engineers} Certified`}
             subtitle={`${currentCompany.code} certified personnel`}
-            icon={<Users className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
-            variant="default"
+            icon={<Users className="w-5 h-5 text-stone-800" />}
+            variant="sand"
             onClick={() => navigate('/engineers')}
           />
           <StatCard
@@ -128,8 +128,8 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.utilization_rate}% Utilization`}
             changeType="positive"
             subtitle="On customer Fab sites"
-            icon={<CheckCircle2 className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
-            variant="default"
+            icon={<CheckCircle2 className="w-5 h-5 text-stone-800" />}
+            variant="cream"
             onClick={() => navigate('/engineers')}
           />
           <StatCard
@@ -138,8 +138,8 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.upcoming_travel_count} Scheduled`}
             changeType="neutral"
             subtitle="Flights & assignments"
-            icon={<Plane className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
-            variant="default"
+            icon={<Plane className="w-5 h-5 text-stone-800" />}
+            variant="ice"
             onClick={() => navigate('/travel')}
           />
           <StatCard
@@ -148,8 +148,8 @@ export const DashboardPage: React.FC = () => {
             change={kpi.expiring_visas_count > 0 ? "Action Required" : "All Clear"}
             changeType={kpi.expiring_visas_count > 0 ? 'negative' : 'positive'}
             subtitle="Within next 30 days"
-            icon={<AlertTriangle className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
-            variant="default"
+            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            variant="orange"
             onClick={() => navigate('/visa')}
           />
           <StatCard
@@ -158,7 +158,7 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.active_projects_count} Active`}
             changeType="positive"
             subtitle="Customer Fab installations"
-            icon={<Building2 className="w-5 h-5 text-slate-800 dark:text-slate-200" />}
+            icon={<Building2 className="w-5 h-5 text-stone-800" />}
             variant="default"
             onClick={() => navigate('/schedule')}
           />
@@ -168,17 +168,17 @@ export const DashboardPage: React.FC = () => {
       {/* Charts Visualization Section */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Deployment Chart */}
-        <div className="lg:col-span-2 p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+        <div className="lg:col-span-2 p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+              <h3 className="text-base font-semibold text-stone-900">
                 Engineer Deployment Trend
               </h3>
-              <p className="text-xs text-slate-400">Monthly field workforce allocation across global fabs</p>
+              <p className="text-xs text-stone-500">Monthly field workforce allocation across global fabs</p>
             </div>
             <div className="flex items-center space-x-2 text-xs font-semibold">
               <span className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-secondary)] inline-block" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#527E3A] inline-block" />
                 <span>Deployed</span>
               </span>
             </div>
@@ -186,7 +186,7 @@ export const DashboardPage: React.FC = () => {
 
           <div className="h-64 w-full">
             {isLoading ? (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400">
+              <div className="h-full flex items-center justify-center text-xs text-stone-400">
                 Loading Deployment Analytics...
               </div>
             ) : (
@@ -194,16 +194,16 @@ export const DashboardPage: React.FC = () => {
                 <AreaChart data={deploymentData}>
                   <defs>
                     <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={currentCompany.secondaryColor} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={currentCompany.secondaryColor} stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#527E3A" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#A8BC8B" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#BAE6FD" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8DEC8" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#78716C" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#78716C" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0F172A',
+                      backgroundColor: '#1C1917',
                       borderRadius: '8px',
                       color: '#FFFFFF',
                       border: 'none',
@@ -215,7 +215,7 @@ export const DashboardPage: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="Deployed"
-                    stroke={currentCompany.secondaryColor}
+                    stroke="#527E3A"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorDeployed)"
@@ -227,17 +227,17 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Workforce Status Distribution Donut Chart */}
-        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+            <h3 className="text-base font-semibold text-stone-900">
               Workforce Status Distribution
             </h3>
-            <p className="text-xs text-slate-400">Current allocation: Deployed, Support, & PTO</p>
+            <p className="text-xs text-stone-500">Current allocation: Deployed, Support, & PTO</p>
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
             {isLoading ? (
-              <div className="text-xs text-slate-400">Loading Status Distribution...</div>
+              <div className="text-xs text-stone-400">Loading Status Distribution...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -251,12 +251,12 @@ export const DashboardPage: React.FC = () => {
                     dataKey="value"
                   >
                     {statusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0F172A',
+                      backgroundColor: '#1C1917',
                       borderRadius: '8px',
                       color: '#FFFFFF',
                       border: 'none',
@@ -270,12 +270,12 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="space-y-1.5 pt-2 border-t border-[#E8DEC8] text-xs">
             {statusDistribution.map((item) => {
               const total = statusDistribution.reduce((acc, curr) => acc + curr.value, 0);
               const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
               return (
-                <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <div key={item.name} className="flex items-center justify-between text-stone-700">
                   <div className="flex items-center space-x-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="truncate max-w-[160px]">{item.name}</span>
@@ -288,19 +288,19 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Country Distribution Donut Chart */}
-        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+            <h3 className="text-base font-semibold text-stone-900">
               Fab Site Country Distribution
             </h3>
-            <p className="text-xs text-slate-400">Geographic footprint of active assignments</p>
+            <p className="text-xs text-stone-500">Geographic footprint of active assignments</p>
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
             {isLoading ? (
-              <div className="text-xs text-slate-400">Loading Country Footprint...</div>
+              <div className="text-xs text-stone-400">Loading Country Footprint...</div>
             ) : countryDistribution.length === 0 ? (
-              <div className="text-xs text-slate-400">No active country assignments</div>
+              <div className="text-xs text-stone-400">No active country assignments</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -319,7 +319,7 @@ export const DashboardPage: React.FC = () => {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0F172A',
+                      backgroundColor: '#1C1917',
                       borderRadius: '8px',
                       color: '#FFFFFF',
                       border: 'none',
@@ -333,9 +333,9 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="space-y-1.5 pt-2 border-t border-[#E8DEC8] text-xs">
             {countryDistribution.slice(0, 3).map((item, idx) => (
-              <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+              <div key={item.name} className="flex items-center justify-between text-stone-700">
                 <div className="flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[idx] }} />
                   <span className="truncate max-w-[160px]">{item.name}</span>
@@ -353,19 +353,19 @@ export const DashboardPage: React.FC = () => {
       {/* Operational Intelligence Summary Card */}
       {user?.role !== 'Viewer' && (
 
-        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 bg-white border border-[#E8DEC8] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200/60 dark:border-amber-900/40">
-              <ShieldAlert className="w-6 h-6 text-amber-500" />
+            <div className="p-3 bg-[#FEFADC] rounded-xl border border-[#E8DEC8]">
+              <ShieldAlert className="w-6 h-6 text-[#527E3A]" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
+              <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
                 <span>Operational Intelligence & Deterministic Exceptions</span>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/60 rounded-full">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-[#FEFADC] text-[#527E3A] border border-[#E8DEC8] rounded-full">
                   {opAlerts?.length || 0}
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Review and address compliance validation issues, travel scheduling delays, or leaves anomalies.
               </p>
             </div>

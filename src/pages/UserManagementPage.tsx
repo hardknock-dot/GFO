@@ -860,13 +860,13 @@ export const UserManagementPage: React.FC = () => {
       />
 
       {/* Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto">
+      <div className="flex items-center space-x-2 border-b border-[#E8DEC8] pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('users')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'users'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'border-[#527E3A] text-[#527E3A]'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -877,8 +877,8 @@ export const UserManagementPage: React.FC = () => {
           onClick={() => setActiveTab('companies')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'companies'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'border-[#527E3A] text-[#527E3A]'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -892,8 +892,8 @@ export const UserManagementPage: React.FC = () => {
           }}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'audit'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              ? 'border-[#527E3A] text-[#527E3A]'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
           <FileText className="w-4 h-4" />

@@ -8,7 +8,7 @@ export interface StatCardProps {
   change?: string;
   changeType?: 'positive' | 'negative' | 'neutral';
   icon: React.ReactNode;
-  variant?: 'default' | 'ice' | 'sand' | 'orange';
+  variant?: 'default' | 'ice' | 'sand' | 'orange' | 'cream';
   onClick?: () => void;
 }
 
@@ -23,14 +23,15 @@ export const StatCard: React.FC<StatCardProps> = ({
   onClick,
 }) => {
   const variantStyles = {
-    default: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white',
-    ice: 'bg-slate-100 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700',
-    sand: 'bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700',
-    orange: 'bg-slate-900 dark:bg-slate-950 text-white border border-slate-800',
+    default: 'bg-white border border-[#E8DEC8] text-stone-900',
+    cream: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
+    ice: 'bg-[#A8BC8B]/50 border border-[#A8BC8B] text-stone-900',
+    sand: 'bg-[#F6D4BA]/80 border border-[#F6D4BA] text-stone-900',
+    orange: 'bg-[#527E3A] text-white border border-[#436730]',
   };
 
-  const isOrange = variant === 'orange';
-  const isColored = variant !== 'default';
+  const isForest = variant === 'orange';
+  const isColored = variant !== 'default' && variant !== 'cream';
 
   return (
     <motion.div
@@ -43,17 +44,17 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div className="flex items-center justify-between">
         <span
-          className={`text-xs font-semibold uppercase tracking-wider ${isOrange ? 'text-white/80' : isColored ? 'text-slate-700' : 'text-slate-500 dark:text-slate-400'
+          className={`text-xs font-semibold uppercase tracking-wider ${isForest ? 'text-white/90' : 'text-stone-700'
             }`}
         >
           {title}
         </span>
         <div
-          className={`p-2.5 rounded-xl ${isOrange
+          className={`p-2.5 rounded-xl ${isForest
             ? 'bg-white/20 text-white'
             : isColored
-              ? 'bg-black/5 text-slate-800'
-              : 'bg-slate-100 dark:bg-slate-800/40 text-[var(--color-secondary)]'
+              ? 'bg-black/10 text-stone-900'
+              : 'bg-[#FEFADC] text-[#527E3A] border border-[#E8DEC8]'
             }`}
         >
           {icon}
@@ -62,22 +63,22 @@ export const StatCard: React.FC<StatCardProps> = ({
 
       <div className="mt-4 flex items-baseline justify-between">
         <span
-          className={`text-3xl font-extrabold tracking-tight ${isOrange ? 'text-white' : 'text-slate-900 dark:text-white'
+          className={`text-3xl font-extrabold tracking-tight ${isForest ? 'text-white' : 'text-stone-900'
             }`}
         >
           {value}
         </span>
         {change && (
           <span
-            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${isOrange
-              ? 'bg-white/20 text-blue'
+            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${isForest
+              ? 'bg-white/20 text-white'
               : isColored
-                ? 'bg-black/10 text-slate-900'
+                ? 'bg-black/10 text-stone-900'
                 : changeType === 'positive'
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  ? 'bg-[#A8BC8B]/40 text-[#527E3A]'
                   : changeType === 'negative'
-                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                    : 'bg-slate-700 dark:bg-slate-800 !text-white font-bold'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-[#F6D4BA] text-stone-800 font-bold'
 
               }`}
           >
@@ -88,7 +89,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
       {subtitle && (
         <p
-          className={`text-xs mt-1.5 ${isOrange ? 'text-white/75' : isColored ? 'text-slate-600' : 'text-slate-400 dark:text-slate-500'
+          className={`text-xs mt-1.5 ${isForest ? 'text-white/80' : 'text-stone-600'
             }`}
         >
           {subtitle}
