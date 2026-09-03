@@ -100,21 +100,3 @@ def read_root():
     return {
         "message": "Welcome to the ORBIT Resource Management Portal API. Please visit /docs for Swagger API documentation."
     }
-app.include_router(leave.router, prefix="/api")
-app.include_router(missed_schedule.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-app.include_router(operational.router, prefix="/api")
-app.include_router(reports.router, prefix="/api")
-app.include_router(upload.router, prefix="/api")
-
-
-
-
-@app.get("/")
-def read_root():
-    """
-    Root endpoint redirecting or pointing to API docs.
-    """
-    return {
-        "message": "Welcome to the ORBIT Resource Management Portal API. Please visit /docs for Swagger API documentation."
-    }
