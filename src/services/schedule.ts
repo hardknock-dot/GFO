@@ -43,7 +43,7 @@ export const updateScheduleCommentStatus = async (scheduleId: string, commentAdr
     comment_adressal: commentAdressal === false ? false : null,
     comment_status: commentAdressal === false ? 'UNADDRESSED' : 'ADDRESSED'
   };
-  const res = await api.put(`/schedules/${scheduleId}/comments/status`, payload);
+  const res = await api.patch(`/schedules/${scheduleId}/comments/status`, payload);
   return mapApiScheduleToFrontend(res.data);
 };
 
