@@ -23,6 +23,8 @@ import {
   ShieldAlert
 } from 'lucide-react';
 
+import logoImg from '../../assets/OIP.webp';
+
 interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -95,9 +97,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
           title={currentCompany.name}
         >
-          <div className="w-9 h-9 rounded-xl bg-stone-950 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-xs flex-shrink-0 tracking-wider">
-            {currentCompany.code?.slice(0, 4) || 'GFO'}
-          </div>
+          <img
+            src={logoImg}
+            alt={currentCompany.name || 'Company Logo'}
+            className="w-9 h-9 rounded-xl object-contain shadow-xs flex-shrink-0 bg-white/90 p-0.5 border border-black/5"
+          />
           {(!collapsed || mobileOpen) && (
             <div className="min-w-0 flex-1">
               <h1 className="text-sm sm:text-base font-black text-stone-950 truncate tracking-tight leading-tight">
