@@ -55,7 +55,13 @@ export const DashboardPage: React.FC = () => {
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
 
-  const PIE_COLORS = ['#78B654', '#A8BC8B', '#F1A67E', '#F6D4BA', '#3D5E2B'];
+  const PIE_COLORS = [
+    currentCompany.primaryColor || '#78B654',
+    currentCompany.secondaryColor || '#8DA7BE',
+    currentCompany.accentColor || '#F1A67E',
+    currentCompany.sidebarColor || '#F6D4BA',
+    currentCompany.textColor || '#2B3D41',
+  ];
 
   if (isError) {
     return (
@@ -101,8 +107,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         }
       />
-
-
 
       {/* KPI Cards Grid */}
       {isLoading ? (
@@ -168,7 +172,7 @@ export const DashboardPage: React.FC = () => {
       {/* Charts Visualization Section */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Deployment Chart */}
-        <div className="lg:col-span-2 p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="lg:col-span-2 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-stone-900">
@@ -178,7 +182,10 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2 text-xs font-semibold">
               <span className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#78B654] inline-block" />
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block"
+                  style={{ backgroundColor: currentCompany.primaryColor || '#78B654' }}
+                />
                 <span>Deployed</span>
               </span>
             </div>
@@ -194,11 +201,19 @@ export const DashboardPage: React.FC = () => {
                 <AreaChart data={deploymentData}>
                   <defs>
                     <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#78B654" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#A8BC8B" stopOpacity={0.0} />
+                      <stop
+                        offset="5%"
+                        stopColor={currentCompany.primaryColor || '#78B654'}
+                        stopOpacity={0.4}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor={currentCompany.secondaryColor || '#A8BC8B'}
+                        stopOpacity={0.0}
+                      />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8DEC8" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#78716C" />
                   <YAxis tick={{ fontSize: 12 }} stroke="#78716C" />
                   <Tooltip
@@ -215,7 +230,7 @@ export const DashboardPage: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="Deployed"
-                    stroke="#78B654"
+                    stroke={currentCompany.primaryColor || '#78B654'}
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorDeployed)"
@@ -227,7 +242,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Workforce Status Distribution Donut Chart */}
-        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
           <div>
             <h3 className="text-base font-semibold text-stone-900">
               Workforce Status Distribution
@@ -270,7 +285,7 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-[#E8DEC8] text-xs">
+          <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)] text-xs">
             {statusDistribution.map((item) => {
               const total = statusDistribution.reduce((acc, curr) => acc + curr.value, 0);
               const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
@@ -288,7 +303,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Country Distribution Donut Chart */}
-        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4">
+        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
           <div>
             <h3 className="text-base font-semibold text-stone-900">
               Fab Site Country Distribution
@@ -333,7 +348,7 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-[#E8DEC8] text-xs">
+          <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)] text-xs">
             {countryDistribution.slice(0, 3).map((item, idx) => (
               <div key={item.name} className="flex items-center justify-between text-stone-700">
                 <div className="flex items-center space-x-2">
@@ -353,15 +368,15 @@ export const DashboardPage: React.FC = () => {
       {/* Operational Intelligence Summary Card */}
       {user?.role !== 'Viewer' && (
 
-        <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-white rounded-xl border border-[#E8DEC8]">
-              <ShieldAlert className="w-6 h-6 text-[#78B654]" />
+            <div className="p-3 bg-white rounded-xl border border-[var(--color-border)]">
+              <ShieldAlert className="w-6 h-6 text-[var(--color-primary)]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
                 <span>Operational Intelligence & Deterministic Exceptions</span>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[#78B654] border border-[#E8DEC8] rounded-full">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[var(--color-primary)] border border-[var(--color-border)] rounded-full">
                   {opAlerts?.length || 0}
                 </span>
               </h3>

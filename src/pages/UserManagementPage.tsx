@@ -891,12 +891,12 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       />
 
       {/* Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-[#E8DEC8] pb-1 overflow-x-auto">
+      <div className="flex items-center space-x-2 border-b border-[var(--color-border)] pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('users')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'users'
-              ? 'border-[#78B654] text-[#78B654]'
+              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
@@ -908,7 +908,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           onClick={() => setActiveTab('companies')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'companies'
-              ? 'border-[#78B654] text-[#78B654]'
+              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
@@ -923,7 +923,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           }}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'audit'
-              ? 'border-[#78B654] text-[#78B654]'
+              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >

@@ -126,14 +126,14 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
               <div
                 key={sch.id}
                 onClick={() => setSelectedPendingComment(sch)}
-                className="p-3.5 bg-white border border-[#E8DEC8] rounded-xl space-y-2 flex flex-col justify-between transition-all duration-150 hover:border-amber-500 cursor-pointer shadow-xs group"
+                className="p-3.5 bg-white border border-[var(--color-border)] rounded-xl space-y-2 flex flex-col justify-between transition-all duration-150 hover:border-amber-500 cursor-pointer shadow-xs group"
                 title="Click to view full comment addressal details"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-stone-900 flex items-center space-x-1.5 group-hover:text-amber-700 transition-colors">
                       {sch.engineerName && (
-                        <span className="text-[#78B654] font-bold flex items-center mr-1">
+                        <span className="text-[var(--color-primary)] font-bold flex items-center mr-1">
                           <User className="w-3 h-3 mr-1 inline" />
                           {sch.engineerName} ({sch.engineerOrbitId || sch.engineerId?.slice(0, 8)}) •
                         </span>

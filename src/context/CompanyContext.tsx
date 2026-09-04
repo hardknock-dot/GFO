@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Company } from '../types';
 import { getCompanies } from '../services/company';
+import {
+  getCompanyTheme,
+  DEFAULT_THEME,
+  LAM_THEME,
+  AXCELIS_THEME,
+  VISHAY_THEME,
+} from '../config/companyThemes';
 
 export const PRESET_COMPANIES: Company[] = [
   {
@@ -12,21 +19,21 @@ export const PRESET_COMPANIES: Company[] = [
     short_name: 'LAM',
     logo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&auto=format&fit=crop&q=80',
     tagline: 'Semiconductor Equipment & Service Leader',
-    primaryColor: '#78B654',
-    primaryHover: '#43682F',
-    secondaryColor: '#78B654',
-    accentColor: '#F1A67E',
-    accentTransparent: 'rgba(241, 166, 126, 0.15)',
-    backgroundColor: '#FFFFFF',
-    cardColor: '#FEFADC',
-    sidebarColor: '#F1A67E',
-    sidebarActiveColor: '#E5956D',
-    textColor: '#1C1917',
-    textMutedColor: '#57534E',
-    textSecondaryAccent: '#78B654',
+    primaryColor: LAM_THEME.primaryColor,
+    primaryHover: LAM_THEME.primaryHover,
+    secondaryColor: LAM_THEME.secondaryColor,
+    accentColor: LAM_THEME.accentColor,
+    accentTransparent: 'rgba(193, 18, 31, 0.15)',
+    backgroundColor: LAM_THEME.backgroundColor,
+    cardColor: LAM_THEME.cardColor,
+    sidebarColor: LAM_THEME.sidebarColor,
+    sidebarActiveColor: LAM_THEME.sidebarActiveColor,
+    textColor: LAM_THEME.textColor,
+    textMutedColor: LAM_THEME.textMutedColor,
+    textSecondaryAccent: LAM_THEME.textSecondaryAccent,
     textOnPrimary: '#FFFFFF',
     textMainReverse: '#FFFFFF',
-    borderColor: '#E8DEC8',
+    borderColor: LAM_THEME.borderColor,
   },
   {
     id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
@@ -37,18 +44,21 @@ export const PRESET_COMPANIES: Company[] = [
     short_name: 'AXCELIS',
     logo: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=120&auto=format&fit=crop&q=80',
     tagline: 'Ion Implantation Solutions for Semiconductor Fabrication',
-    primaryColor: '#78B654',
-    primaryHover: '#43682F',
-    secondaryColor: '#78B654',
-    accentColor: '#F1A67E',
-    accentTransparent: 'rgba(241, 166, 126, 0.15)',
-    backgroundColor: '#FFFFFF',
-    cardColor: '#FEFADC',
-    sidebarColor: '#F1A67E',
-    sidebarActiveColor: '#E5956D',
-    textColor: '#1C1917',
-    textMutedColor: '#57534E',
-    borderColor: '#E8DEC8',
+    primaryColor: AXCELIS_THEME.primaryColor,
+    primaryHover: AXCELIS_THEME.primaryHover,
+    secondaryColor: AXCELIS_THEME.secondaryColor,
+    accentColor: AXCELIS_THEME.accentColor,
+    accentTransparent: 'rgba(120, 138, 163, 0.15)',
+    backgroundColor: AXCELIS_THEME.backgroundColor,
+    cardColor: AXCELIS_THEME.cardColor,
+    sidebarColor: AXCELIS_THEME.sidebarColor,
+    sidebarActiveColor: AXCELIS_THEME.sidebarActiveColor,
+    textColor: AXCELIS_THEME.textColor,
+    textMutedColor: AXCELIS_THEME.textMutedColor,
+    textSecondaryAccent: AXCELIS_THEME.textSecondaryAccent,
+    textOnPrimary: '#FFFFFF',
+    textMainReverse: '#FFFFFF',
+    borderColor: AXCELIS_THEME.borderColor,
   },
   {
     id: '34d51cd0-fb63-4684-96a3-662477298678',
@@ -59,18 +69,21 @@ export const PRESET_COMPANIES: Company[] = [
     short_name: 'VISHAY',
     logo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&auto=format&fit=crop&q=80',
     tagline: 'Discrete Semiconductors & Passive Electronic Components',
-    primaryColor: '#78B654',
-    primaryHover: '#43682F',
-    secondaryColor: '#78B654',
-    accentColor: '#F1A67E',
-    accentTransparent: 'rgba(241, 166, 126, 0.15)',
-    backgroundColor: '#FFFFFF',
-    cardColor: '#FEFADC',
-    sidebarColor: '#F1A67E',
-    sidebarActiveColor: '#E5956D',
-    textColor: '#1C1917',
-    textMutedColor: '#57534E',
-    borderColor: '#E8DEC8',
+    primaryColor: VISHAY_THEME.primaryColor,
+    primaryHover: VISHAY_THEME.primaryHover,
+    secondaryColor: VISHAY_THEME.secondaryColor,
+    accentColor: VISHAY_THEME.accentColor,
+    accentTransparent: 'rgba(73, 88, 103, 0.15)',
+    backgroundColor: VISHAY_THEME.backgroundColor,
+    cardColor: VISHAY_THEME.cardColor,
+    sidebarColor: VISHAY_THEME.sidebarColor,
+    sidebarActiveColor: VISHAY_THEME.sidebarActiveColor,
+    textColor: VISHAY_THEME.textColor,
+    textMutedColor: VISHAY_THEME.textMutedColor,
+    textSecondaryAccent: VISHAY_THEME.textSecondaryAccent,
+    textOnPrimary: '#FFFFFF',
+    textMainReverse: '#FFFFFF',
+    borderColor: VISHAY_THEME.borderColor,
   },
   {
     id: 'all-data',
@@ -81,21 +94,21 @@ export const PRESET_COMPANIES: Company[] = [
     short_name: 'ALL',
     logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=120&auto=format&fit=crop&q=80',
     tagline: 'Aggregated Semiconductor Field Operations & Workforce Dataset',
-    primaryColor: '#78B654',
-    primaryHover: '#43682F',
-    secondaryColor: '#78B654',
-    accentColor: '#F1A67E',
+    primaryColor: DEFAULT_THEME.primaryColor,
+    primaryHover: DEFAULT_THEME.primaryHover,
+    secondaryColor: DEFAULT_THEME.secondaryColor,
+    accentColor: DEFAULT_THEME.accentColor,
     accentTransparent: 'rgba(241, 166, 126, 0.15)',
-    backgroundColor: '#FFFFFF',
-    cardColor: '#FEFADC',
-    sidebarColor: '#F1A67E',
-    sidebarActiveColor: '#E5956D',
-    textColor: '#1C1917',
-    textMutedColor: '#57534E',
-    textSecondaryAccent: '#78B654',
+    backgroundColor: DEFAULT_THEME.backgroundColor,
+    cardColor: DEFAULT_THEME.cardColor,
+    sidebarColor: DEFAULT_THEME.sidebarColor,
+    sidebarActiveColor: DEFAULT_THEME.sidebarActiveColor,
+    textColor: DEFAULT_THEME.textColor,
+    textMutedColor: DEFAULT_THEME.textMutedColor,
+    textSecondaryAccent: DEFAULT_THEME.textSecondaryAccent,
     textOnPrimary: '#FFFFFF',
     textMainReverse: '#FFFFFF',
-    borderColor: '#E8DEC8',
+    borderColor: DEFAULT_THEME.borderColor,
   },
 ];
 
@@ -113,6 +126,31 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [companies, setCompanies] = useState<Company[]>(PRESET_COMPANIES);
   const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
   const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
+
+  const applyCompanyTheme = (company?: Company | null) => {
+    const theme = getCompanyTheme(company?.company_id || company?.id || company?.name);
+    const root = document.documentElement;
+    root.style.setProperty('--color-primary', theme.primaryColor);
+    root.style.setProperty('--color-primary-hover', theme.primaryHover);
+    root.style.setProperty('--color-secondary', theme.secondaryColor);
+    root.style.setProperty('--color-accent', theme.accentColor);
+    root.style.setProperty('--color-accent-soft', theme.accentSoft);
+    root.style.setProperty('--color-dark-accent', theme.darkAccent);
+    root.style.setProperty('--color-dark-neutral', theme.darkNeutral);
+    root.style.setProperty('--color-bg', theme.backgroundColor);
+    root.style.setProperty('--color-card', theme.cardColor);
+    root.style.setProperty('--color-sidebar', theme.sidebarColor);
+    root.style.setProperty('--color-sidebar-active', theme.sidebarActiveColor);
+    root.style.setProperty('--color-text', theme.textColor);
+    root.style.setProperty('--color-text-primary', theme.textColor);
+    root.style.setProperty('--color-text-secondary', theme.textMutedColor);
+    root.style.setProperty('--color-text-accent', theme.textSecondaryAccent);
+    root.style.setProperty('--color-border', theme.borderColor);
+  };
+
+  useEffect(() => {
+    applyCompanyTheme(currentCompany);
+  }, [currentCompany]);
 
   useEffect(() => {
     const loadCompanies = async () => {
@@ -134,8 +172,10 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
           );
           if (found) {
             setCurrentCompany(found);
+            applyCompanyTheme(found);
           } else {
             setCurrentCompany(combined[0]);
+            applyCompanyTheme(combined[0]);
           }
 
           const savedSelected = localStorage.getItem('ormp_selected_company_ids');
@@ -160,32 +200,6 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const setSelectedCompanyIds = (ids: string[]) => {
     setSelectedCompanyIdsState(ids);
     localStorage.setItem('ormp_selected_company_ids', JSON.stringify(ids));
-  };
-
-  const applyCompanyTheme = (company: Company) => {
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', company.primaryColor);
-    root.style.setProperty('--color-primary-hover', company.primaryHover);
-    root.style.setProperty('--color-secondary', company.secondaryColor);
-    root.style.setProperty('--color-accent', company.accentColor);
-    root.style.setProperty('--color-accent-transparent', company.accentTransparent);
-    root.style.setProperty('--color-bg', company.backgroundColor);
-    root.style.setProperty('--color-card', company.cardColor);
-    root.style.setProperty('--color-sidebar', company.sidebarColor);
-    root.style.setProperty('--color-sidebar-active', company.sidebarActiveColor);
-    root.style.setProperty('--color-text', company.textColor);
-    root.style.setProperty('--color-text-muted', company.textMutedColor);
-    root.style.setProperty('--color-border', company.borderColor);
-
-    if (company.textSecondaryAccent) {
-      root.style.setProperty('--color-text-secondary-accent', company.textSecondaryAccent);
-    }
-    if (company.textOnPrimary) {
-      root.style.setProperty('--color-text-on-primary', company.textOnPrimary);
-    }
-    if (company.textMainReverse) {
-      root.style.setProperty('--color-text-main-reverse', company.textMainReverse);
-    }
   };
 
   const setCompany = (companyId: string) => {
@@ -225,3 +239,4 @@ export const useCompany = () => {
   }
   return context;
 };
+

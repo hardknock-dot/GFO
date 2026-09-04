@@ -23,11 +23,11 @@ export const StatCard: React.FC<StatCardProps> = ({
   onClick,
 }) => {
   const variantStyles = {
-    default: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
-    cream: 'bg-[#FEFADC] border border-[#E8DEC8] text-stone-900',
-    ice: 'bg-[#A8BC8B]/50 border border-[#A8BC8B] text-stone-900',
-    sand: 'bg-[#F6D4BA]/80 border border-[#F6D4BA] text-stone-900',
-    orange: 'bg-[#78B654] text-white border border-[#436730]',
+    default: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
+    cream: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
+    ice: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
+    sand: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
+    orange: 'bg-[var(--color-primary)] text-white border border-[var(--color-primary-hover)]',
   };
 
   const isForest = variant === 'orange';
@@ -54,7 +54,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             ? 'bg-white/20 text-white'
             : isColored
               ? 'bg-black/10 text-stone-900'
-              : 'bg-[#FEFADC] text-[#78B654] border border-[#E8DEC8]'
+              : 'bg-[var(--color-card)] text-[var(--color-primary)] border border-[var(--color-border)]'
             }`}
         >
           {icon}
@@ -63,7 +63,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
       <div className="mt-4 flex items-baseline justify-between">
         <span
-          className={`text-3xl font-extrabold tracking-tight ${isForest ? 'text-white' : 'text-stone-900'
+          className={`text-3xl font-extrabold tracking-tight ${isForest ? 'text-white' : 'text-[var(--color-text-primary)]'
             }`}
         >
           {value}
@@ -75,10 +75,10 @@ export const StatCard: React.FC<StatCardProps> = ({
               : isColored
                 ? 'bg-black/10 text-stone-900'
                 : changeType === 'positive'
-                  ? 'bg-[#A8BC8B]/40 text-[#78B654]'
+                  ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
                   : changeType === 'negative'
                     ? 'bg-rose-100 text-rose-800'
-                    : 'bg-[#F6D4BA] text-stone-800 font-bold'
+                    : 'bg-black/5 text-stone-800 font-bold'
 
               }`}
           >
