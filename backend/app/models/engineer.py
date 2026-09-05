@@ -74,20 +74,20 @@ class Engineer(Base):
     @property
     def country(self) -> str:
         current = self.current_schedule
-        if current and current.country:
-            return current.country
+        if current and current.country and current.country.strip():
+            return current.country.strip()
         return "No Schedule"
 
     @property
     def city(self) -> str:
         current = self.current_schedule
-        if current and current.fab_city:
-            return current.fab_city
+        if current and current.fab_city and current.fab_city.strip():
+            return current.fab_city.strip()
         return "No Schedule"
 
     @property
     def assigned_site(self) -> str:
         current = self.current_schedule
-        if current and current.fab_site:
-            return current.fab_site
+        if current and current.fab_site and current.fab_site.strip():
+            return current.fab_site.strip()
         return "No Schedule"

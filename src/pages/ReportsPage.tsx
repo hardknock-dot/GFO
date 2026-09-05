@@ -76,7 +76,7 @@ export const ReportsPage: React.FC = () => {
       />
 
       {/* Global Filter Bar */}
-      <div className="bg-[#FEFADC] p-5 rounded-2xl border border-[#E8DEC8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[var(--color-card)] p-5 rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4 text-xs">
           {/* Company Filter */}
           {isMainAdmin ? (
@@ -177,25 +177,25 @@ export const ReportsPage: React.FC = () => {
           {activeTab === 'feedback' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
+                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20">
                   <span className="text-xs font-semibold text-stone-500">Total Feedback Items</span>
                   <p className="text-2xl font-bold text-stone-900 mt-1">{reportData.total_feedback ?? reportData.total_feedback_count ?? 0}</p>
                 </div>
-                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
+                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20">
                   <span className="text-xs font-semibold text-stone-500">Positive Feedback</span>
                   <p className="text-2xl font-bold text-[var(--color-primary)] mt-1">{reportData.positive_feedback_count}</p>
                 </div>
-                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
+                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20">
                   <span className="text-xs font-semibold text-stone-500">Negative Feedback</span>
                   <p className="text-2xl font-bold text-rose-600 mt-1">{reportData.negative_feedback_count}</p>
                 </div>
-                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
+                <div className="bg-[var(--color-card)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20">
                   <span className="text-xs font-semibold text-stone-500">Average Rating Score</span>
                   <p className="text-2xl font-bold text-[var(--color-primary)] mt-1">{reportData.average_score} / 5.0</p>
                 </div>
               </div>
 
-              <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] shadow-xs overflow-hidden">
+              <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20 overflow-hidden">
                 <div className="p-4 border-b border-[var(--color-border)] font-bold text-stone-800 text-sm">
                   Customer & Manager Feedback Log
                 </div>

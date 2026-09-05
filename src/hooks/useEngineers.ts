@@ -35,7 +35,7 @@ export const useEngineers = (params?: EngineerQueryParams) => {
     ...params,
     company_id: companyId,
     page: params?.page || 1,
-    pageSize: params?.pageSize || params?.limit || 20,
+    pageSize: params?.pageSize || params?.limit || 100,
   };
 
   const serializedKey = JSON.stringify(fullParams);

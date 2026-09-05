@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useEngineers,
@@ -6,6 +6,10 @@ import {
   useUpdateEngineer,
   useDeleteEngineer,
 } from '../hooks/useEngineers';
+import {
+  getEngineerFilterOptions,
+  type EngineerFilterOptions,
+} from '../services/engineers';
 import {
   useEngineerDeletionRequests,
   useRequestEngineerDeletion,
@@ -16,7 +20,7 @@ import type { Engineer } from '../types';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
 import type { Column } from '../components/common/Table';
-import { GlobalSearch } from '../components/common/GlobalSearch';
+import { SearchableMultiSelect } from '../components/forms/SearchableMultiSelect';
 import { Dropdown } from '../components/forms/Dropdown';
 import { Button } from '../components/forms/Button';
 import { TextInput } from '../components/forms/TextInput';
@@ -24,7 +28,22 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, User, Eye, MapPin, Wrench, Edit, Trash2, Building2, ShieldAlert, Check, X } from 'lucide-react';
+import {
+  UserPlus,
+  User,
+  MapPin,
+  Wrench,
+  Edit,
+  Trash2,
+  Building2,
+  ShieldAlert,
+  Check,
+  X,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
+  RotateCcw,
+} from 'lucide-react';
 
 export const EngineersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,19 +63,38 @@ export const EngineersPage: React.FC = () => {
   const approveDeletionMutation = useApproveEngineerDeletionRequest();
   const rejectDeletionMutation = useRejectEngineerDeletionRequest();
 
-  // Search & Filter & Pagination state
+  // Dynamic filter options metadata state
+  const [filterOptions, setFilterOptions] = useState<EngineerFilterOptions>({
+    tool_modules: [],
+    tool_names: [],
+    countries: [],
+    fabs: [],
+    consumer_experience: { min: 0, max: 20 },
+    industry_experience: { min: 0, max: 20 },
+  });
+
+  // Search & Filter state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
+  const [customerMin, setCustomerMin] = useState<number | null>(null);
+  const [customerMax, setCustomerMax] = useState<number | null>(null);
+  const [industryMin, setIndustryMin] = useState<number | null>(null);
+  const [industryMax, setIndustryMax] = useState<number | null>(null);
+  const [toolModules, setToolModules] = useState<string[]>([]);
+  const [toolNames, setToolNames] = useState<string[]>([]);
+  const [fabs, setFabs] = useState<string[]>([]);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // Pagination state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(100);
 
   // Modals state
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
-
 
   // Form state
   const [formData, setFormData] = useState({
@@ -78,16 +116,123 @@ export const EngineersPage: React.FC = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Load filter options metadata when company changes
+  useEffect(() => {
+    let isMounted = true;
+    getEngineerFilterOptions(companyId)
+      .then((res) => {
+        if (isMounted && res) {
+          const custExp = res.customer_experience || res.consumer_experience || { min: 0, max: 20 };
+          setFilterOptions({
+            tool_modules: res.tool_modules || [],
+            tool_names: res.tool_names || [],
+            countries: res.countries || [],
+            fabs: res.fabs || [],
+            consumer_experience: custExp,
+            customer_experience: custExp,
+            industry_experience: res.industry_experience || { min: 0, max: 20 },
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load engineer filter options:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [companyId]);
+
+  // Range Slider bounds with fallback
+  const expBounds = useMemo(() => {
+    const custOpt = filterOptions?.customer_experience || filterOptions?.consumer_experience;
+    const indOpt = filterOptions?.industry_experience;
+    return {
+      customerMin: custOpt?.min ?? 0,
+      customerMax: Math.max(custOpt?.max ?? 20, 1),
+      industryMin: indOpt?.min ?? 0,
+      industryMax: Math.max(indOpt?.max ?? 20, 1),
+    };
+  }, [filterOptions]);
+
+  const currentCustomerMin = customerMin !== null ? customerMin : expBounds.customerMin;
+  const currentCustomerMax = customerMax !== null ? customerMax : expBounds.customerMax;
+  const currentIndustryMin = industryMin !== null ? industryMin : expBounds.industryMin;
+  const currentIndustryMax = industryMax !== null ? industryMax : expBounds.industryMax;
+
+  // Active filters count
+  const activeFiltersCount =
+    (search.trim() ? 1 : 0) +
+    (statusFilter !== 'All' ? 1 : 0) +
+    (countryFilter !== 'All' && countryFilter !== '' ? 1 : 0) +
+    (customerMin !== null || customerMax !== null ? 1 : 0) +
+    (industryMin !== null || industryMax !== null ? 1 : 0) +
+    (toolModules.length > 0 ? 1 : 0) +
+    (toolNames.length > 0 ? 1 : 0) +
+    (fabs.length > 0 ? 1 : 0);
+
+  // Clear all filters action
+  const handleClearFilters = () => {
+    setSearch('');
+    setStatusFilter('All');
+    setCountryFilter('All');
+    setCustomerMin(null);
+    setCustomerMax(null);
+    setIndustryMin(null);
+    setIndustryMax(null);
+    setToolModules([]);
+    setToolNames([]);
+    setFabs([]);
+    setPage(1);
+  };
+
+  // React Query fetch for server-side paginated engineers
   const { data: res, isLoading, isError, refetch } = useEngineers({
-    search,
+    search: search.trim() || undefined,
+    q: search.trim() || undefined,
     status: statusFilter !== 'All' ? statusFilter : undefined,
-    country: countryFilter !== 'All' ? countryFilter : undefined,
+    country: countryFilter !== 'All' && countryFilter !== '' ? countryFilter : undefined,
+    consumer_min: customerMin !== null ? customerMin : undefined,
+    consumer_max: customerMax !== null ? customerMax : undefined,
+    customer_min: customerMin !== null ? customerMin : undefined,
+    customer_max: customerMax !== null ? customerMax : undefined,
+    industry_min: industryMin !== null ? industryMin : undefined,
+    industry_max: industryMax !== null ? industryMax : undefined,
+    tool_modules: toolModules.length > 0 ? toolModules : undefined,
+    tool_names: toolNames.length > 0 ? toolNames : undefined,
+    fabs: fabs.length > 0 ? fabs : undefined,
     page,
     limit: pageSize,
+    pageSize,
   });
 
-  const engineers = res?.data || [];
-  const totalItems = res?.total || 0;
+  // Display engineers directly from server response to maintain precise database-level filtering and pagination
+  const filteredEngineers = res?.data || [];
+
+  // Derived available countries list from metadata + loaded data
+  const availableCountries = useMemo(() => {
+    const set = new Set<string>();
+    (filterOptions.countries || []).forEach((c) => {
+      if (c && c.trim() && c.trim().toLowerCase() !== 'all') {
+        set.add(c.trim());
+      }
+    });
+    (res?.data || []).forEach((e) => {
+      if (e.country && e.country.trim() && e.country.trim().toLowerCase() !== 'all') {
+        set.add(e.country.trim());
+      }
+    });
+    set.add('No Schedule');
+    const list = Array.from(set).sort((a, b) => {
+      if (a === 'No Schedule') return 1;
+      if (b === 'No Schedule') return -1;
+      return a.localeCompare(b);
+    });
+    return list.length > 0
+      ? list
+      : ['Taiwan', 'USA', 'Japan', 'India', 'Ireland', 'Chiayi', 'Arizona', 'No Schedule'];
+  }, [filterOptions.countries, res?.data]);
+
+  const totalItems = res?.total !== undefined ? res.total : filteredEngineers.length;
   const totalPages = res?.totalPages || 1;
 
   const handleOpenAddModal = () => {
@@ -396,14 +541,6 @@ export const EngineersPage: React.FC = () => {
         const pendingReq = deletionRequests.find((r) => r.engineerId === item.id && r.status === 'PENDING');
         return (
           <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate(`/engineers/${item.id}`)}
-              icon={<Eye className="w-3.5 h-3.5 text-[var(--color-secondary)]" />}
-            >
-              View Profile
-            </Button>
             {canEdit && (
               <>
                 <Button
@@ -502,44 +639,339 @@ export const EngineersPage: React.FC = () => {
         }
       />
 
-      {/* Control Bar: Global Search & Dropdown Filters */}
-      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <GlobalSearch onSearch={(q) => { setSearch(q); setPage(1); }} placeholder="Search by name, Orbit ID, tool chamber, or country..." />
-
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="w-full sm:w-36">
-            <Dropdown
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training']}
+      {/* Search Bar & Quick Filters Control Bar */}
+      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          {/* Primary Upgraded Search Input */}
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by name, Orbit ID, company ID, goes by..."
+              className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <div className="w-full sm:w-36">
-            <Dropdown
-              value={countryFilter}
-              onChange={(e) => { setCountryFilter(e.target.value); setPage(1); }}
-              options={['All', 'United States', 'Germany', 'Japan', 'Taiwan', 'Italy']}
-            />
+
+          {/* Controls: Status Dropdown & Toggle Filters Button */}
+          <div className="flex items-center space-x-2.5 w-full md:w-auto justify-end">
+            <div className="w-36">
+              <Dropdown
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training']}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                isFilterPanelOpen || activeFiltersCount > 0
+                  ? 'bg-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-accent)]/30 font-bold shadow-2xs'
+                  : 'bg-[#C1121F] text-white border-[#C1121F] hover:bg-[#a80f1b] shadow-xs'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFilterPanelOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {activeFiltersCount > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleClearFilters}
+                icon={<RotateCcw className="w-3.5 h-3.5" />}
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Collapsible Advanced Search / Filters Panel */}
+        {isFilterPanelOpen && (
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center space-x-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                <span>Advanced Search & Filters</span>
+              </h4>
+              <div className="flex items-center space-x-2">
+                {activeFiltersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              {/* 1. Customer Experience Range Slider */}
+              <div className="space-y-2 p-3 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Customer Experience
+                  </span>
+                  <span className="font-bold text-[var(--color-accent)] px-2 py-0.5 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20">
+                    {currentCustomerMin} – {currentCustomerMax} Yrs
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400">Min: {currentCustomerMin} Yrs</span>
+                    <input
+                      type="range"
+                      min={expBounds.customerMin}
+                      max={expBounds.customerMax}
+                      value={currentCustomerMin}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCustomerMin(val);
+                        if (currentCustomerMax < val) {
+                          setCustomerMax(val);
+                        }
+                        setPage(1);
+                      }}
+                      className="w-full accent-[var(--color-accent)] cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400">Max: {currentCustomerMax} Yrs</span>
+                    <input
+                      type="range"
+                      min={expBounds.customerMin}
+                      max={expBounds.customerMax}
+                      value={currentCustomerMax}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCustomerMax(val);
+                        if (currentCustomerMin > val) {
+                          setCustomerMin(val);
+                        }
+                        setPage(1);
+                      }}
+                      className="w-full accent-[var(--color-accent)] cursor-pointer"
+                    />
+                  </div>
+                </div>
+                {(customerMin !== null || customerMax !== null) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerMin(null);
+                      setCustomerMax(null);
+                      setPage(1);
+                    }}
+                    className="text-[11px] text-[var(--color-accent)] hover:underline cursor-pointer font-medium"
+                  >
+                    Reset Customer Range
+                  </button>
+                )}
+              </div>
+
+              {/* 2. Industry Experience Range Slider */}
+              <div className="space-y-2 p-3 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Industry Experience
+                  </span>
+                  <span className="font-bold text-[var(--color-accent)] px-2 py-0.5 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20">
+                    {currentIndustryMin} – {currentIndustryMax} Yrs
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400">Min: {currentIndustryMin} Yrs</span>
+                    <input
+                      type="range"
+                      min={expBounds.industryMin}
+                      max={expBounds.industryMax}
+                      value={currentIndustryMin}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setIndustryMin(val);
+                        if (currentIndustryMax < val) {
+                          setIndustryMax(val);
+                        }
+                        setPage(1);
+                      }}
+                      className="w-full accent-[var(--color-accent)] cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400">Max: {currentIndustryMax} Yrs</span>
+                    <input
+                      type="range"
+                      min={expBounds.industryMin}
+                      max={expBounds.industryMax}
+                      value={currentIndustryMax}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setIndustryMax(val);
+                        if (currentIndustryMin > val) {
+                          setIndustryMin(val);
+                        }
+                        setPage(1);
+                      }}
+                      className="w-full accent-[var(--color-accent)] cursor-pointer"
+                    />
+                  </div>
+                </div>
+                {(industryMin !== null || industryMax !== null) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIndustryMin(null);
+                      setIndustryMax(null);
+                      setPage(1);
+                    }}
+                    className="text-[11px] text-[var(--color-accent)] hover:underline cursor-pointer font-medium"
+                  >
+                    Reset Industry Range
+                  </button>
+                )}
+              </div>
+
+              {/* 3. Tool Module Searchable Multi-Select */}
+              <div>
+                <SearchableMultiSelect
+                  label="Tool Module"
+                  placeholder="Search tool modules..."
+                  options={filterOptions.tool_modules}
+                  selectedValues={toolModules}
+                  onChange={(selected) => {
+                    setToolModules(selected);
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              {/* 4. Tool Name Searchable Multi-Select */}
+              <div>
+                <SearchableMultiSelect
+                  label="Tool Name"
+                  placeholder="Search skill tool types..."
+                  options={filterOptions.tool_names}
+                  selectedValues={toolNames}
+                  onChange={(selected) => {
+                    setToolNames(selected);
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              {/* 5. Current Country Select */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+                  Current Country {countryFilter && countryFilter !== 'All' && <span className="text-[var(--color-accent)] font-bold">(1)</span>}
+                </label>
+                <select
+                  value={countryFilter}
+                  onChange={(e) => {
+                    setCountryFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                >
+                  <option value="All">All Countries</option>
+                  {availableCountries.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 6. Current Fab Searchable Multi-Select */}
+              <div>
+                <SearchableMultiSelect
+                  label="Current Fab"
+                  placeholder="Search customer fab sites..."
+                  options={filterOptions.fabs}
+                  selectedValues={fabs}
+                  onChange={(selected) => {
+                    setFabs(selected);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Panel Bottom Action Bar */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500">
+                Showing <strong className="text-slate-900 dark:text-white">{totalItems}</strong> matching engineers
+              </span>
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  disabled={activeFiltersCount === 0}
+                >
+                  Clear Filters
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setIsFilterPanelOpen(false)}
+                >
+                  Apply & Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Enterprise Data Table */}
       <Table
         columns={columns}
-        data={engineers}
+        data={filteredEngineers}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
         onRowClick={(item) => navigate(`/engineers/${item.id}`)}
         emptyTitle="No Engineers Found"
         emptyDescription="No field engineer records match your current filter parameters."
+        hidePagination={true}
       />
 
       {/* Pagination Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm">
         <div className="text-xs text-slate-500 dark:text-slate-400">
-          Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{engineers.length > 0 ? (page - 1) * pageSize + 1 : 0}</span> to <span className="font-semibold text-slate-700 dark:text-slate-200">{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</span> engineers
+          Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{filteredEngineers.length > 0 ? (page - 1) * pageSize + 1 : 0}</span> to <span className="font-semibold text-slate-700 dark:text-slate-200">{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</span> engineers
         </div>
 
         <div className="flex items-center space-x-3">

@@ -43,10 +43,10 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
 
   // Filter schedules returned by commentAdressal=false query for valid non-empty remarks and matching engineerId if provided
   const pendingComments = (scheduleRes?.data || []).filter(
-    (s) => s.remarks && 
-           s.remarks.trim().length > 0 && 
-           s.remarks !== 'None' && 
-           (!engineerId || String(s.engineerId) === String(engineerId))
+    (s) => s.remarks &&
+      s.remarks.trim().length > 0 &&
+      s.remarks !== 'None' &&
+      (!engineerId || String(s.engineerId) === String(engineerId))
   );
 
   // Modal / Selected Comment State
@@ -69,7 +69,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
   };
 
   return (
-    <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-xs space-y-4 relative">
+    <div className="p-5 bg-[#FEFADC] border border-[#E8DEC8] rounded-2xl shadow-md shadow-black/20 space-y-4 relative">
       {toastMessage && (
         <div className="flex items-center justify-between px-3.5 py-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center space-x-2">
@@ -141,7 +141,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
                       <Building2 className="w-3.5 h-3.5 text-stone-400 inline" />
                       <span>{sch.supportType || 'Assignment'}</span>
                     </span>
-                    
+
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded border flex items-center space-x-1 bg-amber-100 text-amber-900 border-amber-300">
                       <Clock className="w-2.5 h-2.5 inline mr-1 text-amber-600" />
                       <span>Pending Addressal</span>

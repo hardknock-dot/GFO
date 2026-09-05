@@ -23,6 +23,7 @@ interface TableProps<T> {
   emptyDescription?: string;
   onRowClick?: (item: T) => void;
   pageSize?: number;
+  hidePagination?: boolean;
   rowClassName?: (item: T) => string;
 }
 
@@ -36,6 +37,7 @@ export function Table<T extends { id?: string | number }>({
   emptyDescription = 'There are no entries available for display in this view.',
   onRowClick,
   pageSize = 10,
+  hidePagination = false,
   rowClassName,
 }: TableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function Table<T extends { id?: string | number }>({
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
+  const paginatedData = hidePagination ? sortedData : sortedData.slice(startIndex, startIndex + pageSize);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -82,11 +84,11 @@ export function Table<T extends { id?: string | number }>({
   }
 
   return (
-    <div className="w-full bg-[#FEFADC] border border-[#E8DEC8] rounded-xl shadow-xs overflow-hidden">
+    <div className="w-full bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-md shadow-black/20 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="bg-white/60 border-b border-[#E8DEC8] text-xs font-semibold text-stone-600 uppercase tracking-wider">
+            <tr className="bg-white/50 border-b border-[var(--color-border)] text-xs font-semibold text-stone-600 uppercase tracking-wider">
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -117,14 +119,14 @@ export function Table<T extends { id?: string | number }>({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-[#E8DEC8]/60 text-stone-700">
+          <tbody className="divide-y divide-[var(--color-border)]/60 text-stone-700">
             {paginatedData.map((item, idx) => {
               const customClass = rowClassName ? rowClassName(item) : '';
               return (
                 <tr
                   key={item.id ?? idx}
                   onClick={() => onRowClick && onRowClick(item)}
-                  className={`transition-colors duration-150 ${customClass || (onRowClick ? 'hover:bg-[#FEFADC]/40' : 'hover:bg-[#FEFADC]/20')} ${onRowClick ? 'cursor-pointer' : ''} ${customClass}`}
+                  className={`transition-colors duration-150 ${customClass || (onRowClick ? 'hover:bg-white/40' : 'hover:bg-white/20')} ${onRowClick ? 'cursor-pointer' : ''} ${customClass}`}
                 >
                 {columns.map((col) => (
                   <td
@@ -144,35 +146,37 @@ export function Table<T extends { id?: string | number }>({
       </div>
 
       {/* Enterprise Pagination Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-[#E8DEC8] bg-[#FEFADC]/30 text-xs text-stone-500">
-        <div className="text-center sm:text-left">
-          Showing <span className="font-semibold text-stone-800">{startIndex + 1}</span> to{' '}
-          <span className="font-semibold text-stone-800">
-            {Math.min(startIndex + pageSize, sortedData.length)}
-          </span>{' '}
-          of <span className="font-semibold text-stone-800">{sortedData.length}</span> results
-        </div>
+      {!hidePagination && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-[var(--color-border)] bg-black/5 text-xs text-stone-500">
+          <div className="text-center sm:text-left">
+            Showing <span className="font-semibold text-stone-800">{startIndex + 1}</span> to{' '}
+            <span className="font-semibold text-stone-800">
+              {Math.min(startIndex + pageSize, sortedData.length)}
+            </span>{' '}
+            of <span className="font-semibold text-stone-800">{sortedData.length}</span> results
+          </div>
 
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded-lg border border-[#E8DEC8] bg-white hover:bg-[#FEFADC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="px-2 font-medium text-stone-700">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-1.5 rounded-lg border border-[#E8DEC8] bg-white hover:bg-[#FEFADC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-card)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-2 font-medium text-stone-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-card)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

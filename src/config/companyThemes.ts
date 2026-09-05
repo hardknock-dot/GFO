@@ -12,30 +12,54 @@ export interface CompanyTheme {
   cardColor: string;
   sidebarColor: string;
   sidebarActiveColor: string;
+  sidebarTextColor: string;
+  sidebarTextMuted: string;
+  sidebarBorderColor: string;
+  sidebarHoverColor: string;
   textColor: string;
   textMutedColor: string;
   textSecondaryAccent: string;
   borderColor: string;
+  statCard1Bg: string;
+  statCard1Text: string;
+  statCard2Bg: string;
+  statCard2Text: string;
+  statCard3Bg: string;
+  statCard3Text: string;
+  statCard4Bg: string;
+  statCard4Text: string;
 }
 
 export const DEFAULT_THEME: CompanyTheme = {
   id: 'default',
   name: 'Default Theme',
-  primaryColor: '#78B654',
-  primaryHover: '#43682F',
-  secondaryColor: '#78B654',
-  accentColor: '#F1A67E',
-  accentSoft: '#F6D4BA',
-  darkAccent: '#43682F',
-  darkNeutral: '#1C1917',
-  backgroundColor: '#FFFFFF',
-  cardColor: '#FEFADC',
-  sidebarColor: '#F1A67E',
-  sidebarActiveColor: '#E5956D',
-  textColor: '#1C1917',
-  textMutedColor: '#57534E',
-  textSecondaryAccent: '#78B654',
-  borderColor: '#E8DEC8',
+  primaryColor: '#606C38',
+  primaryHover: '#283618',
+  secondaryColor: '#606C38',
+  accentColor: '#DDA15E',
+  accentSoft: '#FEFAE0',
+  darkAccent: '#BC6C25',
+  darkNeutral: '#283618',
+  backgroundColor: '#F4F5F7',
+  cardColor: '#FEFAE0',
+  sidebarColor: '#283618',
+  sidebarActiveColor: 'rgba(255, 255, 255, 0.15)',
+  sidebarTextColor: '#FFFFFF',
+  sidebarTextMuted: 'rgba(255, 255, 255, 0.75)',
+  sidebarBorderColor: 'rgba(255, 255, 255, 0.12)',
+  sidebarHoverColor: 'rgba(255, 255, 255, 0.08)',
+  textColor: '#283618',
+  textMutedColor: '#5C6352',
+  textSecondaryAccent: '#606C38',
+  borderColor: '#E6E2C8',
+  statCard1Bg: '#FEFAE0',
+  statCard1Text: '#283618',
+  statCard2Bg: '#606C38',
+  statCard2Text: '#FFFFFF',
+  statCard3Bg: '#DDA15E',
+  statCard3Text: '#283618',
+  statCard4Bg: '#BC6C25',
+  statCard4Text: '#FFFFFF',
 };
 
 export const LAM_THEME: CompanyTheme = {
@@ -48,34 +72,58 @@ export const LAM_THEME: CompanyTheme = {
   accentSoft: '#FDEDEE',
   darkAccent: '#741B21',
   darkNeutral: '#2B3D41',
-  backgroundColor: '#FFFFFF',
+  backgroundColor: '#F4F5F7',
   cardColor: '#FDEDEE',
-  sidebarColor: '#8DA7BE',
-  sidebarActiveColor: '#7794AC',
+  sidebarColor: '#FDEDEE',
+  sidebarActiveColor: 'rgba(43, 61, 65, 0.12)',
+  sidebarTextColor: '#2B3D41',
+  sidebarTextMuted: 'rgba(43, 61, 65, 0.7)',
+  sidebarBorderColor: 'rgba(43, 61, 65, 0.12)',
+  sidebarHoverColor: 'rgba(43, 61, 65, 0.06)',
   textColor: '#2B3D41',
   textMutedColor: '#57534E',
   textSecondaryAccent: '#C1121F',
-  borderColor: '#D4DFE8',
+  borderColor: '#F0D6D8',
+  statCard1Bg: '#8DA7BE',
+  statCard1Text: '#FFFFFF',
+  statCard2Bg: '#C1121F',
+  statCard2Text: '#FFFFFF',
+  statCard3Bg: '#741B21',
+  statCard3Text: '#FFFFFF',
+  statCard4Bg: '#2B3D41',
+  statCard4Text: '#FFFFFF',
 };
 
 export const AXCELIS_THEME: CompanyTheme = {
   id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
   name: 'Axcelis Technologies',
-  primaryColor: '#788AA3',
-  primaryHover: '#741B21',
-  secondaryColor: '#949D6A',
-  accentColor: '#788AA3',
-  accentSoft: '#FDEDEE',
-  darkAccent: '#741B21',
-  darkNeutral: '#2B3D41',
-  backgroundColor: '#FFFFFF',
-  cardColor: '#FDEDEE',
-  sidebarColor: '#949D6A',
-  sidebarActiveColor: '#818A57',
-  textColor: '#2B3D41',
-  textMutedColor: '#57534E',
-  textSecondaryAccent: '#788AA3',
-  borderColor: '#DDE2D3',
+  primaryColor: '#E26D5C',
+  primaryHover: '#723D46',
+  secondaryColor: '#C9CBA3',
+  accentColor: '#E26D5C',
+  accentSoft: '#FFE1A8',
+  darkAccent: '#723D46',
+  darkNeutral: '#472D30',
+  backgroundColor: '#F4F5F7',
+  cardColor: '#FFE1A8',
+  sidebarColor: '#472D30',
+  sidebarActiveColor: 'rgba(255, 255, 255, 0.15)',
+  sidebarTextColor: '#FFFFFF',
+  sidebarTextMuted: 'rgba(255, 255, 255, 0.75)',
+  sidebarBorderColor: 'rgba(255, 255, 255, 0.12)',
+  sidebarHoverColor: 'rgba(255, 255, 255, 0.08)',
+  textColor: '#472D30',
+  textMutedColor: '#723D46',
+  textSecondaryAccent: '#E26D5C',
+  borderColor: '#E8D4B0',
+  statCard1Bg: '#C9CBA3',
+  statCard1Text: '#472D30',
+  statCard2Bg: '#E26D5C',
+  statCard2Text: '#FFFFFF',
+  statCard3Bg: '#723D46',
+  statCard3Text: '#FFFFFF',
+  statCard4Bg: '#472D30',
+  statCard4Text: '#FFFFFF',
 };
 
 export const VISHAY_THEME: CompanyTheme = {
@@ -88,14 +136,26 @@ export const VISHAY_THEME: CompanyTheme = {
   accentSoft: '#E3D7FF',
   darkAccent: '#741B21',
   darkNeutral: '#2B3D41',
-  backgroundColor: '#FFFFFF',
+  backgroundColor: '#F4F5F7',
   cardColor: '#E3D7FF',
-  sidebarColor: '#899D78',
-  sidebarActiveColor: '#778B66',
+  sidebarColor: '#2B3D41',
+  sidebarActiveColor: '#3E5358',
+  sidebarTextColor: '#FFFFFF',
+  sidebarTextMuted: 'rgba(255, 255, 255, 0.75)',
+  sidebarBorderColor: 'rgba(255, 255, 255, 0.12)',
+  sidebarHoverColor: 'rgba(255, 255, 255, 0.08)',
   textColor: '#2B3D41',
   textMutedColor: '#57534E',
   textSecondaryAccent: '#495867',
-  borderColor: '#D2DCD0',
+  borderColor: '#D8CEEE',
+  statCard1Bg: '#E3D7FF',
+  statCard1Text: '#2B3D41',
+  statCard2Bg: '#899D78',
+  statCard2Text: '#FFFFFF',
+  statCard3Bg: '#495867',
+  statCard3Text: '#FFFFFF',
+  statCard4Bg: '#741B21',
+  statCard4Text: '#FFFFFF',
 };
 
 export const COMPANY_THEMES: Record<string, CompanyTheme> = {

@@ -81,26 +81,26 @@ export const DeleteRequestsPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800">
+            <div className="p-2.5 rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-primary)] border border-[var(--color-border)]">
               <CheckSquare className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">Delete Request Governance</h1>
-              <p className="text-xs text-slate-500">Manager & Admin Deletion Request Approval Queue</p>
+              <h1 className="text-xl font-bold text-stone-900">Delete Request Governance</h1>
+              <p className="text-xs text-stone-500">Manager & Admin Deletion Request Approval Queue</p>
             </div>
           </div>
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+        <div className="flex items-center space-x-1.5 bg-[var(--color-card)] p-1 rounded-xl border border-[var(--color-border)] shadow-xs">
           {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 statusFilter === st
-                  ? 'bg-white text-slate-800 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                  ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-black/5'
               }`}
             >
               {st}
@@ -124,21 +124,21 @@ export const DeleteRequestsPage: React.FC = () => {
 
       {/* Search Bar */}
       <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search requests by entity, requester, reason..."
-          className="w-full pl-10 pr-4 py-2.5 text-xs bg-white rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+          className="w-full pl-10 pr-4 py-2.5 text-xs bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] shadow-xs"
         />
       </div>
 
       {/* Requests Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] shadow-md shadow-black/20 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-white/50 text-stone-600 font-semibold border-b border-[var(--color-border)]">
               <tr>
                 <th className="px-5 py-3.5">Entity / Record</th>
                 <th className="px-5 py-3.5">Requester</th>
@@ -149,32 +149,32 @@ export const DeleteRequestsPage: React.FC = () => {
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-[var(--color-border)]/60 text-stone-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-5 py-8 text-center text-stone-400">
                     Loading delete requests...
                   </td>
                 </tr>
               ) : filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-5 py-8 text-center text-stone-400">
                     No delete requests found matching the current filter.
                   </td>
                 </tr>
               ) : (
                 filteredRequests.map((req) => (
-                  <tr key={req.request_id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={req.request_id} className="hover:bg-white/40 transition-colors">
                     <td className="px-5 py-4">
-                      <div className="font-bold text-slate-800">{req.entity_name}</div>
-                      <div className="text-[10px] font-mono text-slate-400 uppercase mt-0.5">
+                      <div className="font-bold text-stone-900">{req.entity_name}</div>
+                      <div className="text-[10px] font-mono text-stone-400 uppercase mt-0.5">
                         {req.entity_type}
                       </div>
                     </td>
-                    <td className="px-5 py-4 font-medium text-slate-700">{req.requested_by_name}</td>
-                    <td className="px-5 py-4 text-slate-600">{req.company_name}</td>
+                    <td className="px-5 py-4 font-medium text-stone-800">{req.requested_by_name}</td>
+                    <td className="px-5 py-4 text-stone-600">{req.company_name}</td>
                     <td className="px-5 py-4 max-w-xs">
-                      <p className="text-slate-600 truncate" title={req.reason}>
+                      <p className="text-stone-600 truncate" title={req.reason}>
                         {req.reason}
                       </p>
                       {req.review_comment && (
@@ -185,28 +185,26 @@ export const DeleteRequestsPage: React.FC = () => {
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          req.status === 'PENDING'
-                            ? 'bg-amber-100 text-amber-800'
-                            : req.status === 'APPROVED'
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          req.status === 'APPROVED'
                             ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-rose-100 text-rose-800'
+                            : req.status === 'REJECTED'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {req.status === 'PENDING' && <Clock className="w-3 h-3" />}
-                        {req.status === 'APPROVED' && <CheckCircle2 className="w-3 h-3" />}
-                        {req.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                        <span>{req.status}</span>
+                        {req.status === 'APPROVED' ? (
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                        ) : req.status === 'REJECTED' ? (
+                          <XCircle className="w-3 h-3 mr-1" />
+                        ) : (
+                          <Clock className="w-3 h-3 mr-1" />
+                        )}
+                        {req.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-500 font-mono text-[11px]">
-                      {new Date(req.created_at).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <td className="px-5 py-4 text-stone-500 font-mono text-[11px]">
+                      {new Date(req.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-4 text-right">
                       {req.status === 'PENDING' ? (
@@ -214,7 +212,7 @@ export const DeleteRequestsPage: React.FC = () => {
                           <button
                             onClick={() => handleApprove(req.request_id)}
                             disabled={actionLoading}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs transition-all shadow-xs"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs transition-all shadow-2xs"
                           >
                             Approve
                           </button>
@@ -227,7 +225,7 @@ export const DeleteRequestsPage: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-slate-400 text-[11px] italic">
+                        <span className="text-stone-400 text-[11px] italic">
                           Reviewed by {req.reviewed_by_name || 'Admin'}
                         </span>
                       )}
@@ -243,19 +241,19 @@ export const DeleteRequestsPage: React.FC = () => {
       {/* Reject Modal */}
       {rejectingReqId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-rose-50 flex items-center justify-between">
+          <div className="bg-[var(--color-card)] rounded-2xl shadow-2xl max-w-md w-full border border-[var(--color-border)] overflow-hidden">
+            <div className="px-6 py-4 border-b border-[var(--color-border)] bg-rose-50/80 flex items-center justify-between">
               <h3 className="text-sm font-bold text-rose-800">Reject Delete Request</h3>
               <button
                 onClick={() => setRejectingReqId(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-stone-400 hover:text-stone-600"
               >
                 &times;
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-stone-700 mb-1.5">
                   Rejection Comment <span className="text-rose-500">*</span>
                 </label>
                 <textarea
@@ -263,14 +261,14 @@ export const DeleteRequestsPage: React.FC = () => {
                   onChange={(e) => setRejectComment(e.target.value)}
                   placeholder="Explain why this request is being rejected..."
                   rows={3}
-                  className="w-full text-xs rounded-xl border border-slate-200 px-3.5 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full text-xs rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2 text-stone-800 placeholder-stone-400 focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
 
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setRejectingReqId(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-black/5 rounded-xl"
                 >
                   Cancel
                 </button>

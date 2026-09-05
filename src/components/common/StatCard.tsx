@@ -17,21 +17,37 @@ export const StatCard: React.FC<StatCardProps> = ({
   value,
   subtitle,
   change,
-  changeType = 'positive',
   icon,
   variant = 'default',
   onClick,
 }) => {
-  const variantStyles = {
-    default: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
-    cream: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
-    ice: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
-    sand: 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)]',
-    orange: 'bg-[var(--color-primary)] text-white border border-[var(--color-primary-hover)]',
+  const variantConfig = {
+    cream: {
+      bg: 'bg-[var(--color-stat-1-bg)]',
+      textColor: 'text-[var(--color-stat-1-text)]',
+      border: 'border-transparent',
+    },
+    ice: {
+      bg: 'bg-[var(--color-stat-2-bg)]',
+      textColor: 'text-[var(--color-stat-2-text)]',
+      border: 'border-transparent',
+    },
+    sand: {
+      bg: 'bg-[var(--color-stat-3-bg)]',
+      textColor: 'text-[var(--color-stat-3-text)]',
+      border: 'border-transparent',
+    },
+    orange: {
+      bg: 'bg-[var(--color-stat-4-bg)]',
+      textColor: 'text-[var(--color-stat-4-text)]',
+      border: 'border-transparent',
+    },
+    default: {
+      bg: 'bg-[var(--color-card)]',
+      textColor: 'text-[var(--color-text-primary)]',
+      border: 'border-[var(--color-border)]',
+    },
   };
-
-  const isForest = variant === 'orange';
-  const isColored = variant !== 'default' && variant !== 'cream';
 
   return (
     <motion.div
@@ -39,59 +55,32 @@ export const StatCard: React.FC<StatCardProps> = ({
       whileTap={{ scale: 0.99 }}
       transition={{ duration: 0.15 }}
       onClick={onClick}
-      className={`p-5 rounded-2xl transition-all duration-150 relative overflow-hidden group ${onClick ? 'cursor-pointer hover:shadow-lg' : ''
-        } ${variantStyles[variant]}`}
+      className={`p-5 rounded-2xl transition-all duration-150 relative overflow-hidden group shadow-md shadow-black/20 hover:shadow-lg hover:shadow-black/25 ${onClick ? 'cursor-pointer' : ''
+        } ${variantConfig[variant]?.bg || 'bg-[var(--color-card)]'} ${variantConfig[variant]?.textColor || 'text-[var(--color-text-primary)]'
+        } border ${variantConfig[variant]?.border || 'border-transparent'}`}
     >
       <div className="flex items-center justify-between">
-        <span
-          className={`text-xs font-semibold uppercase tracking-wider ${isForest ? 'text-white/90' : 'text-stone-700'
-            }`}
-        >
+        <span className="text-xs font-semibold uppercase tracking-wider opacity-90">
           {title}
         </span>
-        <div
-          className={`p-2.5 rounded-xl ${isForest
-            ? 'bg-white/20 text-white'
-            : isColored
-              ? 'bg-black/10 text-stone-900'
-              : 'bg-[var(--color-card)] text-[var(--color-primary)] border border-[var(--color-border)]'
-            }`}
-        >
+        <div className="p-2.5 rounded-xl bg-white/20 border border-white/15 backdrop-blur-xs flex items-center justify-center">
           {icon}
         </div>
       </div>
 
       <div className="mt-4 flex items-baseline justify-between">
-        <span
-          className={`text-3xl font-extrabold tracking-tight ${isForest ? 'text-white' : 'text-[var(--color-text-primary)]'
-            }`}
-        >
+        <span className="text-3xl font-extrabold tracking-tight">
           {value}
         </span>
         {change && (
-          <span
-            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${isForest
-              ? 'bg-white/20 text-white'
-              : isColored
-                ? 'bg-black/10 text-stone-900'
-                : changeType === 'positive'
-                  ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
-                  : changeType === 'negative'
-                    ? 'bg-rose-100 text-rose-800'
-                    : 'bg-black/5 text-stone-800 font-bold'
-
-              }`}
-          >
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
             {change}
           </span>
         )}
       </div>
 
       {subtitle && (
-        <p
-          className={`text-xs mt-1.5 ${isForest ? 'text-white/80' : 'text-stone-600'
-            }`}
-        >
+        <p className="text-xs mt-1.5 opacity-80 font-medium">
           {subtitle}
         </p>
       )}

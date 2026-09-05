@@ -81,9 +81,12 @@ def read_engineers(
     tool_names: Optional[List[str]] = Query(None),
     consumer_min: Optional[float] = Query(None),
     consumer_max: Optional[float] = Query(None),
+    customer_min: Optional[float] = Query(None),
+    customer_max: Optional[float] = Query(None),
     industry_min: Optional[float] = Query(None),
     industry_max: Optional[float] = Query(None),
     country: Optional[str] = Query(None),
+    countries: Optional[List[str]] = Query(None),
     fab: Optional[str] = Query(None),
     fabs: Optional[List[str]] = Query(None),
     page: int = Query(1, ge=1),
@@ -97,6 +100,9 @@ def read_engineers(
     try:
         target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
         validated_cids = enforce_company_isolation(db, current_user, target_cids)
+        effective_consumer_min = consumer_min if consumer_min is not None else customer_min
+        effective_consumer_max = consumer_max if consumer_max is not None else customer_max
+
         res = engineer_service.get_engineers_paginated(
             db=db,
             company_id=validated_cids,
@@ -108,11 +114,12 @@ def read_engineers(
             tool_name_filter=tool_name,
             tool_modules=tool_modules,
             tool_names=tool_names,
-            consumer_min=consumer_min,
-            consumer_max=consumer_max,
+            consumer_min=effective_consumer_min,
+            consumer_max=effective_consumer_max,
             industry_min=industry_min,
             industry_max=industry_max,
             country_filter=country,
+            countries=countries,
             fab_filter=fab,
             fabs=fabs,
             page=page,

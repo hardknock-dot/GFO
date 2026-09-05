@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import select, text, and_, or_, func, String
+from sqlalchemy import select, text, and_, or_, func, String, exists, not_
 from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
 import uuid
@@ -101,43 +101,66 @@ def get_engineer_filter_options(
             all_tns.add(cleaned_full)
     tool_names = sorted(list(all_tns), key=lambda s: s.lower())
 
-    # 3. Distinct Countries (from schedules.country)
-    c_stmt = select(Schedule.country).where(
-        Schedule.country.isnot(None),
-        Schedule.country != ""
+    # 3. Distinct Countries (from engineers' ongoing schedules in schedules table)
+    today = date.today()
+    c_stmt = (
+        select(Schedule.country)
+        .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+        .where(
+            Schedule.start_date <= today,
+            or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
+            Schedule.country.isnot(None),
+            Schedule.country != ""
+        )
+        .distinct()
     )
     if company_id:
         if isinstance(company_id, list):
-            c_stmt = c_stmt.join(Engineer, Schedule.engineer_id == Engineer.engineer_id).where(Engineer.company_id.in_(company_id))
+            c_stmt = c_stmt.where(Engineer.company_id.in_(company_id))
         else:
-            c_stmt = c_stmt.join(Engineer, Schedule.engineer_id == Engineer.engineer_id).where(Engineer.company_id == company_id)
+            c_stmt = c_stmt.where(Engineer.company_id == company_id)
 
     try:
-        raw_cs = db.scalars(c_stmt.distinct()).all()
+        raw_cs = db.scalars(c_stmt).all()
     except Exception as e:
         logger.warning("Error fetching countries from DB: %s", e)
         raw_cs = []
 
-    countries = sorted(list(set(c.strip() for c in raw_cs if c and str(c).strip())), key=lambda s: s.lower())
+    real_countries = sorted(
+        list(set(c.strip() for c in raw_cs if c and str(c).strip() and str(c).strip().lower() != "no schedule")),
+        key=lambda s: s.lower()
+    )
+    countries = real_countries + ["No Schedule"]
 
-    # 4. Distinct Fabs / Sites (from schedules.fab_site)
-    f_stmt = select(Schedule.fab_site).where(
-        Schedule.fab_site.isnot(None),
-        Schedule.fab_site != ""
+    # 4. Distinct Fabs / Sites (from engineers' ongoing schedules in schedules table)
+    f_stmt = (
+        select(Schedule.fab_site)
+        .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+        .where(
+            Schedule.start_date <= today,
+            or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
+            Schedule.fab_site.isnot(None),
+            Schedule.fab_site != ""
+        )
+        .distinct()
     )
     if company_id:
         if isinstance(company_id, list):
-            f_stmt = f_stmt.join(Engineer, Schedule.engineer_id == Engineer.engineer_id).where(Engineer.company_id.in_(company_id))
+            f_stmt = f_stmt.where(Engineer.company_id.in_(company_id))
         else:
-            f_stmt = f_stmt.join(Engineer, Schedule.engineer_id == Engineer.engineer_id).where(Engineer.company_id == company_id)
+            f_stmt = f_stmt.where(Engineer.company_id == company_id)
 
     try:
-        raw_fs = db.scalars(f_stmt.distinct()).all()
+        raw_fs = db.scalars(f_stmt).all()
     except Exception as e:
         logger.warning("Error fetching fabs from DB: %s", e)
         raw_fs = []
 
-    fabs = sorted(list(set(f.strip() for f in raw_fs if f and str(f).strip())), key=lambda s: s.lower())
+    real_fabs = sorted(
+        list(set(f.strip() for f in raw_fs if f and str(f).strip() and str(f).strip().lower() != "no schedule")),
+        key=lambda s: s.lower()
+    )
+    fabs = real_fabs + ["No Schedule"]
 
     # 5. Consumer Experience Min/Max
     exp_stmt = select(
@@ -171,6 +194,10 @@ def get_engineer_filter_options(
             "min": int(math.floor(c_min)),
             "max": int(math.ceil(max(c_max, 1.0)))
         },
+        "customer_experience": {
+            "min": int(math.floor(c_min)),
+            "max": int(math.ceil(max(c_max, 1.0)))
+        },
         "industry_experience": {
             "min": int(math.floor(i_min)),
             "max": int(math.ceil(max(i_max, 1.0)))
@@ -193,6 +220,7 @@ def get_engineers_paginated(
     industry_min: Optional[float] = None,
     industry_max: Optional[float] = None,
     country_filter: Optional[str] = None,
+    countries: Optional[List[str]] = None,
     fab_filter: Optional[str] = None,
     fabs: Optional[List[str]] = None,
     page: int = 1,
@@ -226,17 +254,17 @@ def get_engineers_paginated(
 
     # 2. Consumer Experience Slider Range Filter (customer_experience / lam_experience)
     if consumer_min is not None:
-        conditions.append(Engineer.lam_experience >= consumer_min)
+        conditions.append(func.coalesce(Engineer.lam_experience, 0.0) >= consumer_min)
     if consumer_max is not None:
-        conditions.append(Engineer.lam_experience <= consumer_max)
+        conditions.append(func.coalesce(Engineer.lam_experience, 0.0) <= consumer_max)
 
     # 3. Industry Experience Slider Range Filter (industry_experience)
     if industry_min is not None:
-        conditions.append(Engineer.industry_experience >= industry_min)
+        conditions.append(func.coalesce(Engineer.industry_experience, 0.0) >= industry_min)
     if industry_max is not None:
-        conditions.append(Engineer.industry_experience <= industry_max)
+        conditions.append(func.coalesce(Engineer.industry_experience, 0.0) <= industry_max)
 
-    # 4. Tool Module Multi-Select Filter (engineers.primary_tool_type & skills.tool_type)
+    # 4. Tool Module Multi-Select Filter (engineers.primary_tool_type & skills.tool_type / wafer_size)
     if tool_modules:
         clean_modules = [m.strip() for m in tool_modules if m and m.strip()]
         if clean_modules:
@@ -256,15 +284,23 @@ def get_engineers_paginated(
                 )
             conditions.append(or_(*mod_or_list))
     elif primary_tool_filter and primary_tool_filter.strip():
-        pattern = f"%{primary_tool_filter.strip()}%"
-        conditions.append(
-            or_(
-                Engineer.primary_tool_type.ilike(pattern),
+        pts = [p.strip() for p in primary_tool_filter.split(',') if p.strip()]
+        mod_or_list = []
+        for p in pts:
+            pattern = f"%{p}%"
+            mod_or_list.append(Engineer.primary_tool_type.ilike(pattern))
+            mod_or_list.append(
                 Engineer.engineer_id.in_(
-                    select(Skill.engineer_id).where(Skill.tool_type.ilike(pattern))
+                    select(Skill.engineer_id).where(
+                        or_(
+                            Skill.tool_type.ilike(pattern),
+                            Skill.wafer_size.ilike(pattern)
+                        )
+                    )
                 )
             )
-        )
+        if mod_or_list:
+            conditions.append(or_(*mod_or_list))
 
     # 5. Tool Name Multi-Select Filter (skills.tool_type & engineers.primary_tool_type)
     if tool_names:
@@ -281,82 +317,105 @@ def get_engineers_paginated(
                 )
             conditions.append(or_(*name_or_list))
     elif tool_name_filter and tool_name_filter.strip():
-        pattern = f"%{tool_name_filter.strip()}%"
-        conditions.append(
-            Engineer.engineer_id.in_(
-                select(Skill.engineer_id).where(Skill.tool_type.ilike(pattern))
+        tns = [t.strip() for t in tool_name_filter.split(',') if t.strip()]
+        name_or_list = []
+        for t in tns:
+            pattern = f"%{t}%"
+            name_or_list.append(Engineer.primary_tool_type.ilike(pattern))
+            name_or_list.append(
+                Engineer.engineer_id.in_(
+                    select(Skill.engineer_id).where(Skill.tool_type.ilike(pattern))
+                )
             )
-        )
+        if name_or_list:
+            conditions.append(or_(*name_or_list))
 
-    # 6. Current Fab Filter (from active schedules & skills)
+    # 6. Current Country Filter (derived DIRECTLY from schedules table using EXISTS / NOT EXISTS)
     today = date.today()
-    if fabs:
-        clean_fabs = [f.strip() for f in fabs if f and f.strip()]
-        if clean_fabs:
-            fab_or_list = []
-            for f in clean_fabs:
-                pattern = f"%{f}%"
-                fab_or_list.append(
-                    Engineer.engineer_id.in_(
-                        select(Schedule.engineer_id).where(
-                            and_(
-                                Schedule.start_date <= today,
-                                or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
-                                or_(
-                                    Schedule.fab_site.ilike(pattern),
-                                    Schedule.fab_city.ilike(pattern)
-                                )
-                            )
-                        )
-                    )
-                )
-                fab_or_list.append(
-                    Engineer.engineer_id.in_(
-                        select(Skill.engineer_id).where(Skill.fab.ilike(pattern))
-                    )
-                )
-            conditions.append(or_(*fab_or_list))
-    elif fab_filter and fab_filter.strip() and fab_filter.lower() != "all":
-        pattern = f"%{fab_filter.strip()}%"
-        conditions.append(
-            or_(
-                Engineer.engineer_id.in_(
-                    select(Schedule.engineer_id).where(
-                        and_(
-                            Schedule.start_date <= today,
-                            or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
-                            or_(
-                                Schedule.fab_site.ilike(pattern),
-                                Schedule.fab_city.ilike(pattern)
-                            )
-                        )
-                    )
-                ),
-                Engineer.engineer_id.in_(
-                    select(Skill.engineer_id).where(Skill.fab.ilike(pattern))
-                )
-            )
-        )
-
-    # 7. Current Country Filter (from active schedules & skills)
+    all_country_queries = []
+    if countries:
+        all_country_queries.extend([c.strip() for c in countries if c and c.strip()])
     if country_filter and country_filter.strip() and country_filter.lower() != "all":
-        pattern = f"%{country_filter.strip()}%"
-        conditions.append(
-            or_(
-                Engineer.engineer_id.in_(
-                    select(Schedule.engineer_id).where(
-                        and_(
-                            Schedule.start_date <= today,
-                            or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
-                            Schedule.country.ilike(pattern)
-                        )
+        for part in country_filter.split(","):
+            part_str = part.strip()
+            if part_str and part_str.lower() != "all" and part_str not in all_country_queries:
+                all_country_queries.append(part_str)
+
+    if all_country_queries:
+        has_no_schedule = any(c.lower() == "no schedule" for c in all_country_queries)
+        real_countries = [c for c in all_country_queries if c.lower() != "no schedule"]
+
+        c_subconds = []
+        if real_countries:
+            c_matches = [Schedule.country.ilike(c) for c in real_countries]
+            c_subconds.append(
+                exists().where(
+                    and_(
+                        Schedule.engineer_id == Engineer.engineer_id,
+                        Schedule.start_date <= today,
+                        or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
+                        or_(*c_matches)
                     )
-                ),
-                Engineer.engineer_id.in_(
-                    select(Skill.engineer_id).where(Skill.country.ilike(pattern))
                 )
             )
-        )
+        if has_no_schedule:
+            c_subconds.append(
+                not_(
+                    exists().where(
+                        and_(
+                            Schedule.engineer_id == Engineer.engineer_id,
+                            Schedule.start_date <= today,
+                            or_(Schedule.end_date >= today, Schedule.end_date.is_(None))
+                        )
+                    )
+                )
+            )
+        if c_subconds:
+            conditions.append(or_(*c_subconds))
+
+    # 7. Current Fab Filter (derived DIRECTLY from schedules table using EXISTS / NOT EXISTS)
+    all_fab_queries = []
+    if fabs:
+        all_fab_queries.extend([f.strip() for f in fabs if f and f.strip()])
+    if fab_filter and fab_filter.strip() and fab_filter.lower() != "all":
+        for part in fab_filter.split(","):
+            part_str = part.strip()
+            if part_str and part_str.lower() != "all" and part_str not in all_fab_queries:
+                all_fab_queries.append(part_str)
+
+    if all_fab_queries:
+        has_no_fab_schedule = any(f.lower() == "no schedule" for f in all_fab_queries)
+        real_fabs = [f for f in all_fab_queries if f.lower() != "no schedule"]
+
+        f_subconds = []
+        if real_fabs:
+            f_matches = [Schedule.fab_site.ilike(f"%{f}%") for f in real_fabs]
+            f_subconds.append(
+                exists().where(
+                    and_(
+                        Schedule.engineer_id == Engineer.engineer_id,
+                        Schedule.start_date <= today,
+                        or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
+                        or_(*f_matches)
+                    )
+                )
+            )
+        if has_no_fab_schedule:
+            f_subconds.append(
+                not_(
+                    exists().where(
+                        and_(
+                            Schedule.engineer_id == Engineer.engineer_id,
+                            Schedule.start_date <= today,
+                            or_(Schedule.end_date >= today, Schedule.end_date.is_(None)),
+                            Schedule.fab_site.isnot(None),
+                            Schedule.fab_site != ""
+                        )
+                    )
+                )
+            )
+        if f_subconds:
+            conditions.append(or_(*f_subconds))
 
     # 8. Additional legacy filters
     if status_filter and status_filter.strip() and status_filter.lower() != "all":
@@ -378,27 +437,22 @@ def get_engineers_paginated(
 
     items = list(db.scalars(stmt).all())
 
-    # Bulk pre-fetch current active schedules for all returned engineers to prevent N+1 query overhead
+    # Bulk pre-fetch current ongoing schedules for all returned engineers to prevent N+1 query overhead
     if items:
         try:
             eng_ids = [item.engineer_id for item in items]
-            today = date.today()
-            active_schedules = db.scalars(
+            all_schedules = db.scalars(
                 select(Schedule)
-                .where(
-                    and_(
-                        Schedule.engineer_id.in_(eng_ids),
-                        Schedule.start_date <= today,
-                        or_(Schedule.end_date >= today, Schedule.end_date.is_(None))
-                    )
-                )
+                .where(Schedule.engineer_id.in_(eng_ids))
                 .order_by(Schedule.start_date.desc())
             ).all()
 
             sched_map = {}
-            for s in active_schedules:
-                if s.engineer_id not in sched_map:
-                    sched_map[s.engineer_id] = s
+            for s in all_schedules:
+                eid = s.engineer_id
+                s_is_active = bool(s.start_date and s.start_date <= today and (not s.end_date or s.end_date >= today))
+                if s_is_active and eid not in sched_map:
+                    sched_map[eid] = s
 
             for item in items:
                 item._cached_current_schedule = sched_map.get(item.engineer_id)

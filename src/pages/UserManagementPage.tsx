@@ -992,7 +992,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       {activeTab === 'audit' && (
         <div className="space-y-4">
           {/* Audit Filters */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md shadow-black/20 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Audit Log Filters
@@ -1075,7 +1075,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           </div>
 
           {/* Audit Logs Table */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md shadow-black/20 overflow-hidden">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>

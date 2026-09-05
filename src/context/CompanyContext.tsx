@@ -98,7 +98,7 @@ export const PRESET_COMPANIES: Company[] = [
     primaryHover: DEFAULT_THEME.primaryHover,
     secondaryColor: DEFAULT_THEME.secondaryColor,
     accentColor: DEFAULT_THEME.accentColor,
-    accentTransparent: 'rgba(241, 166, 126, 0.15)',
+    accentTransparent: 'rgba(221, 161, 94, 0.15)',
     backgroundColor: DEFAULT_THEME.backgroundColor,
     cardColor: DEFAULT_THEME.cardColor,
     sidebarColor: DEFAULT_THEME.sidebarColor,
@@ -141,11 +141,23 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     root.style.setProperty('--color-card', theme.cardColor);
     root.style.setProperty('--color-sidebar', theme.sidebarColor);
     root.style.setProperty('--color-sidebar-active', theme.sidebarActiveColor);
+    root.style.setProperty('--color-sidebar-text', theme.sidebarTextColor);
+    root.style.setProperty('--color-sidebar-text-muted', theme.sidebarTextMuted);
+    root.style.setProperty('--color-sidebar-border', theme.sidebarBorderColor);
+    root.style.setProperty('--color-sidebar-hover', theme.sidebarHoverColor);
     root.style.setProperty('--color-text', theme.textColor);
     root.style.setProperty('--color-text-primary', theme.textColor);
     root.style.setProperty('--color-text-secondary', theme.textMutedColor);
     root.style.setProperty('--color-text-accent', theme.textSecondaryAccent);
     root.style.setProperty('--color-border', theme.borderColor);
+    root.style.setProperty('--color-stat-1-bg', theme.statCard1Bg);
+    root.style.setProperty('--color-stat-1-text', theme.statCard1Text);
+    root.style.setProperty('--color-stat-2-bg', theme.statCard2Bg);
+    root.style.setProperty('--color-stat-2-text', theme.statCard2Text);
+    root.style.setProperty('--color-stat-3-bg', theme.statCard3Bg);
+    root.style.setProperty('--color-stat-3-text', theme.statCard3Text);
+    root.style.setProperty('--color-stat-4-bg', theme.statCard4Bg);
+    root.style.setProperty('--color-stat-4-text', theme.statCard4Text);
   };
 
   useEffect(() => {

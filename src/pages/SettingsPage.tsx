@@ -19,19 +19,19 @@ export const SettingsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Navigation Cards */}
         <div className="space-y-4">
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Settings Categories</h4>
+          <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-md shadow-black/20 space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-500">Settings Categories</h4>
             <div className="space-y-1 text-xs font-medium">
-              <button className="w-full text-left px-3 py-2 rounded-lg bg-[var(--color-secondary)] text-white flex items-center space-x-2">
+              <button className="w-full text-left px-3 py-2 rounded-lg bg-[var(--color-primary)] text-white flex items-center space-x-2 shadow-xs">
                 <Building2 className="w-4 h-4" />
                 <span>Tenant & Theme Tokens</span>
               </button>
-              <button className="w-full text-left px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
-                <Lock className="w-4 h-4 text-slate-400" />
+              <button className="w-full text-left px-3 py-2 rounded-lg text-stone-700 hover:bg-black/5 flex items-center space-x-2">
+                <Lock className="w-4 h-4 text-stone-400" />
                 <span>FastAPI Base URL & Security</span>
               </button>
-              <button className="w-full text-left px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
-                <Bell className="w-4 h-4 text-slate-400" />
+              <button className="w-full text-left px-3 py-2 rounded-lg text-stone-700 hover:bg-black/5 flex items-center space-x-2">
+                <Bell className="w-4 h-4 text-stone-400" />
                 <span>Visa Expiry Notifications</span>
               </button>
             </div>
@@ -40,9 +40,9 @@ export const SettingsPage: React.FC = () => {
 
         {/* Right Column: Settings Form */}
         <div className="md:col-span-2 space-y-6">
-          <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-[var(--color-secondary)]" />
+          <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-6">
+            <h3 className="text-base font-bold text-stone-900 pb-3 border-b border-[var(--color-border)] flex items-center space-x-2">
+              <Building2 className="w-4 h-4 text-[var(--color-primary)]" />
               <span>Current Tenant Configuration</span>
             </h3>
 
@@ -54,9 +54,9 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2">
-              <Shield className="w-4 h-4 text-slate-400 dark:text-slate-300" />
+          <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-6">
+            <h3 className="text-base font-bold text-stone-900 pb-3 border-b border-[var(--color-border)] flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-stone-600" />
               <span>FastAPI Integration Settings</span>
             </h3>
 
@@ -73,7 +73,7 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+            <div className="pt-4 border-t border-[var(--color-border)] flex justify-end">
               <Button icon={<Save className="w-4 h-4" />} onClick={() => alert('Settings configuration saved!')}>
                 Save Settings
               </Button>

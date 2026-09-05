@@ -163,34 +163,39 @@ def get_dashboard_metrics(
         StatusDistributionItem(name="PTO", value=pto_status, color="#F59E0B")
     ]
 
-    # 6. Country / Site Distribution Computation
+    # 6. Engineer Location / Country Distribution Computation
+    # Business Logic:
+    # 1. For each engineer in selected company, check for an ongoing schedule (start_date <= today <= end_date)
+    # 2. If multiple ongoing schedules, take the one with the most recent start_date
+    # 3. If ongoing schedule exists, country = schedule.country
+    # 4. If no ongoing schedule, fallback country = "India"
     country_counts: Dict[str, int] = {}
-    for s in schedules:
-        c_label = s.country or "Other"
-        if s.fab_site:
-            c_label = f"{c_label} ({s.fab_site})"
-        country_counts[c_label] = country_counts.get(c_label, 0) + 1
 
-    if not country_counts:
-        for eng in engineers:
-            c_label = eng.primary_tool_type or "General"
-            country_counts[c_label] = country_counts.get(c_label, 0) + 1
+    for eng in engineers:
+        active_scheds = [
+            s for s in schedules 
+            if s.engineer_id == eng.engineer_id 
+            and s.start_date <= today 
+            and (s.end_date is None or s.end_date >= today)
+        ]
 
-    country_distribution: List[CountryDistributionItem] = []
-    total_country_samples = sum(country_counts.values())
+        if active_scheds:
+            # Sort by start_date descending to take the most recent
+            active_scheds.sort(key=lambda s: s.start_date, reverse=True)
+            chosen_country = (active_scheds[0].country or "").strip()
+            if not chosen_country or chosen_country.lower() in ("none", "null", "unknown"):
+                chosen_country = "India"
+        else:
+            chosen_country = "India"
 
-    if total_country_samples > 0:
-        sorted_countries = sorted(country_counts.items(), key=lambda x: x[1], reverse=True)
-        top_countries = sorted_countries[:4]
-        others_count = sum(val for _, val in sorted_countries[4:])
+        country_counts[chosen_country] = country_counts.get(chosen_country, 0) + 1
 
-        for c_name, count in top_countries:
-            pct = round((count / total_country_samples) * 100)
-            country_distribution.append(CountryDistributionItem(name=c_name, value=pct))
-
-        if others_count > 0:
-            pct = round((others_count / total_country_samples) * 100)
-            country_distribution.append(CountryDistributionItem(name="Others", value=pct))
+    # Sort countries descending by engineer count
+    sorted_country_counts = sorted(country_counts.items(), key=lambda x: x[1], reverse=True)
+    country_distribution: List[CountryDistributionItem] = [
+        CountryDistributionItem(name=c_name, value=count)
+        for c_name, count in sorted_country_counts
+    ]
 
     # 7. Recent Activity Items
     recent_activity: List[RecentActivityItem] = []

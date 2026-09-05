@@ -4,22 +4,30 @@
 
 @layer base {
   :root {
-    /* Warm Earth & Sage Palette */
-    --color-primary: #78B654;
-    --color-primary-hover: #43682F;
-    --color-secondary: #78B654;
-    --color-accent: #F1A67E;
-    --color-accent-soft: #F6D4BA;
-    --color-accent-green: #A8BC8B;
-    --color-accent-transparent: rgba(241, 166, 126, 0.15);
-    --color-bg: #FFFFFF;
-    --color-card: #FEFADC;
-    --color-sidebar: #F1A67E;
-    --color-sidebar-active: #E5956D;
-    --color-text-primary: #1C1917;
-    --color-text-secondary: #57534E;
-    --color-text-accent: #78B654;
-    --color-border: #E8DEC8;
+    /* Forest & Ochre Palette */
+    --color-primary: #606C38;
+    --color-primary-hover: #283618;
+    --color-secondary: #606C38;
+    --color-accent: #DDA15E;
+    --color-accent-soft: #FEFAE0;
+    --color-accent-green: #606C38;
+    --color-accent-transparent: rgba(221, 161, 94, 0.15);
+    --color-dark-accent: #BC6C25;
+    --color-dark-neutral: #283618;
+    --color-bg: #F4F5F7;
+    --color-card: #FEFAE0;
+    --color-sidebar: #283618;
+    --color-sidebar-active: #3A4B24;
+    --color-text: #283618;
+    --color-text-primary: #283618;
+    --color-text-secondary: #5C6352;
+    --color-text-accent: #606C38;
+    --color-border: #E6E2C8;
+  }
+
+  html, body, #root {
+    min-height: 100vh;
+    background-color: var(--color-bg);
   }
 
   body {
@@ -33,77 +41,77 @@
   }
 }
 
-/* Harmonious warm styling overrides for cards and panels in dark mode */
+/* Harmonious dynamic theme styling overrides for cards and panels */
 .dark .dark\:bg-slate-900 {
-  background-color: #FEFADC !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-950 {
-  background-color: #FFFFFF !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-950\/50 {
-  background-color: rgba(255, 255, 255, 0.5) !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-800\/80 {
-  background-color: #FEFADC !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:border-slate-800 {
-  border-color: #E8DEC8 !important;
+  border-color: var(--color-border) !important;
 }
 .dark .dark\:border-slate-800\/60 {
-  border-color: rgba(232, 222, 200, 0.6) !important;
+  border-color: var(--color-border) !important;
 }
 .dark .dark\:bg-slate-800\/40 {
-  background-color: #FEFADC !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-800\/50 {
-  background-color: #FEFADC !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-800\/60 {
-  background-color: #FEFADC !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-50\/70 {
-  background-color: rgba(254, 250, 220, 0.7) !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-50\/60 {
-  background-color: rgba(254, 250, 220, 0.6) !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:bg-slate-50\/40 {
-  background-color: rgba(254, 250, 220, 0.4) !important;
+  background-color: var(--color-card) !important;
 }
 .dark .dark\:hover\:bg-slate-800\/50:hover {
-  background-color: #F6D4BA !important;
+  background-color: var(--color-border) !important;
 }
 .dark .dark\:hover\:bg-slate-800\/20:hover {
-  background-color: #F6D4BA !important;
+  background-color: var(--color-border) !important;
 }
 
-/* High contrast text overrides */
+/* High contrast text overrides connected to active theme */
 .dark .dark\:text-white {
-  color: #1C1917 !important;
+  color: var(--color-text-primary) !important;
 }
 .dark .dark\:text-slate-100 {
-  color: #1C1917 !important;
+  color: var(--color-text-primary) !important;
 }
 .dark .dark\:text-slate-200 {
-  color: #292524 !important;
+  color: var(--color-text-primary) !important;
 }
 .dark .dark\:text-slate-300 {
-  color: #44403C !important;
+  color: var(--color-text-secondary) !important;
 }
 .dark .dark\:text-slate-400 {
-  color: #57534E !important;
+  color: var(--color-text-secondary) !important;
 }
 .dark .dark\:text-slate-500 {
-  color: #78716C !important;
+  color: var(--color-text-secondary) !important;
 }
 .dark .dark\:text-emerald-300 {
-  color: #78B654 !important;
+  color: var(--color-primary) !important;
 }
 .dark .dark\:text-cyan-300 {
-  color: #78B654 !important;
+  color: var(--color-primary) !important;
 }
 .dark .dark\:text-cyan-200 {
-  color: #78B654 !important;
+  color: var(--color-primary) !important;
 }
 
 /* Scrollbar styling */

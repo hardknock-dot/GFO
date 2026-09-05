@@ -9,6 +9,7 @@ export interface EngineerFilterOptions {
   countries: string[];
   fabs: string[];
   consumer_experience: { min: number; max: number };
+  customer_experience?: { min: number; max: number };
   industry_experience: { min: number; max: number };
 }
 
@@ -23,6 +24,8 @@ export interface EngineerQueryParams {
   tool_names?: string[];
   consumer_min?: number;
   consumer_max?: number;
+  customer_min?: number;
+  customer_max?: number;
   industry_min?: number;
   industry_max?: number;
   country?: string;
@@ -45,7 +48,29 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+const parseNum = (val: any): number => {
+  if (val === undefined || val === null || val === '') return 0;
+  const n = Number(val);
+  return isNaN(n) ? 0 : n;
+};
+
 const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
+  const custExp =
+    apiEng.customer_experience !== undefined && apiEng.customer_experience !== null
+      ? parseNum(apiEng.customer_experience)
+      : apiEng.lam_experience !== undefined && apiEng.lam_experience !== null
+      ? parseNum(apiEng.lam_experience)
+      : apiEng.customerExperience !== undefined && apiEng.customerExperience !== null
+      ? parseNum(apiEng.customerExperience)
+      : 0;
+
+  const indExp =
+    apiEng.industry_experience !== undefined && apiEng.industry_experience !== null
+      ? parseNum(apiEng.industry_experience)
+      : apiEng.yearsExperience !== undefined && apiEng.yearsExperience !== null
+      ? parseNum(apiEng.yearsExperience)
+      : 0;
+
   return {
     id: apiEng.engineer_id,
     orbitId: apiEng.orbit_id,
@@ -57,11 +82,11 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
     status: apiEng.status || 'Active',
     primaryTool: apiEng.primary_tool_type || apiEng.primary_tool || '',
     level: apiEng.level || 'L2 Specialist',
-    country: apiEng.country || 'Taiwan',
-    city: apiEng.city || 'Hsinchu',
-    assignedSite: apiEng.assigned_site || 'TSMC Fab 18',
-    yearsExperience: Number(apiEng.industry_experience) || 0,
-    customerExperience: Number(apiEng.customer_experience) || Number(apiEng.lam_experience) || 0,
+    country: apiEng.country || 'No Schedule',
+    city: apiEng.city || 'No Schedule',
+    assignedSite: apiEng.assigned_site || 'No Schedule',
+    yearsExperience: indExp,
+    customerExperience: custExp,
     certificationsCount: apiEng.certifications_count || 0,
     activeProjectsCount: apiEng.active_projects_count || 0,
     avatarUrl: apiEng.avatar_url || '',
@@ -119,6 +144,7 @@ export const getEngineerFilterOptions = async (companyId?: string): Promise<Engi
       countries: [],
       fabs: [],
       consumer_experience: { min: 0, max: 20 },
+      customer_experience: { min: 0, max: 20 },
       industry_experience: { min: 0, max: 20 },
     };
   }
@@ -145,6 +171,11 @@ export const getEngineers = async (params?: EngineerQueryParams): Promise<Pagina
         p.tool_name = p.toolName;
         delete p.toolName;
       }
+
+      if (p.customer_min !== undefined && p.consumer_min === undefined) p.consumer_min = p.customer_min;
+      if (p.customer_max !== undefined && p.consumer_max === undefined) p.consumer_max = p.customer_max;
+      if (p.consumer_min !== undefined && p.customer_min === undefined) p.customer_min = p.consumer_min;
+      if (p.consumer_max !== undefined && p.customer_max === undefined) p.customer_max = p.consumer_max;
 
       Object.entries(p).forEach(([key, val]) => {
         if (val === undefined || val === null || val === '') return;

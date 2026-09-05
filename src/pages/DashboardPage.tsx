@@ -10,6 +10,7 @@ import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import { ErrorState } from '../components/common/ErrorState';
 import { Button } from '../components/forms/Button';
 import { ScheduleCommentsCard } from '../components/schedule/ScheduleCommentsCard';
+import { WorldMapDistribution } from '../components/dashboard/WorldMapDistribution';
 
 import {
   Users,
@@ -116,14 +117,14 @@ export const DashboardPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           <StatCard
             title="Total Engineers"
             value={kpi.total_engineers}
             change={`${kpi.total_engineers} Certified`}
             subtitle={`${currentCompany.code} certified personnel`}
-            icon={<Users className="w-5 h-5 text-stone-800" />}
-            variant="sand"
+            icon={<Users className="w-5 h-5" />}
+            variant="cream"
             onClick={() => navigate('/engineers')}
           />
           <StatCard
@@ -132,8 +133,8 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.utilization_rate}% Utilization`}
             changeType="positive"
             subtitle="On customer Fab sites"
-            icon={<CheckCircle2 className="w-5 h-5 text-stone-800" />}
-            variant="cream"
+            icon={<CheckCircle2 className="w-5 h-5" />}
+            variant="ice"
             onClick={() => navigate('/engineers')}
           />
           <StatCard
@@ -142,8 +143,8 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.upcoming_travel_count} Scheduled`}
             changeType="neutral"
             subtitle="Flights & assignments"
-            icon={<Plane className="w-5 h-5 text-stone-800" />}
-            variant="ice"
+            icon={<Plane className="w-5 h-5" />}
+            variant="sand"
             onClick={() => navigate('/travel')}
           />
           <StatCard
@@ -152,7 +153,7 @@ export const DashboardPage: React.FC = () => {
             change={kpi.expiring_visas_count > 0 ? "Action Required" : "All Clear"}
             changeType={kpi.expiring_visas_count > 0 ? 'negative' : 'positive'}
             subtitle="Within next 30 days"
-            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            icon={<AlertTriangle className="w-5 h-5" />}
             variant="orange"
             onClick={() => navigate('/visa')}
           />
@@ -162,7 +163,7 @@ export const DashboardPage: React.FC = () => {
             change={`${kpi.active_projects_count} Active`}
             changeType="positive"
             subtitle="Customer Fab installations"
-            icon={<Building2 className="w-5 h-5 text-stone-800" />}
+            icon={<Building2 className="w-5 h-5" />}
             variant="default"
             onClick={() => navigate('/schedule')}
           />
@@ -170,9 +171,9 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* Charts Visualization Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Main Deployment Chart */}
-        <div className="lg:col-span-2 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+        {/* Main Deployment Chart (decreased width by 50px on desktop) */}
+        <div className="w-full lg:w-[calc(50%-50px)] flex-shrink-0 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-stone-900">
@@ -242,7 +243,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Workforce Status Distribution Donut Chart */}
-        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
+        <div className="w-full lg:flex-1 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between">
           <div>
             <h3 className="text-base font-semibold text-stone-900">
               Workforce Status Distribution
@@ -302,63 +303,13 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Country Distribution Donut Chart */}
-        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs space-y-4">
-          <div>
-            <h3 className="text-base font-semibold text-stone-900">
-              Fab Site Country Distribution
-            </h3>
-            <p className="text-xs text-stone-500">Geographic footprint of active assignments</p>
-          </div>
-
-          <div className="h-52 w-full flex items-center justify-center">
-            {isLoading ? (
-              <div className="text-xs text-stone-400">Loading Country Footprint...</div>
-            ) : countryDistribution.length === 0 ? (
-              <div className="text-xs text-stone-400">No active country assignments</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={countryDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {countryDistribution.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1C1917',
-                      borderRadius: '8px',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      fontSize: '12px',
-                    }}
-                    itemStyle={{ color: '#FFFFFF' }}
-                    labelStyle={{ color: '#FFFFFF' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)] text-xs">
-            {countryDistribution.slice(0, 3).map((item, idx) => (
-              <div key={item.name} className="flex items-center justify-between text-stone-700">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[idx] }} />
-                  <span className="truncate max-w-[160px]">{item.name}</span>
-                </div>
-                <span className="font-semibold">{item.value}%</span>
-              </div>
-            ))}
-          </div>
+        {/* World Map Engineer Location Distribution (increased width by 50px on desktop) */}
+        <div className="w-full lg:w-[calc(25%+50px)] flex-shrink-0 flex flex-col">
+          <WorldMapDistribution
+            data={countryDistribution}
+            totalEngineers={kpi.total_engineers}
+            className="h-full"
+          />
         </div>
       </div>
 
@@ -368,7 +319,7 @@ export const DashboardPage: React.FC = () => {
       {/* Operational Intelligence Summary Card */}
       {user?.role !== 'Viewer' && (
 
-        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
             <div className="p-3 bg-white rounded-xl border border-[var(--color-border)]">
               <ShieldAlert className="w-6 h-6 text-[var(--color-primary)]" />
