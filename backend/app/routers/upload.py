@@ -339,18 +339,49 @@ SCHEDULE_HEADER_MAP = {
     "schedule_id": "schedule_id",
     "id": "schedule_id",
     "orbitid": "orbit_id",
+    "orbit_id": "orbit_id",
     "supporttype": "support_type",
+    "support": "support_type",
+    "type": "support_type",
+    "deploymenttype": "support_type",
     "country": "country",
+    "region": None,           # informational — not stored on Schedule, silently ignored
+    "engineername": None,     # informational — resolved via orbit_id, silently ignored
+    "shortname": None,
+    "firstname": None,
+    "fullname": None,
+    "name": None,
+    # City / Fab location
     "fabcity": "fab_city",
+    "city": "fab_city",
+    "location": "fab_city",
+    "deploymentcity": "fab_city",
+    "deploymentlocation": "fab_city",
+    # Site / Customer / Fab name
     "fabsite": "fab_site",
+    "fab": "fab_site",
+    "fabname": "fab_site",
+    "customer": "fab_site",
+    "customername": "fab_site",
+    "site": "fab_site",
+    "deploymentsite": "fab_site",
+    "facility": "fab_site",
+    # Dates
     "startdate": "start_date",
+    "start": "start_date",
     "enddate": "end_date",
+    "end": "end_date",
+    # Status / meta
     "schedulestatus": "schedule_status",
+    "status": "schedule_status",
     "remarks": "remarks",
+    "notes": "remarks",
     "commentstatus": "comment_status",
     "owner": "owner",
-    "ownerid": "owner"
+    "ownerid": "owner",
+    "owneremail": "owner",
 }
+
 
 VISA_HEADER_MAP = {
     "visaid": "visa_id",
