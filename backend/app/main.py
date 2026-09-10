@@ -8,7 +8,7 @@ from app.routers import (
     health, companies, engineers, skills, schedules, visa, travel,
     performance, leave, missed_schedule, dashboard, operational,
     reports, auth, users, upload, engineer_me, engineer_deletion_requests,
-    admin, delete_requests
+    admin, delete_requests, settings as settings_router
 )
 
 # Setup logging
@@ -88,6 +88,7 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(operational.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
 
 
 

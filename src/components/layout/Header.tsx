@@ -133,11 +133,10 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                       selectCompany(targetId);
                       setCompanyMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
-                      currentCompany.id === comp.id || currentCompany.company_id === comp.company_id
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${currentCompany.id === comp.id || currentCompany.company_id === comp.company_id
                         ? 'bg-[var(--color-card)] font-bold text-[var(--color-primary)]'
                         : 'text-stone-700 hover:bg-black/5'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center space-x-2 truncate">
                       <div
@@ -212,11 +211,10 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                       <button
                         key={alt.id}
                         onClick={() => handleAlertClick(alt)}
-                        className={`w-full text-left p-3.5 hover:bg-stone-50 transition-colors flex items-start space-x-3 ${
-                          alt.severity === 'warning' || alt.severity === 'critical'
+                        className={`w-full text-left p-3.5 hover:bg-stone-50 transition-colors flex items-start space-x-3 ${alt.severity === 'warning' || alt.severity === 'critical'
                             ? 'bg-amber-50/30'
                             : ''
-                        }`}
+                          }`}
                       >
                         {alt.severity === 'warning' || alt.severity === 'critical' ? (
                           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -269,26 +267,26 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="hidden md:flex flex-col text-left">
-              <span className="text-xs font-semibold text-stone-800">{user?.name}</span>
-              <span className="text-[10px] text-stone-400 font-medium">{user?.role === 'Global Admin' ? 'Main Admin' : user?.role}</span>
+              <span className="text-xs font-semibold text-black">{user?.name}</span>
+              <span className="text-[10px] text-black font-medium">{user?.role === 'Global Admin' ? 'Main Admin' : user?.role}</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-stone-400 hidden sm:block" />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 border border-[var(--color-border)] rounded-xl shadow-xl z-50 py-1.5 text-xs text-stone-700 dark:text-stone-300">
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 border border-[var(--color-border)] rounded-xl shadow-xl z-50 py-1.5 text-xs text-black">
               <div className="px-3.5 py-2 border-b border-[var(--color-border)]">
-                <p className="font-semibold text-stone-900 dark:text-white">{user?.name}</p>
-                <p className="text-[11px] text-stone-400 truncate">{user?.email}</p>
+                <p className="font-semibold text-black">{user?.name}</p>
+                <p className="text-[11px] text-stone-600 truncate">{user?.email}</p>
               </div>
 
               {/* 1. My Profile */}
               <button
                 onClick={() => {
                   setDropdownOpen(false);
-                  navigate('/engineer/profile');
+                  navigate('/profile');
                 }}
-                className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-black transition-colors font-medium"
               >
                 <UserIcon className="w-4 h-4 text-[var(--color-primary)]" />
                 <span>My Profile</span>
@@ -301,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                     setDropdownOpen(false);
                     navigate('/users');
                   }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-black transition-colors font-medium"
                 >
                   <Users className="w-4 h-4 text-[var(--color-primary)]" />
                   <span>User Management</span>
@@ -315,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                     setDropdownOpen(false);
                     navigate('/audit');
                   }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-black transition-colors font-medium"
                 >
                   <FileText className="w-4 h-4 text-[var(--color-primary)]" />
                   <span>Audit</span>
@@ -329,7 +327,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                     setDropdownOpen(false);
                     navigate('/settings');
                   }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-stone-700 dark:text-stone-300 transition-colors"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[var(--color-card)] flex items-center space-x-2 text-black transition-colors font-medium"
                 >
                   <SettingsIcon className="w-4 h-4 text-[var(--color-primary)]" />
                   <span>Settings</span>

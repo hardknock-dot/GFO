@@ -57,6 +57,10 @@ def read_schedules(
             page=page,
             page_size=page_size
         )
+        logger.info(
+            "DEBUG READ_SCHEDULES: user=%s, company_id_param=%s, validated_cids=%s, comment_adressal=%s, items_returned=%d, total=%d",
+            current_user.email, company_id, validated_cids, comment_adressal, len(res.get('items', [])), res.get('total', 0)
+        )
         return PaginatedResponse[ScheduleResponse](
             items=[ScheduleResponse.model_validate(item) for item in res["items"]],
             page=res["page"],
@@ -301,7 +305,7 @@ def mark_schedule_comment_addressed(
 ):
     """
     Mark schedule operational remark as addressed.
-    Sets schedules.comment_adressal = NULL in database.
+    Sets schedules.comment_adressal = TRUE in database.
     Restricted to Managers / Admins.
     """
     if is_engineer_user(current_user):
@@ -311,13 +315,16 @@ def mark_schedule_comment_addressed(
         )
     enforce_write_permission(current_user)
     sch = get_schedule_and_verify(db, schedule_id, current_user)
-    sch.comment_adressal = None
+    sch.comment_adressal = True
+    sch.comment_status = "ADDRESSED"
+    sch.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(sch)
     return {
+        "success": True,
         "message": "Comment marked as addressed successfully",
         "schedule_id": sch.schedule_id,
-        "comment_adressal": sch.comment_adressal
+        "comment_adressal": True
     }
 
 
@@ -343,13 +350,16 @@ def update_schedule_comment_status(
     if payload.comment_adressal is False:
         sch.comment_adressal = False
         sch.comment_status = "UNADDRESSED"
-    elif payload.comment_adressal is True or payload.comment_adressal is None:
-        sch.comment_adressal = None
+    elif payload.comment_adressal is True:
+        sch.comment_adressal = True
         sch.comment_status = "ADDRESSED"
+    elif payload.comment_adressal is None and payload.comment_status is None:
+        sch.comment_adressal = None
+        sch.comment_status = None
     elif payload.comment_status:
         st = str(payload.comment_status).upper().strip()
         if st in ("ADDRESSED", "APPROVED", "TRUE"):
-            sch.comment_adressal = None
+            sch.comment_adressal = True
             sch.comment_status = "ADDRESSED"
         elif st in ("UNADDRESSED", "FALSE", "PENDING"):
             sch.comment_adressal = False
@@ -357,7 +367,7 @@ def update_schedule_comment_status(
         else:
             sch.comment_status = payload.comment_status
     else:
-        sch.comment_adressal = None
+        sch.comment_adressal = True
         sch.comment_status = "ADDRESSED"
     sch.updated_at = datetime.utcnow()
     db.commit()

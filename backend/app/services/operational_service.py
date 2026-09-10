@@ -1,6 +1,6 @@
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException, status
@@ -15,24 +15,36 @@ from app.models.leave import Leave
 from app.models.missed_schedule import MissedSchedule
 from app.models.skill import Skill
 from app.schemas.operational import OperationalAlert
+from app.services.company_settings_service import get_or_create_company_settings
 
 def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = None) -> List[OperationalAlert]:
     """
     Derive deterministic operational alerts and exceptions for a company (or Master All Data).
+    Strictly respects CompanySettings configuration persisted in PostgreSQL.
     """
     today = date.today()
 
     if company_id is not None:
-        company = db.get(Company, company_id)
-        if company is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Company not found"
-            )
+        if not isinstance(company_id, (list, set, tuple)):
+            company = db.get(Company, company_id)
+            if company is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Company not found"
+                )
 
     # Fetch Companies for company_name lookup
     companies = list(db.scalars(select(Company)).all())
     comp_map = {c.company_id: c.company_name for c in companies}
+
+    # Settings cache per company
+    settings_cache = {}
+    def get_comp_settings(cid: Optional[UUID]):
+        if not cid:
+            return None
+        if cid not in settings_cache:
+            settings_cache[cid] = get_or_create_company_settings(db, cid)
+        return settings_cache[cid]
 
     # Base Queries
     eng_stmt = select(Engineer)
@@ -88,12 +100,16 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
 
     # 1. Schedule vs Leave Overlap (Notice alert for PTO during active deployment)
     for s in schedules:
+        eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.leave_alerts_enabled:
+            continue
+
         eng_leaves = [l for l in leaves if l.engineer_id == s.engineer_id]
         for l in eng_leaves:
             if l.requested_date and s.start_date:
                 s_end = s.end_date or s.start_date
                 if s.start_date <= l.requested_date <= s_end:
-                    eng = eng_map.get(s.engineer_id)
                     eng_name = eng.engineer_name if eng else "Engineer"
                     c_id, c_name = get_comp_info(eng)
                     alerts.append(OperationalAlert(
@@ -108,26 +124,28 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                         company_name=c_name
                     ))
 
-    # 2. Schedule vs Schedule Overlap per Engineer (Excluding PTO which can occur during deployment)
+    # 2. Schedule vs Schedule Overlap per Engineer (Controlled by deployment_alerts_enabled)
     eng_schedules_map: dict[UUID, List[Schedule]] = {}
     for s in schedules:
         eng_schedules_map.setdefault(s.engineer_id, []).append(s)
 
     for eng_id, sch_list in eng_schedules_map.items():
+        eng = eng_map.get(eng_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.deployment_alerts_enabled:
+            continue
+
         if len(sch_list) > 1:
-            # Sort schedules by start_date to define earlier vs next
             sorted_sch = sorted(sch_list, key=lambda x: x.start_date)
             for i in range(len(sorted_sch)):
                 for j in range(i + 1, len(sorted_sch)):
                     s1, s2 = sorted_sch[i], sorted_sch[j]
                     
-                    # PTO can come in between a deployment schedule, so skip generic overlap warning for PTO
                     s1_type = (s1.support_type or '').strip().upper()
                     s2_type = (s2.support_type or '').strip().upper()
                     if s1_type in ('PTO', 'LEAVE', 'ANNUAL PTO') or s2_type in ('PTO', 'LEAVE', 'ANNUAL PTO'):
                         continue
 
-                    # s1 is earlier or same day as s2
                     is_overlap = False
                     if s1.start_date == s2.start_date:
                         is_overlap = True
@@ -135,7 +153,6 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                         is_overlap = True
                     
                     if is_overlap:
-                        eng = eng_map.get(eng_id)
                         eng_name = eng.engineer_name if eng else "Engineer"
                         c_id, c_name = get_comp_info(eng)
                         alerts.append(OperationalAlert(
@@ -150,10 +167,17 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                             company_name=c_name
                         ))
 
-    # 3. Visa Validation per Schedule
+    # 3. Visa Validation per Schedule (Controlled by visa_alerts_enabled and visa_expiration_days)
     for s in schedules:
-        eng_visas = [v for v in visas if v.engineer_id == s.engineer_id and v.country.lower() == s.country.lower()]
         eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.visa_alerts_enabled:
+            continue
+
+        visa_warning_days = c_settings.visa_expiration_days if c_settings else 30
+        threshold_date = today + timedelta(days=visa_warning_days)
+
+        eng_visas = [v for v in visas if v.engineer_id == s.engineer_id and v.country.lower() == s.country.lower()]
         eng_name = eng.engineer_name if eng else "Engineer"
         c_id, c_name = get_comp_info(eng)
 
@@ -184,6 +208,18 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                             company_id=c_id,
                             company_name=c_name
                         ))
+                    elif v.visa_end_date <= threshold_date:
+                        alerts.append(OperationalAlert(
+                            id=f"alert-visa-expiring-soon-{v.visa_id}",
+                            type="visa",
+                            severity="warning",
+                            title="Visa Expiring Soon",
+                            message=f"Visa for {eng_name} in {v.country} expires on {v.visa_end_date} (within configured {visa_warning_days} day limit).",
+                            engineer_id=str(s.engineer_id),
+                            schedule_id=str(s.schedule_id),
+                            company_id=c_id,
+                            company_name=c_name
+                        ))
                     elif s.end_date and v.visa_end_date < s.end_date:
                         alerts.append(OperationalAlert(
                             id=f"alert-visa-short-{v.visa_id}",
@@ -197,10 +233,14 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                             company_name=c_name
                         ))
 
-    # 4. Travel Booking Validation
+    # 4. Travel Booking Validation (Controlled by travel_alerts_enabled)
     for s in schedules:
+        eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.travel_alerts_enabled:
+            continue
+
         if s.schedule_id not in sch_travel_map:
-            eng = eng_map.get(s.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"
             c_id, c_name = get_comp_info(eng)
             alerts.append(OperationalAlert(
@@ -215,9 +255,13 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                 company_name=c_name
             ))
 
-    # 5. Performance Validation
+    # 5. Performance Validation (Controlled by performance_alerts_enabled)
     for s in schedules:
         eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.performance_alerts_enabled:
+            continue
+
         eng_name = eng.engineer_name if eng else "Engineer"
         c_id, c_name = get_comp_info(eng)
         if s.schedule_id not in sch_perf_map:
@@ -248,11 +292,15 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                     company_name=c_name
                 ))
 
-    # 6. Missed Schedule Validation
+    # 6. Missed Schedule Validation (Controlled by missed_schedule_alerts_enabled)
     for s in schedules:
+        eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.missed_schedule_alerts_enabled:
+            continue
+
         if s.schedule_id in sch_missed_map:
             m = sch_missed_map[s.schedule_id]
-            eng = eng_map.get(s.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"
             c_id, c_name = get_comp_info(eng)
             alerts.append(OperationalAlert(
@@ -286,18 +334,20 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                 company_name=c_name
             ))
 
-    # 8. Same-Country Pending PTO Conflict Alert (Feature 2)
+    # 8. Same-Country Pending PTO Conflict Alert (Controlled by leave_alerts_enabled)
     PTO_ALERT_THRESHOLD = 2
     pending_leaves = [l for l in leaves if (l.approval_status or '').strip().lower() == "pto requested"]
     
-    # Group pending PTO requests by (company_id, country)
     country_pto_map: dict[tuple, list] = {}
     for l in pending_leaves:
         eng = eng_map.get(l.engineer_id)
         if not eng:
             continue
         c_id = eng.company_id
-        # Resolve country from engineer's schedule or profile
+        c_settings = get_comp_settings(c_id)
+        if c_settings and not c_settings.leave_alerts_enabled:
+            continue
+
         eng_sch = next((s for s in schedules if s.engineer_id == l.engineer_id), None)
         cntry = eng_sch.country if (eng_sch and eng_sch.country) else (eng.country if eng.country != "No Schedule" else "General")
         
@@ -322,7 +372,7 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                 company_name=comp_name
             ))
 
-    # 9. Engineer Deletion Request Alerts (Feature 5)
+    # 9. Engineer Deletion Request Alerts
     from app.models.engineer_deletion_request import EngineerDeletionRequest
     del_stmt = select(EngineerDeletionRequest).where(EngineerDeletionRequest.status == "PENDING")
     if company_id is not None:
@@ -347,11 +397,16 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
             company_name=dr_comp_name
         ))
 
-    # 10. Unaddressed Field Engineer Comment Alerts (Feature 4 & 5)
+    # 10. Unaddressed Field Engineer Comment Alerts (Controlled by operational_remark_alerts_enabled)
+    # Strictly maintains comment_adressal = FALSE condition
     for s in schedules:
+        eng = eng_map.get(s.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.operational_remark_alerts_enabled:
+            continue
+
         is_pending = (s.comment_adressal is False) or (s.comment_adressal is None and (s.comment_status or '').strip().upper() == "UNADDRESSED")
         if s.remarks and s.remarks.strip() and is_pending:
-            eng = eng_map.get(s.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"
             c_id, c_name = get_comp_info(eng)
             alerts.append(OperationalAlert(
@@ -367,8 +422,12 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
             ))
 
     for v in visas:
+        eng = eng_map.get(v.engineer_id)
+        c_settings = get_comp_settings(eng.company_id) if eng else None
+        if c_settings and not c_settings.visa_alerts_enabled:
+            continue
+
         if v.comments and (v.comment_status or '').strip().upper() == "UNADDRESSED":
-            eng = eng_map.get(v.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"
             c_id, c_name = get_comp_info(eng)
             alerts.append(OperationalAlert(
@@ -382,8 +441,37 @@ def get_company_operational_alerts(db: Session, company_id: Optional[UUID] = Non
                 company_name=c_name
             ))
 
-    return alerts
+    # Final safety filter strictly respecting CompanySettings configuration
+    filtered_alerts = []
+    for alert in alerts:
+        target_cid = None
+        if alert.company_id:
+            try:
+                target_cid = UUID(alert.company_id)
+            except Exception:
+                pass
+        if not target_cid and company_id and isinstance(company_id, UUID):
+            target_cid = company_id
 
+        st = get_comp_settings(target_cid) if target_cid else None
+        if st:
+            if alert.type in ('visa', 'visa_comment') and not st.visa_alerts_enabled:
+                continue
+            if alert.type in ('schedule', 'deployment') and not st.deployment_alerts_enabled:
+                continue
+            if alert.type == 'travel' and not st.travel_alerts_enabled:
+                continue
+            if alert.type in ('leave', 'pto_conflict') and not st.leave_alerts_enabled:
+                continue
+            if alert.type == 'missed_schedule' and not st.missed_schedule_alerts_enabled:
+                continue
+            if alert.type in ('schedule_comment', 'remark') and not st.operational_remark_alerts_enabled:
+                continue
+            if alert.type == 'performance' and not st.performance_alerts_enabled:
+                continue
+        filtered_alerts.append(alert)
+
+    return filtered_alerts
 
 def get_engineer_operational_alerts(db: Session, engineer_id: UUID) -> List[OperationalAlert]:
     """

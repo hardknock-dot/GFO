@@ -113,12 +113,17 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  avatar_url?: string;
+  goes_by?: string;
   role: UserRole;
+  company_name?: string;
   currentCompanyId: string;
   accessibleCompanies: string[];
   companies?: CompanySummary[];
   engineerId?: string;
   engineer_id?: string;
+  is_active?: boolean;
+  last_login?: string;
 }
 
 export interface Engineer {
@@ -135,8 +140,10 @@ export interface Engineer {
   country: string;
   city: string;
   assignedSite?: string;
-  yearsExperience: number;
-  customerExperience?: number;
+  yearsExperience?: string | number;
+  customerExperience?: string | number;
+  industry_experience?: string | null;
+  customer_experience?: string | null;
   certificationsCount: number;
   activeProjectsCount: number;
   avatarUrl?: string;

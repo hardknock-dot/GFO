@@ -4,6 +4,7 @@ import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { useCompanyOperationalAlerts } from '../hooks/useOperationalAlerts';
+import { useCompanySettings } from '../hooks/useSettings';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatCard } from '../components/common/StatCard';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
@@ -40,6 +41,9 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const { user } = useAuth();
+  const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
+  const { data: companySettings } = useCompanySettings(companyId);
+  const remarksAlertsEnabled = companySettings?.operational_remark_alerts_enabled ?? true;
   const { data, isLoading, isError, refetch } = useDashboard();
   const { data: opAlerts } = useCompanyOperationalAlerts();
 
@@ -56,13 +60,49 @@ export const DashboardPage: React.FC = () => {
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
 
-  const PIE_COLORS = [
-    currentCompany.primaryColor || '#78B654',
-    currentCompany.secondaryColor || '#8DA7BE',
-    currentCompany.accentColor || '#F1A67E',
-    currentCompany.sidebarColor || '#F6D4BA',
-    currentCompany.textColor || '#2B3D41',
-  ];
+
+  const getStatusColor = (item: { name: string; color?: string }, index: number) => {
+    const s = item.name.toLowerCase();
+    const companyId = currentCompany.company_id || currentCompany.id || currentCompany.code || '';
+
+    // LAM Research Theme
+    if (companyId.includes('11b9d863') || currentCompany.code === 'LAM') {
+      if (s.includes('deploy')) return '#C1121F';
+      if (s.includes('support')) return '#8DA7BE';
+      if (s.includes('pto') || s.includes('leave')) return '#2B3D41';
+      return index === 0 ? '#C1121F' : index === 1 ? '#8DA7BE' : '#2B3D41';
+    }
+
+    // Axcelis Technologies Theme
+    if (companyId.includes('f81bd16c') || currentCompany.code === 'AXCELIS') {
+      if (s.includes('deploy')) return '#E26D5C';
+      if (s.includes('support')) return '#723D46';
+      if (s.includes('pto') || s.includes('leave')) return '#C9CBA3';
+      return index === 0 ? '#E26D5C' : index === 1 ? '#723D46' : '#C9CBA3';
+    }
+
+    // Vishay Semiconductor Theme
+    if (companyId.includes('34d51cd0') || currentCompany.code === 'VISHAY') {
+      if (s.includes('deploy')) return '#495867';
+      if (s.includes('support')) return '#899D78';
+      if (s.includes('pto') || s.includes('leave')) return '#741B21';
+      return index === 0 ? '#495867' : index === 1 ? '#899D78' : '#741B21';
+    }
+
+    // Default / Master All Data Theme
+    if (s.includes('deploy')) return '#606C38';
+    if (s.includes('support')) return '#DDA15E';
+    if (s.includes('pto') || s.includes('leave')) return '#BC6C25';
+
+    // Fallback company theme colors
+    const fallbackPalette = [
+      currentCompany.primaryColor || '#606C38',
+      currentCompany.secondaryColor || '#DDA15E',
+      currentCompany.accentColor || '#BC6C25',
+      currentCompany.textColor || '#283618',
+    ];
+    return fallbackPalette[index % fallbackPalette.length];
+  };
 
   if (isError) {
     return (
@@ -173,15 +213,15 @@ export const DashboardPage: React.FC = () => {
       {/* Charts Visualization Section */}
       <div className="flex flex-col lg:flex-row gap-6 items-stretch">
         {/* Main Deployment Chart (decreased width by 50px on desktop) */}
-        <div className="w-full lg:w-[calc(50%-50px)] flex-shrink-0 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between">
+        <div className="w-full lg:w-[calc(50%-50px)] flex-shrink-0 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-stone-900">
+              <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
                 Engineer Deployment Trend
               </h3>
-              <p className="text-xs text-stone-500">Monthly field workforce allocation across global fabs</p>
+              <p className="text-xs text-[var(--color-text-secondary)] opacity-80">Monthly field workforce allocation across global fabs</p>
             </div>
-            <div className="flex items-center space-x-2 text-xs font-semibold">
+            <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--color-text-primary)]">
               <span className="flex items-center space-x-1">
                 <span
                   className="w-2.5 h-2.5 rounded-full inline-block"
@@ -194,7 +234,7 @@ export const DashboardPage: React.FC = () => {
 
           <div className="h-64 w-full">
             {isLoading ? (
-              <div className="h-full flex items-center justify-center text-xs text-stone-400">
+              <div className="h-full flex items-center justify-center text-xs text-[var(--color-text-secondary)]">
                 Loading Deployment Analytics...
               </div>
             ) : (
@@ -215,18 +255,18 @@ export const DashboardPage: React.FC = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#78716C" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#78716C" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="var(--color-text-secondary)" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="var(--color-text-secondary)" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1C1917',
+                      backgroundColor: 'var(--color-sidebar, #1C1917)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
-                      border: 'none',
+                      color: 'var(--color-sidebar-text, #FFFFFF)',
+                      border: '1px solid var(--color-border, transparent)',
                       fontSize: '12px',
                     }}
-                    itemStyle={{ color: '#FFFFFF' }}
-                    labelStyle={{ color: '#FFFFFF' }}
+                    itemStyle={{ color: 'var(--color-sidebar-text, #FFFFFF)' }}
+                    labelStyle={{ color: 'var(--color-sidebar-text, #FFFFFF)' }}
                   />
                   <Area
                     type="monotone"
@@ -243,17 +283,17 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Workforce Status Distribution Donut Chart */}
-        <div className="w-full lg:flex-1 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between">
+        <div className="w-full lg:flex-1 p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4 flex flex-col justify-between transition-colors duration-200">
           <div>
-            <h3 className="text-base font-semibold text-stone-900">
+            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
               Workforce Status Distribution
             </h3>
-            <p className="text-xs text-stone-500">Current allocation: Deployed, Support, & PTO</p>
+            <p className="text-xs text-[var(--color-text-secondary)] opacity-80">Current allocation: Deployed, Support, & PTO</p>
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
             {isLoading ? (
-              <div className="text-xs text-stone-400">Loading Status Distribution...</div>
+              <div className="text-xs text-[var(--color-text-secondary)]">Loading Status Distribution...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -267,19 +307,19 @@ export const DashboardPage: React.FC = () => {
                     dataKey="value"
                   >
                     {statusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={getStatusColor(entry, index)} />
                     ))}
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1C1917',
+                      backgroundColor: 'var(--color-sidebar, #1C1917)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
-                      border: 'none',
+                      color: 'var(--color-sidebar-text, #FFFFFF)',
+                      border: '1px solid var(--color-border, transparent)',
                       fontSize: '12px',
                     }}
-                    itemStyle={{ color: '#FFFFFF' }}
-                    labelStyle={{ color: '#FFFFFF' }}
+                    itemStyle={{ color: 'var(--color-sidebar-text, #FFFFFF)' }}
+                    labelStyle={{ color: 'var(--color-sidebar-text, #FFFFFF)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -287,13 +327,14 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)] text-xs">
-            {statusDistribution.map((item) => {
+            {statusDistribution.map((item, index) => {
               const total = statusDistribution.reduce((acc, curr) => acc + curr.value, 0);
               const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
+              const sliceColor = getStatusColor(item, index);
               return (
-                <div key={item.name} className="flex items-center justify-between text-stone-700">
+                <div key={item.name} className="flex items-center justify-between text-[var(--color-text-primary)]">
                   <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: sliceColor }} />
                     <span className="truncate max-w-[160px]">{item.name}</span>
                   </div>
                   <span className="font-semibold">{item.value} ({percentage}%)</span>
@@ -313,25 +354,25 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Schedule Comments Card */}
-      <ScheduleCommentsCard />
+      {/* Schedule Comments Card (Controlled by operational_remark_alerts_enabled setting) */}
+      {remarksAlertsEnabled && <ScheduleCommentsCard />}
 
       {/* Operational Intelligence Summary Card */}
       {user?.role !== 'Viewer' && (
 
-        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors duration-200">
           <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-white rounded-xl border border-[var(--color-border)]">
+            <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl border border-[var(--color-border)] backdrop-blur-xs">
               <ShieldAlert className="w-6 h-6 text-[var(--color-primary)]" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
+              <h3 className="text-base font-semibold text-[var(--color-text-primary)] flex items-center space-x-2">
                 <span>Operational Intelligence & Deterministic Exceptions</span>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white text-[var(--color-primary)] border border-[var(--color-border)] rounded-full">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-white/60 dark:bg-slate-800/60 text-[var(--color-primary)] border border-[var(--color-border)] rounded-full">
                   {opAlerts?.length || 0}
                 </span>
               </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
+              <p className="text-xs text-[var(--color-text-secondary)] opacity-80 mt-0.5">
                 Review and address compliance validation issues, travel scheduling delays, or leaves anomalies.
               </p>
             </div>

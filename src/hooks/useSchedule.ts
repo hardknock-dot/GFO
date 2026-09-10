@@ -19,8 +19,12 @@ export const useSchedule = (params?: any) => {
   const companyId = currentCompany?.company_id || currentCompany?.id;
   const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
 
-  const targetCompanyId = params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId);
   const engineerId = params?.engineerId || params?.engineer_id || undefined;
+  const targetCompanyId = params?.companyId !== undefined
+    ? params.companyId
+    : (params?.company_id !== undefined
+        ? params.company_id
+        : (engineerId ? undefined : activeCompanyId));
   const currentPage = params?.page || 1;
   const pageSize = params?.pageSize || params?.page_size || 20;
   const search = params?.search || '';

@@ -108,16 +108,16 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
       {/* Header & Legend */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] flex items-center space-x-2">
             <span>Engineer Location</span>
           </h3>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-[var(--color-text-secondary)] opacity-80">
             Current workforce location based on ongoing schedules
           </p>
         </div>
 
         {/* Intensity Legend */}
-        <div className="flex items-center space-x-3 text-[11px] font-semibold text-stone-600">
+        <div className="flex items-center space-x-3 text-[11px] font-semibold text-[var(--color-text-primary)]">
           <span className="flex items-center space-x-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"

@@ -5,7 +5,6 @@ import { useCompany } from '../../context/CompanyContext';
 import {
   LayoutDashboard,
   Users,
-  UserCheck,
   Calendar,
   Plane,
   FileCheck,
@@ -19,12 +18,14 @@ import {
   Bell,
   User,
   CheckSquare,
+  Settings as SettingsIcon,
   LogOut,
 } from 'lucide-react';
 
 import lamLogoImg from '../../assets/OIP.webp';
 import axcelisLogoImg from '../../assets/Axcelis_Technologies-Logo.wine.png';
 import vishayLogoImg from '../../assets/vishay-logo-approved.avif';
+import skylineLogoImg from '../../assets/logo.jpg';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -82,7 +83,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     : [
       { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
       ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
-      { label: 'Engineer Search', path: '/engineer-search', icon: UserCheck },
       { label: 'Engineers', path: '/engineers', icon: Users },
       {
         label: 'Schedule',
@@ -98,6 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { label: 'Performance', path: '/performance', icon: TrendingUp },
       ...(user?.role !== 'Viewer' ? [{ label: 'Operational Alerts', path: '/alerts', icon: Bell }] : []),
       { label: 'Reports', path: '/reports', icon: BarChart3 },
+      ...((isMainAdmin || isManager) ? [{ label: 'Settings', path: '/settings', icon: SettingsIcon }] : []),
     ];
 
   return (
@@ -120,9 +121,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             if (mobileOpen && onCloseMobile) onCloseMobile();
             navigate(isEngineerUser ? '/engineer/dashboard' : '/dashboard');
           }}
-          className={`h-16 flex items-center border-b border-[var(--color-sidebar-border)] cursor-pointer transition-colors hover:bg-[var(--color-sidebar-hover)] ${
-            collapsed ? 'justify-center px-2' : hasDedicatedFullLogo ? 'px-3 justify-center' : 'px-4 space-x-3'
-          }`}
+          className={`h-16 flex items-center border-b border-[var(--color-sidebar-border)] cursor-pointer transition-colors hover:bg-[var(--color-sidebar-hover)] ${collapsed ? 'justify-center px-2' : hasDedicatedFullLogo ? 'px-3 justify-center' : 'px-4 space-x-3'
+            }`}
           title={currentCompany.name}
         >
           {hasDedicatedFullLogo ? (
@@ -278,6 +278,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
+        {/* Skyline Orbit Brand Logo above Logout */}
+        <div className="px-3 py-2 border-t border-[var(--color-sidebar-border)]/60">
+          <div
+            className={`w-full bg-white/95 dark:bg-white/90 rounded-xl flex items-center justify-center p-1.5 shadow-xs border border-black/5 dark:border-white/20 transition-all duration-200 hover:scale-[1.02] ${
+              collapsed && !mobileOpen ? 'h-10 px-1' : 'h-12 px-2.5'
+            }`}
+            title="Skyline Orbit Semiconductor"
+          >
+            <img
+              src={skylineLogoImg}
+              alt="Skyline Orbit Semiconductor"
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        </div>
+
         {/* Footer with Logout & Collapse Toggle */}
         <div className="p-3 border-t border-[var(--color-sidebar-border)] flex items-center justify-between gap-1.5">
           <button
@@ -285,9 +301,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               if (mobileOpen && onCloseMobile) onCloseMobile();
               logout();
             }}
-            className={`flex items-center space-x-2 text-xs font-semibold text-[var(--color-sidebar-text-muted)] hover:text-red-400 hover:bg-red-500/10 px-2.5 py-1.5 rounded-xl transition-all group cursor-pointer ${
-              collapsed && !mobileOpen ? 'justify-center w-full' : ''
-            }`}
+            className={`flex items-center space-x-2 text-xs font-semibold text-[var(--color-sidebar-text-muted)] hover:text-red-400 hover:bg-red-500/10 px-2.5 py-1.5 rounded-xl transition-all group cursor-pointer ${collapsed && !mobileOpen ? 'justify-center w-full' : ''
+              }`}
             title="Log Out"
           >
             <LogOut className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" />

@@ -65,13 +65,28 @@ def get_dashboard_metrics(
     deployed_engineers = sum(1 for e in engineers if e.status == 'Deployed' or e.engineer_id in active_sched_eng_ids)
     utilization_rate = round((deployed_engineers / total_engineers * 100), 1) if total_engineers > 0 else 0.0
 
-    upcoming_travel_count = sum(1 for t in travels if t.travel_date is None or t.travel_date >= today)
+    from app.services.company_settings_service import get_or_create_company_settings
+    visa_days = 30
+    visa_enabled = True
+    travel_enabled = True
+    if company_id:
+        cs = get_or_create_company_settings(db, company_id)
+        visa_days = cs.visa_expiration_days
+        visa_enabled = cs.visa_alerts_enabled
+        travel_enabled = cs.travel_alerts_enabled
+    elif target_cids and len(target_cids) == 1:
+        cs = get_or_create_company_settings(db, target_cids[0])
+        visa_days = cs.visa_expiration_days
+        visa_enabled = cs.visa_alerts_enabled
+        travel_enabled = cs.travel_alerts_enabled
+
+    upcoming_travel_count = sum(1 for t in travels if t.travel_date is None or t.travel_date >= today) if travel_enabled else 0
     
-    thirty_days_later = today + timedelta(days=30)
+    visa_threshold_date = today + timedelta(days=visa_days)
     expiring_visas_count = sum(
         1 for v in visas 
-        if v.visa_end_date is not None and (today <= v.visa_end_date <= thirty_days_later or v.visa_end_date < today)
-    )
+        if v.visa_end_date is not None and (today <= v.visa_end_date <= visa_threshold_date or v.visa_end_date < today)
+    ) if visa_enabled else 0
 
     active_projects_count = sum(
         1 for s in schedules 
@@ -214,7 +229,7 @@ def get_dashboard_metrics(
     action_checklist: List[ActionChecklistItem] = []
 
     for v in visas:
-        if v.visa_end_date is not None and v.visa_end_date <= thirty_days_later:
+        if v.visa_end_date is not None and v.visa_end_date <= visa_threshold_date:
             days_left = (v.visa_end_date - today).days
             eng = db.get(Engineer, v.engineer_id)
             eng_name = eng.engineer_name if eng else "Engineer"

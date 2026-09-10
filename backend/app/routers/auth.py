@@ -55,14 +55,21 @@ def login(request: UserLoginRequest, db: Session = Depends(get_db)):
     accessible = get_accessible_companies(db, user)
     comp_summaries = get_user_company_summaries(db, user)
     
+    comp = db.get(Company, user.company_id) if user.company_id else None
     user_me = UserMeResponse(
         id=user.user_id,
         name=user.full_name,
         email=user.email,
+        avatar=user.avatar_url or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        avatar_url=user.avatar_url,
+        goes_by=user.goes_by,
         role=user.role,
+        company_name=comp.company_name if comp else None,
         currentCompanyId=user.company_id,
         engineer_id=user.engineer_id,
         engineerId=user.engineer_id,
+        is_active=bool(user.is_active),
+        last_login=user.last_login,
         accessibleCompanies=accessible,
         companies=comp_summaries
     )
@@ -73,14 +80,21 @@ def login(request: UserLoginRequest, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     accessible = get_accessible_companies(db, current_user)
     comp_summaries = get_user_company_summaries(db, current_user)
+    comp = db.get(Company, current_user.company_id) if current_user.company_id else None
     return UserMeResponse(
         id=current_user.user_id,
         name=current_user.full_name,
         email=current_user.email,
+        avatar=current_user.avatar_url or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        avatar_url=current_user.avatar_url,
+        goes_by=current_user.goes_by,
         role=current_user.role,
+        company_name=comp.company_name if comp else None,
         currentCompanyId=current_user.company_id,
         engineer_id=current_user.engineer_id,
         engineerId=current_user.engineer_id,
+        is_active=bool(current_user.is_active),
+        last_login=current_user.last_login,
         accessibleCompanies=accessible,
         companies=comp_summaries
     )

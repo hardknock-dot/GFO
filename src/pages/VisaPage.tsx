@@ -3,6 +3,7 @@ import { useProgressiveVisa, useCreateVisa, useUpdateVisa, useDeleteVisa, useRen
 import { useEngineers } from '../hooks/useEngineers';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
+import { useCompanySettings } from '../hooks/useSettings';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Table } from '../components/common/Table';
 import type { Column } from '../components/common/Table';
@@ -21,13 +22,14 @@ export const VisaPage: React.FC = () => {
   const { currentCompany } = useCompany();
   const { canEdit } = useAuth();
   const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
+  const { data: companySettings } = useCompanySettings(companyId);
+  const visaThresholdDays = companySettings?.visa_expiration_days ?? 30;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [ownerFilter, setOwnerFilter] = useState('All');
   const [usersList, setUsersList] = useState<ManagedUser[]>([]);
 
-  // Fetch users for Owner assignment and filter
+  // Fetch users for Owner assignment
   useEffect(() => {
     getAllUsers()
       .then((users) => setUsersList(users))
@@ -47,7 +49,6 @@ export const VisaPage: React.FC = () => {
     search,
     status: statusFilter === 'All' ? undefined : statusFilter,
     companyId,
-    ownerId: ownerFilter === 'All' ? undefined : ownerFilter,
   });
 
   // Automatically fetch next page in background until all pages are loaded
@@ -257,7 +258,7 @@ export const VisaPage: React.FC = () => {
       header: 'Days Left',
       sortable: true,
       render: (v) => (
-        <span className={`font-mono text-xs font-bold ${v.daysUntilExpiry <= 30 ? 'text-rose-600' : 'text-slate-600'}`}>
+        <span className={`font-mono text-xs font-bold ${v.daysUntilExpiry <= visaThresholdDays ? 'text-rose-600' : 'text-slate-600'}`}>
           {v.daysUntilExpiry > 0 ? `${v.daysUntilExpiry} Days` : 'EXPIRED'}
         </span>
       ),
@@ -268,13 +269,12 @@ export const VisaPage: React.FC = () => {
       sortable: true,
       render: (v) => (
         <span
-          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-            v.status === 'Expiring Soon'
+          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${v.status === 'Expiring Soon'
               ? 'bg-amber-100 text-amber-800 border-amber-200'
               : v.status === 'Expired'
-              ? 'bg-rose-100 text-rose-800 border-rose-200'
-              : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-          }`}
+                ? 'bg-rose-100 text-rose-800 border-rose-200'
+                : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            }`}
         >
           {v.status}
         </span>
@@ -337,24 +337,8 @@ export const VisaPage: React.FC = () => {
 
       <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <GlobalSearch onSearch={(q) => setSearch(q)} placeholder="Search by engineer, jurisdiction country, passport number..." />
-        
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Owner Filter */}
-          <div className="w-full sm:w-56">
-            <select
-              value={ownerFilter}
-              onChange={(e) => setOwnerFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer shadow-xs"
-            >
-              <option value="All">All Owners</option>
-              {companyUsers.map((u) => (
-                <option key={u.user_id} value={u.user_id}>
-                  {u.full_name} ({u.email})
-                </option>
-              ))}
-            </select>
-          </div>
 
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Status Filter */}
           <div className="w-full sm:w-44">
             <Dropdown value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} options={['All', 'Valid', 'Expiring Soon', 'Expired']} />

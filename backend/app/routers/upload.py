@@ -59,22 +59,16 @@ def parse_date(v):
 def parse_experience(v):
     if v is None:
         return None
-    if isinstance(v, (int, float)):
-        return float(v)
+    if isinstance(v, float):
+        if v.is_integer():
+            return str(int(v))
+        return str(v)
+    if isinstance(v, int):
+        return str(v)
     v_str = str(v).strip()
     if not v_str:
         return None
-    v_clean = v_str.rstrip("+").rstrip(".").strip()
-    match = re.match(r"^([\d.]+)\s*(?:years?|yrs?\.?)$", v_clean, re.IGNORECASE)
-    if match:
-        try:
-            return float(match.group(1))
-        except ValueError:
-            pass
-    try:
-        return float(v_clean)
-    except ValueError:
-        raise ValueError("Must be a valid numeric experience value")
+    return v_str
 
 def clean_val(v):
     if v is None:
@@ -173,7 +167,9 @@ def values_are_equal(val1: Any, val2: Any) -> bool:
 HEADER_MAP = {
     "engineerid": "engineer_id",
     "engineer_id": "engineer_id",
-    "id": "engineer_id",
+    "uuid": "engineer_id",
+    "guid": "engineer_id",
+    "id": "employee_id",
     "engineername": "engineer_name",
     "name": "engineer_name",
     "engineer": "engineer_name",
@@ -207,6 +203,8 @@ HEADER_MAP = {
     "emp_code": "employee_id",
     "staffid": "employee_id",
     "staff_id": "employee_id",
+    "badgeid": "employee_id",
+    "badge_id": "employee_id",
     "orbitid": "orbit_id",
     "orbit": "orbit_id",
     "level": "level",
@@ -240,8 +238,11 @@ def map_engineer_header(raw_header: str) -> Optional[str]:
     if norm in HEADER_MAP:
         return HEADER_MAP[norm]
 
-    if norm in ("engineerid", "id", "engineer_id"):
+    if norm in ("engineerid", "engineer_id", "uuid", "guid"):
         return "engineer_id"
+
+    if norm in ("id", "empid", "employeeid"):
+        return "employee_id"
         
     if ("customer" in norm or "lam" in norm or "cust" in norm) and ("exp" in norm or "experience" in norm):
         return "customer_experience"
@@ -270,7 +271,7 @@ def map_engineer_header(raw_header: str) -> Optional[str]:
     if "tool" in norm:
         return "primary_tool"
         
-    if ("employee" in norm or "emp" in norm or "lam" in norm or "customer" in norm or "cust" in norm or "staff" in norm) and ("id" in norm or "num" in norm or "number" in norm or "no" in norm or "code" in norm):
+    if ("employee" in norm or "emp" in norm or "lam" in norm or "customer" in norm or "cust" in norm or "staff" in norm or "badge" in norm) and ("id" in norm or "num" in norm or "number" in norm or "no" in norm or "code" in norm):
         return "employee_id"
         
     if "name" in norm and "engineer" in norm:
@@ -463,6 +464,21 @@ async def bulk_upload(
     Validate rows against requirements, insert valid new rows into the database,
     update existing rows by primary key, and generate a validation report file.
     """
+    MODULE_ALIAS_MAP = {
+        "engineers": "up-engineers",
+        "skills": "up-skills",
+        "schedules": "up-schedule",
+        "schedule": "up-schedule",
+        "visas": "up-visa",
+        "visa": "up-visa",
+        "travel": "up-travel",
+        "performance": "up-performance",
+        "leaves": "up-leave",
+        "leave": "up-leave"
+    }
+    if module_id in MODULE_ALIAS_MAP:
+        module_id = MODULE_ALIAS_MAP[module_id]
+
     enforce_write_permission(current_user)
 
     target_company_id = None
@@ -3294,19 +3310,8 @@ async def bulk_upload(
                     else:
                         row_dict["phone_number"] = phone_str
 
-                normalized_cust_exp = None
-                if row_dict.get("customer_experience") is not None:
-                    try:
-                        normalized_cust_exp = parse_experience(row_dict["customer_experience"])
-                    except ValueError:
-                        row_errors.append({"field": "Customer Experience", "value": str(row_dict["customer_experience"]), "error": "LAM Experience must be numeric or 'X Years'"})
-
-                normalized_ind_exp = None
-                if row_dict.get("industry_experience") is not None:
-                    try:
-                        normalized_ind_exp = parse_experience(row_dict["industry_experience"])
-                    except ValueError:
-                        row_errors.append({"field": "Industry Experience", "value": str(row_dict["industry_experience"]), "error": "Industry Experience must be numeric or 'X Years'"})
+                normalized_cust_exp = parse_experience(row_dict.get("customer_experience"))
+                normalized_ind_exp = parse_experience(row_dict.get("industry_experience"))
 
                 normalized_date = None
                 if row_dict.get("date_of_joining") is not None:
@@ -3330,11 +3335,13 @@ async def bulk_upload(
                 if raw_pk is not None and str(raw_pk).strip() != "":
                     try:
                         parsed_pk = parse_uuid_safe(raw_pk)
-                    except ValueError as ve:
-                        row_errors.append({"field": "Engineer ID", "value": str(raw_pk), "error": str(ve)})
-                        row_dict["errors"] = row_errors
-                        errors_list.append(row_dict)
-                        continue
+                    except ValueError:
+                        # If a non-UUID value (e.g. '74494' or 'EMP-101') was passed under engineer_id/ID header,
+                        # assign it to employee_id if employee_id is empty, rather than failing the row.
+                        if not row_dict.get("employee_id"):
+                            row_dict["employee_id"] = str(raw_pk).strip()
+                        raw_pk = None
+                        parsed_pk = None
 
                 # PRIMARY KEY UPDATE PATH
                 if parsed_pk is not None:
@@ -3362,8 +3369,8 @@ async def bulk_upload(
                         ("level", "Level", db_exist.level),
                         ("date_of_joining", "Date of Joining", db_exist.date_of_joining),
                         ("primary_tool", "Primary Tool", db_exist.primary_tool_type),
-                        ("customer_experience", "Customer Experience", float(db_exist.lam_experience) if db_exist.lam_experience is not None else None),
-                        ("industry_experience", "Industry Experience", float(db_exist.industry_experience) if db_exist.industry_experience is not None else None),
+                        ("customer_experience", "Customer Experience", str(db_exist.lam_experience) if db_exist.lam_experience is not None else None),
+                        ("industry_experience", "Industry Experience", str(db_exist.industry_experience) if db_exist.industry_experience is not None else None),
                         ("status", "Status", db_exist.status),
                         ("email", "Email", db_exist.email),
                         ("phone_number", "Phone Number", db_exist.phone_number)
@@ -3422,14 +3429,46 @@ async def bulk_upload(
                     ).first()
 
                     if db_exist:
-                        row_errors.append({
-                            "field": "Orbit ID",
-                            "value": o_id,
-                            "error": f"Engineer with Orbit ID '{o_id}' already exists in database. To update an existing engineer record, supply the engineer_id."
-                        })
-                        row_dict["errors"] = row_errors
-                        errors_list.append(row_dict)
-                        continue
+                        row_dict["engineer_id"] = db_exist.engineer_id
+                        changes = []
+                        field_specs = [
+                            ("engineer_name", "Engineer Name", db_exist.engineer_name),
+                            ("goes_by", "Goes By", db_exist.goes_by),
+                            ("employee_id", "Employee ID", db_exist.lam_id),
+                            ("orbit_id", "Orbit ID", db_exist.orbit_id),
+                            ("level", "Level", db_exist.level),
+                            ("date_of_joining", "Date of Joining", db_exist.date_of_joining),
+                            ("primary_tool", "Primary Tool", db_exist.primary_tool_type),
+                            ("customer_experience", "Customer Experience", str(db_exist.lam_experience) if db_exist.lam_experience is not None else None),
+                            ("industry_experience", "Industry Experience", str(db_exist.industry_experience) if db_exist.industry_experience is not None else None),
+                            ("status", "Status", db_exist.status),
+                            ("email", "Email", db_exist.email),
+                            ("phone_number", "Phone Number", db_exist.phone_number)
+                        ]
+
+                        for f_key, f_label, cur_val in field_specs:
+                            if f_key in col_indices:
+                                new_val = row_dict.get(f_key)
+                                if not values_are_equal(cur_val, new_val):
+                                    changes.append(f"{f_label}: '{cur_val}' -> '{new_val}'")
+                                    if f_key == "employee_id":
+                                        db_exist.lam_id = new_val
+                                    elif f_key == "primary_tool":
+                                        db_exist.primary_tool_type = new_val
+                                    elif f_key == "customer_experience":
+                                        db_exist.lam_experience = new_val
+                                    else:
+                                        setattr(db_exist, f_key, new_val)
+
+                        if changes:
+                            db_exist.updated_at = datetime.utcnow()
+                            row_dict["update_status"] = "UPDATED"
+                            row_dict["changed_fields"] = "; ".join(changes)
+                            existing_list.append(row_dict)
+                        else:
+                            row_dict["update_status"] = "UNCHANGED"
+                            row_dict["changed_fields"] = "No fields modified"
+                            unchanged_list.append(row_dict)
                     else:
                         valid_rows_to_insert.append(row_dict)
 
@@ -3444,7 +3483,7 @@ async def bulk_upload(
                         company_id=target_company_id,
                         engineer_name=item["engineer_name"],
                         goes_by=item.get("goes_by"),
-                        lam_id=item.get("employee_id"),
+                        lam_id=item.get("employee_id") or item.get("customer_id") or item.get("lam_id") or item.get("emp_id"),
                         orbit_id=item["orbit_id"],
                         level=item.get("level"),
                         date_of_joining=item.get("date_of_joining"),

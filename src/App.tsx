@@ -13,7 +13,6 @@ import { PortalSelectionPage } from './pages/PortalSelectionPage';
 import { CompanySelectionPage } from './pages/CompanySelectionPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AllDataPage } from './pages/AllDataPage';
-import { EngineerSearchPage } from './pages/EngineerSearchPage';
 import { EngineersPage } from './pages/EngineersPage';
 import { EngineerProfilePage } from './pages/EngineerProfilePage';
 import { SchedulePage } from './pages/SchedulePage';
@@ -29,6 +28,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { UploadPage } from './pages/UploadPage';
 import { OperationalAlertsPage } from './pages/OperationalAlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { DeleteRequestsPage } from './pages/DeleteRequestsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -93,7 +93,6 @@ export const App: React.FC = () => {
                         <Route element={<NonEngineerRoute />}>
                           <Route path="/dashboard" element={<DashboardPage />} />
                           <Route path="/all-data" element={<AllDataPage />} />
-                          <Route path="/engineer-search" element={<EngineerSearchPage />} />
 
                           {/* Viewer & Operational Access */}
                           <Route element={<ViewerRoute />}>
@@ -124,9 +123,14 @@ export const App: React.FC = () => {
                             <Route path="/upload" element={<UploadPage />} />
                           </Route>
 
-                          {/* Main Admin access: user management, audit & settings */}
-                          <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin']} />}>
+                          {/* User Profile Page (Authenticated User Self-Service) */}
+                          <Route path="/profile" element={<ProfilePage />} />
+
+                          {/* Administrative access: user management, audit & settings */}
+                          <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin', 'Manager', 'Company Admin']} />}>
                             <Route path="/settings" element={<SettingsPage />} />
+                          </Route>
+                          <Route element={<RoleGuard allowedRoles={['Main Admin', 'Global Admin']} />}>
                             <Route path="/users" element={<UserManagementPage defaultTab="users" />} />
                             <Route path="/audit" element={<UserManagementPage defaultTab="audit" />} />
                           </Route>

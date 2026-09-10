@@ -48,28 +48,27 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-const parseNum = (val: any): number => {
-  if (val === undefined || val === null || val === '') return 0;
-  const n = Number(val);
-  return isNaN(n) ? 0 : n;
+const parseStr = (val: any): string => {
+  if (val === undefined || val === null) return '';
+  return String(val);
 };
 
 const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
   const custExp =
     apiEng.customer_experience !== undefined && apiEng.customer_experience !== null
-      ? parseNum(apiEng.customer_experience)
+      ? parseStr(apiEng.customer_experience)
       : apiEng.lam_experience !== undefined && apiEng.lam_experience !== null
-      ? parseNum(apiEng.lam_experience)
+      ? parseStr(apiEng.lam_experience)
       : apiEng.customerExperience !== undefined && apiEng.customerExperience !== null
-      ? parseNum(apiEng.customerExperience)
-      : 0;
+      ? parseStr(apiEng.customerExperience)
+      : '';
 
   const indExp =
     apiEng.industry_experience !== undefined && apiEng.industry_experience !== null
-      ? parseNum(apiEng.industry_experience)
+      ? parseStr(apiEng.industry_experience)
       : apiEng.yearsExperience !== undefined && apiEng.yearsExperience !== null
-      ? parseNum(apiEng.yearsExperience)
-      : 0;
+      ? parseStr(apiEng.yearsExperience)
+      : '';
 
   return {
     id: apiEng.engineer_id,
@@ -249,8 +248,8 @@ export const createEngineer = async (data: Partial<Engineer>): Promise<Engineer>
     level: data.level,
     date_of_joining: data.joinDate || null,
     primary_tool: data.primaryTool,
-    customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
-    industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
+    customer_experience: data.customerExperience !== undefined && data.customerExperience !== null ? String(data.customerExperience) : null,
+    industry_experience: data.yearsExperience !== undefined && data.yearsExperience !== null ? String(data.yearsExperience) : null,
     status: data.status,
     email: data.email || null,
     phone_number: data.phoneNumber || null,
@@ -268,8 +267,8 @@ export const updateEngineer = async (id: string, data: Partial<Engineer>): Promi
     level: data.level,
     date_of_joining: data.joinDate || null,
     primary_tool: data.primaryTool,
-    customer_experience: data.customerExperience !== undefined ? Number(data.customerExperience) : null,
-    industry_experience: data.yearsExperience !== undefined ? Number(data.yearsExperience) : null,
+    customer_experience: data.customerExperience !== undefined && data.customerExperience !== null ? String(data.customerExperience) : null,
+    industry_experience: data.yearsExperience !== undefined && data.yearsExperience !== null ? String(data.yearsExperience) : null,
     status: data.status,
     email: data.email || null,
     phone_number: data.phoneNumber || null,

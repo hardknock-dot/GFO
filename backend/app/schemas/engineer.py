@@ -37,8 +37,8 @@ class EngineerCreate(BaseModel):
     level: str | None = None
     date_of_joining: date | None = None
     primary_tool: str | None = None
-    customer_experience: Decimal | None = None
-    industry_experience: Decimal | None = None
+    customer_experience: str | None = None
+    industry_experience: str | None = None
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None
@@ -63,8 +63,8 @@ class EngineerUpdate(BaseModel):
     level: str | None = None
     date_of_joining: date | None = None
     primary_tool: str | None = None
-    customer_experience: Decimal | None = None
-    industry_experience: Decimal | None = None
+    customer_experience: str | None = None
+    industry_experience: str | None = None
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None
@@ -92,9 +92,9 @@ class EngineerResponse(BaseModel):
     date_of_joining: date | None = None
     primary_tool: str | None = None
     primary_tool_type: str | None = None
-    customer_experience: float | None = None
-    lam_experience: float | None = None
-    industry_experience: float | None = None
+    customer_experience: str | None = None
+    lam_experience: str | None = None
+    industry_experience: str | None = None
     status: str | None = None
     email: str | None = None
     phone_number: str | None = None

@@ -26,6 +26,7 @@ import type { Schedule, MissedSchedule } from '../types';
 import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info, Star } from 'lucide-react';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
 import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
+import { ScheduleCommentsCard } from '../components/schedule/ScheduleCommentsCard';
 
 
 export const SchedulePage: React.FC = () => {
@@ -629,6 +630,9 @@ export const SchedulePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Pending Operational Remarks Card */}
+      <ScheduleCommentsCard />
 
       {/* Add / Edit Schedule Modal */}
       <Modal

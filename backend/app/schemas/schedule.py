@@ -50,9 +50,10 @@ class ScheduleCommentStatusUpdate(BaseModel):
     comment_adressal: bool | None = None
 
 class ScheduleMarkAddressedResponse(BaseModel):
+    success: bool = True
     message: str = "Comment marked as addressed successfully"
     schedule_id: UUID
-    comment_adressal: bool | None = None
+    comment_adressal: bool | None = True
 
 class ScheduleResponse(BaseModel):
     schedule_id: UUID

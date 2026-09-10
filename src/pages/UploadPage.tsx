@@ -129,10 +129,10 @@ export const UploadPage: React.FC = () => {
       />
 
       {/* Target Company Scope Block */}
-      <div className="p-5 bg-sky-50/70 dark:bg-slate-900 border border-sky-200/80 dark:border-slate-800 rounded-2xl space-y-3 w-full max-w-xl shadow-sm">
+      <div className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl space-y-3 w-full max-w-xl shadow-md shadow-black/10">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Target Company Tenant</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-1">Target Company Tenant</h3>
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
             Every engineer uploaded through this bulk-upload workflow will automatically receive this company tenant assignment.
           </p>
         </div>
@@ -141,7 +141,7 @@ export const UploadPage: React.FC = () => {
           <select
             value={currentCompany.company_id || currentCompany.id}
             onChange={(e) => setCompany(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer text-sm shadow-sm"
+            className="w-full px-3.5 py-2.5 bg-[var(--color-bg)] text-[var(--color-text-primary)] font-semibold border border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 cursor-pointer text-sm shadow-xs"
           >
             {companies
               .filter((c) => c.id !== 'all-data' && c.company_id !== 'all-data')
@@ -155,77 +155,28 @@ export const UploadPage: React.FC = () => {
       </div>
 
       {/* Data Type Selector Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl w-full shadow-sm border border-slate-200/60 dark:border-slate-700/60 mb-4">
-        <button
-          onClick={() => setSelectedTab('engineers')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'engineers'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Engineers Roster
-        </button>
-        <button
-          onClick={() => setSelectedTab('skills')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'skills'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Skills & Certifications
-        </button>
-        <button
-          onClick={() => setSelectedTab('schedules')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'schedules'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Field Schedules
-        </button>
-        <button
-          onClick={() => setSelectedTab('visas')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'visas'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Visas & Permits
-        </button>
-        <button
-          onClick={() => setSelectedTab('travel')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'travel'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Travel & Mobility
-        </button>
-        <button
-          onClick={() => setSelectedTab('performance')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'performance'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Performance & Reviews
-        </button>
-        <button
-          onClick={() => setSelectedTab('leaves')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
-            selectedTab === 'leaves'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/50 dark:border-slate-800'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-          }`}
-        >
-          Leaves & Absences
-        </button>
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-[var(--color-card)] rounded-2xl w-full shadow-md shadow-black/10 border border-[var(--color-border)] mb-4">
+        {[
+          { id: 'engineers', label: 'Engineers Roster' },
+          { id: 'skills', label: 'Skills & Certifications' },
+          { id: 'schedules', label: 'Field Schedules' },
+          { id: 'visas', label: 'Visas & Permits' },
+          { id: 'travel', label: 'Travel & Mobility' },
+          { id: 'performance', label: 'Performance & Reviews' },
+          { id: 'leaves', label: 'Leaves & Absences' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSelectedTab(tab.id as any)}
+            className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap ${
+              selectedTab === tab.id
+                ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-black/5'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Grid of Upload Cards */}
@@ -244,11 +195,11 @@ export const UploadPage: React.FC = () => {
           .map((card) => (
           <div
             key={card.id}
-            className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+            className="p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/10 hover:shadow-lg transition-shadow flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[var(--color-secondary)]">
+                <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <span
@@ -257,28 +208,28 @@ export const UploadPage: React.FC = () => {
                       ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                       : card.status === 'Validating'
                       ? 'bg-amber-100 text-amber-800 border-amber-200'
-                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                      : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] border-[var(--color-border)]'
                   }`}
                 >
                   {card.status}
                 </span>
               </div>
 
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">{card.title}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <h3 className="text-base font-bold text-[var(--color-text-primary)]">{card.title}</h3>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">
                 {card.description}
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <div className="mt-6 pt-4 border-t border-[var(--color-border)] space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-[var(--color-text-secondary)] font-mono">
                 <span>FastAPI Endpoint:</span>
-                <span className="text-slate-600 dark:text-slate-300">{card.targetEndpoint}</span>
+                <span className="text-[var(--color-text-primary)] font-semibold">{card.targetEndpoint}</span>
               </div>
 
               {card.lastUploaded && (
-                <div className="text-[11px] text-slate-400">
-                  Last Sync: <span className="font-semibold text-slate-700 dark:text-slate-300">{card.lastUploaded}</span>
+                <div className="text-[11px] text-[var(--color-text-secondary)]">
+                  Last Sync: <span className="font-semibold text-[var(--color-text-primary)]">{card.lastUploaded}</span>
                 </div>
               )}
 
@@ -294,10 +245,10 @@ export const UploadPage: React.FC = () => {
                 <a
                   href={card.templateUrl}
                   download
-                  className="inline-flex items-center justify-center p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+                  className="inline-flex items-center justify-center p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-black/5 text-[var(--color-text-secondary)] transition-colors"
                   title="Download Excel Template"
                 >
-                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <Download className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
                 </a>
               </div>
             </div>
@@ -359,8 +310,8 @@ export const UploadPage: React.FC = () => {
                 )}
               </div>
             ) : selectedCard.id === 'up-skills' ? (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">FastAPI Ingestion Validation Rules (Skills Matrix):</p>
+              <div className="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-xs text-[var(--color-text-secondary)] space-y-1">
+                <p className="font-semibold text-[var(--color-text-primary)]">FastAPI Ingestion Validation Rules (Skills Matrix):</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li>Mandatory column: <strong>Orbit ID</strong>.</li>
                   <li>Dates must be valid, and End Date must be &ge; Start Date.</li>
@@ -369,8 +320,8 @@ export const UploadPage: React.FC = () => {
                 </ul>
               </div>
             ) : selectedCard.id === 'up-schedule' ? (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">FastAPI Ingestion Validation Rules (Schedules):</p>
+              <div className="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-xs text-[var(--color-text-secondary)] space-y-1">
+                <p className="font-semibold text-[var(--color-text-primary)]">FastAPI Ingestion Validation Rules (Schedules):</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li>Mandatory columns: <strong>Orbit ID</strong>, <strong>Support Type</strong>, <strong>Country</strong>, <strong>Start Date</strong>.</li>
                   <li>Dates must be valid, and End Date must be &ge; Start Date.</li>
@@ -378,8 +329,8 @@ export const UploadPage: React.FC = () => {
                 </ul>
               </div>
             ) : (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">FastAPI Ingestion Validation Rules (Engineers):</p>
+              <div className="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-xs text-[var(--color-text-secondary)] space-y-1">
+                <p className="font-semibold text-[var(--color-text-primary)]">FastAPI Ingestion Validation Rules (Engineers):</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li>Mandatory columns: <strong>Engineer Name</strong>, <strong>Orbit ID</strong>.</li>
                   <li>Dates formatted ISO-8601 (YYYY-MM-DD).</li>
@@ -406,19 +357,19 @@ export const UploadPage: React.FC = () => {
       )}
 
       {/* Upload History Section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2 flex items-center space-x-2">
-          <FileSpreadsheet className="w-5 h-5 text-[var(--color-secondary)]" />
+      <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md shadow-black/10">
+        <h2 className="text-lg font-extrabold text-[var(--color-text-primary)] mb-2 flex items-center space-x-2">
+          <FileSpreadsheet className="w-5 h-5 text-[var(--color-primary)]" />
           <span>Upload History & Audit Trail</span>
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-xs text-[var(--color-text-secondary)] mb-6">
           Review bulk data validation results, import metrics, statuses, and download validation reports.
         </p>
 
         {isLoadingHistory ? (
           <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
-            <span className="ml-2 text-xs text-slate-500">Loading upload history...</span>
+            <RefreshCw className="w-6 h-6 animate-spin text-[var(--color-text-secondary)]" />
+            <span className="ml-2 text-xs text-[var(--color-text-secondary)]">Loading upload history...</span>
           </div>
         ) : !historyList || historyList.filter((item) => {
           if (selectedTab === 'engineers') return item.uploadType === 'engineers';
@@ -430,16 +381,16 @@ export const UploadPage: React.FC = () => {
           if (selectedTab === 'leaves') return item.uploadType === 'leaves' || item.uploadType === 'leave';
           return true;
         }).length === 0 ? (
-          <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-            <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">No upload history found</p>
-            <p className="text-xs text-slate-400 mt-1">Upload records will appear here after they are processed.</p>
+          <div className="text-center py-12 border border-dashed border-[var(--color-border)] rounded-xl">
+            <FileSpreadsheet className="w-8 h-8 text-[var(--color-text-secondary)]/50 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">No upload history found</p>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">Upload records will appear here after they are processed.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                <tr className="border-b border-[var(--color-border)] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">
                   <th className="py-3 px-4">File Name</th>
                   <th className="py-3 px-4">Type</th>
                   <th className="py-3 px-4">Target Company</th>
@@ -453,7 +404,7 @@ export const UploadPage: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-[var(--color-border)] font-medium text-[var(--color-text-primary)]">
                 {historyList
                   .filter((item) => {
                     if (selectedTab === 'engineers') return item.uploadType === 'engineers';
@@ -466,14 +417,14 @@ export const UploadPage: React.FC = () => {
                     return true;
                   })
                   .map((item) => (
-                  <tr key={item.uploadId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white max-w-[200px] truncate" title={item.fileName}>
+                  <tr key={item.uploadId} className="hover:bg-black/5 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-[var(--color-text-primary)] max-w-[200px] truncate" title={item.fileName}>
                       {item.fileName}
                     </td>
                     <td className="py-3.5 px-4 capitalize">{item.uploadType}</td>
                     <td className="py-3.5 px-4">{item.companyName}</td>
                     <td className="py-3.5 px-4">{item.uploadedByName}</td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">
+                    <td className="py-3.5 px-4 font-mono text-[11px] text-[var(--color-text-secondary)]">
                       {new Date(item.createdAt).toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono">{item.totalRows}</td>
@@ -489,7 +440,7 @@ export const UploadPage: React.FC = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleViewDetails(item)}
-                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                          className="p-1.5 hover:bg-black/10 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -497,7 +448,7 @@ export const UploadPage: React.FC = () => {
                         {item.reportFile && (
                           <button
                             onClick={() => downloadReportFile(`/api/upload/download-report/${item.reportFile}`)}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-[var(--color-secondary)] transition-colors"
+                            className="p-1.5 hover:bg-black/10 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors"
                             title="Download Report"
                           >
                             <Download className="w-4 h-4" />
@@ -522,43 +473,43 @@ export const UploadPage: React.FC = () => {
           subtitle={`Audit log for bulk ingestion file: ${selectedHistoryUpload.fileName}`}
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)]">
               <div className="space-y-2">
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Upload ID</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{selectedHistoryUpload.uploadId}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Upload ID</span>
+                  <span className="font-mono text-[var(--color-text-primary)]">{selectedHistoryUpload.uploadId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">File Name</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold">{selectedHistoryUpload.fileName}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">File Name</span>
+                  <span className="text-[var(--color-text-primary)] font-semibold">{selectedHistoryUpload.fileName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Upload Type</span>
-                  <span className="text-slate-800 dark:text-slate-200 capitalize">{selectedHistoryUpload.uploadType}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Upload Type</span>
+                  <span className="text-[var(--color-text-primary)] capitalize">{selectedHistoryUpload.uploadType}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Target Company</span>
-                  <span className="text-slate-800 dark:text-slate-200">{selectedHistoryUpload.companyName}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Target Company</span>
+                  <span className="text-[var(--color-text-primary)]">{selectedHistoryUpload.companyName}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Uploaded By</span>
-                  <span className="text-slate-800 dark:text-slate-200">{selectedHistoryUpload.uploadedByName}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Uploaded By</span>
+                  <span className="text-[var(--color-text-primary)]">{selectedHistoryUpload.uploadedByName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Created At</span>
-                  <span className="text-slate-800 dark:text-slate-200">{new Date(selectedHistoryUpload.createdAt).toLocaleString()}</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Created At</span>
+                  <span className="text-[var(--color-text-primary)]">{new Date(selectedHistoryUpload.createdAt).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Completed At</span>
-                  <span className="text-slate-800 dark:text-slate-200">
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Completed At</span>
+                  <span className="text-[var(--color-text-primary)]">
                     {selectedHistoryUpload.completedAt ? new Date(selectedHistoryUpload.completedAt).toLocaleString() : 'N/A'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Current Ingestion Status</span>
+                  <span className="text-[var(--color-text-secondary)] block font-semibold uppercase tracking-wider text-[9px]">Current Ingestion Status</span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block mt-0.5 ${getStatusBadgeColor(selectedHistoryUpload.status)}`}>
                     {selectedHistoryUpload.status}
                   </span>
@@ -566,12 +517,12 @@ export const UploadPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl space-y-3">
-              <h4 className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-2">Row Validation & Import Counts</h4>
+            <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl space-y-3">
+              <h4 className="font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-2">Row Validation & Import Counts</h4>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-2 bg-slate-50 dark:bg-slate-850 rounded-lg">
-                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Total Rows</div>
-                  <div className="text-lg font-bold text-slate-800 dark:text-white mt-0.5">{selectedHistoryUpload.totalRows}</div>
+                <div className="p-2 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                  <div className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Total Rows</div>
+                  <div className="text-lg font-bold text-[var(--color-text-primary)] mt-0.5">{selectedHistoryUpload.totalRows}</div>
                 </div>
                 <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/10 rounded-lg">
                   <div className="text-[10px] text-emerald-500 font-semibold uppercase tracking-wider">Valid Rows</div>

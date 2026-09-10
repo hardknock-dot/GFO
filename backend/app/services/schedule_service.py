@@ -208,13 +208,16 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
         if schedule_data.comment_adressal is False:
             db_schedule.comment_adressal = False
             db_schedule.comment_status = "UNADDRESSED"
+        elif schedule_data.comment_adressal is True:
+            db_schedule.comment_adressal = True
+            db_schedule.comment_status = "ADDRESSED"
         else:
             db_schedule.comment_adressal = None
-            db_schedule.comment_status = "ADDRESSED"
+            db_schedule.comment_status = None
     elif "comment_status" in schedule_data.model_fields_set:
         st = str(schedule_data.comment_status).upper().strip() if schedule_data.comment_status else ""
         if st in ("ADDRESSED", "APPROVED", "TRUE"):
-            db_schedule.comment_adressal = None
+            db_schedule.comment_adressal = True
             db_schedule.comment_status = "ADDRESSED"
         elif st in ("UNADDRESSED", "FALSE", "PENDING"):
             db_schedule.comment_adressal = False

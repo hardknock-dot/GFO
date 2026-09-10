@@ -13,7 +13,7 @@ const mapApiVisaToFrontend = (apiVisa: any, engineerName?: string, orbitId?: str
     const today = new Date();
     const diffTime = expiry.getTime() - today.getTime();
     daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntilExpiry <= 0) {
       status = 'Expired';
     } else if (daysUntilExpiry <= 30) {

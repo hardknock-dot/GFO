@@ -2,7 +2,7 @@ import api from './axios';
 
 export interface OperationalAlert {
   id: string;
-  type: 'schedule' | 'leave' | 'visa' | 'travel' | 'performance' | 'skills' | 'missed_schedule';
+  type: 'schedule' | 'leave' | 'visa' | 'travel' | 'performance' | 'skills' | 'missed_schedule' | 'pto_conflict' | 'schedule_comment' | 'visa_comment' | 'deletion_request' | (string & {});
   severity: 'info' | 'warning' | 'critical';
   title: string;
   message: string;

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status as http_status, Query
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -63,7 +63,7 @@ def read_engineer_filter_options(
     except Exception as e:
         logger.error("Error retrieving engineer filter options: %s", str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve engineer filter options metadata"
         )
 
@@ -137,11 +137,11 @@ def read_engineers(
     except Exception as e:
         logger.error("Error retrieving engineers from database: %s", str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve engineers from database"
         )
 
-@router.post("", response_model=EngineerResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=EngineerResponse, status_code=http_status.HTTP_201_CREATED)
 def create_engineer(
     engineer_data: EngineerCreate,
     db: Session = Depends(get_db),
@@ -156,7 +156,7 @@ def create_engineer(
         db_company = company_service.get_company_by_id(db, engineer_data.company_id)
         if db_company is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Specified company does not exist"
             )
         return engineer_service.create_engineer(db, engineer_data, current_user_id=current_user.user_id)
@@ -165,7 +165,7 @@ def create_engineer(
     except Exception as e:
         logger.error("Error creating engineer in database: %s", str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create engineer record in database"
         )
 
@@ -186,7 +186,7 @@ def read_engineer(
     except Exception as e:
         logger.error("Error retrieving engineer %s from database: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve engineer from database"
         )
 
@@ -218,7 +218,7 @@ def update_existing_engineer(
         enforce_write_permission(current_user)
         if is_engineer_user(current_user) and current_user.engineer_id != engineer_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=http_status.HTTP_403_FORBIDDEN,
                 detail="Engineers can only update their own profile record."
             )
         get_engineer_and_verify(db, engineer_id, current_user)
@@ -236,7 +236,7 @@ def update_existing_engineer(
     except Exception as e:
         logger.error("Error updating engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
         )
 
@@ -276,11 +276,11 @@ def read_engineer_skills(
     except Exception as e:
         logger.error("Error retrieving skills for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve skills from database"
         )
 
-@router.post("/{engineer_id}/skills", response_model=SkillResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{engineer_id}/skills", response_model=SkillResponse, status_code=http_status.HTTP_201_CREATED)
 def create_engineer_skill(
     engineer_id: UUID,
     skill_data: SkillCreate,
@@ -299,7 +299,7 @@ def create_engineer_skill(
     except Exception as e:
         logger.error("Error creating skill for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create skill in database"
         )
 
@@ -320,11 +320,11 @@ def read_engineer_schedules(
     except Exception as e:
         logger.error("Error retrieving schedules for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve schedules from database"
         )
 
-@router.post("/{engineer_id}/schedules", response_model=ScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{engineer_id}/schedules", response_model=ScheduleResponse, status_code=http_status.HTTP_201_CREATED)
 def create_engineer_schedule(
     engineer_id: UUID,
     schedule_data: ScheduleCreate,
@@ -343,7 +343,7 @@ def create_engineer_schedule(
     except Exception as e:
         logger.error("Error creating schedule for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create schedule in database"
         )
 
@@ -364,11 +364,11 @@ def read_engineer_visa(
     except Exception as e:
         logger.error("Error retrieving visa for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve visa details from database"
         )
 
-@router.post("/{engineer_id}/visa", response_model=VisaResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{engineer_id}/visa", response_model=VisaResponse, status_code=http_status.HTTP_201_CREATED)
 def create_engineer_visa(
     engineer_id: UUID,
     visa_data: VisaCreate,
@@ -388,7 +388,7 @@ def create_engineer_visa(
     except Exception as e:
         logger.error("Error creating visa for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create visa details in database"
         )
 
@@ -409,7 +409,7 @@ def read_engineer_travel(
     except Exception as e:
         logger.error("Error retrieving travel for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve travel arrangements from database"
         )
 
@@ -430,7 +430,7 @@ def read_engineer_performance(
     except Exception as e:
         logger.error("Error retrieving performance for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve performance details from database"
         )
 
@@ -451,11 +451,11 @@ def read_engineer_leaves(
     except Exception as e:
         logger.error("Error retrieving leaves for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve leave details from database"
         )
 
-@router.post("/{engineer_id}/leaves", response_model=LeaveResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{engineer_id}/leaves", response_model=LeaveResponse, status_code=http_status.HTTP_201_CREATED)
 def create_engineer_leave(
     engineer_id: UUID,
     leave_data: LeaveCreate,
@@ -475,7 +475,7 @@ def create_engineer_leave(
     except Exception as e:
         logger.error("Error creating leave for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create leave record in database"
         )
 
@@ -496,7 +496,7 @@ def read_engineer_missed_schedules(
     except Exception as e:
         logger.error("Error retrieving missed schedules for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve missed schedule details from database"
         )
 
@@ -518,7 +518,7 @@ def read_engineer_reports_summary(
     except Exception as e:
         logger.error("Error generating reports summary for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate engineer reports summary"
         )
 
@@ -546,7 +546,7 @@ async def upload_engineer_photo(
     enforce_write_permission(current_user)
     if is_engineer_user(current_user) and current_user.engineer_id != engineer_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=http_status.HTTP_403_FORBIDDEN,
             detail="Engineers can only upload photo for their own profile record."
         )
 
@@ -557,14 +557,14 @@ async def upload_engineer_photo(
     ext = os.path.splitext(filename)[1].lower()
     if not ext or ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported image file format '{ext}'. Allowed formats: JPG, PNG, WEBP."
         )
 
     content_type = file.content_type or ""
     if content_type and content_type.lower() not in ALLOWED_MIME_TYPES:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported image MIME type '{content_type}'. Allowed types: image/jpeg, image/png, image/webp."
         )
 
@@ -572,12 +572,12 @@ async def upload_engineer_photo(
     contents = await file.read()
     if not contents:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail="Uploaded image file is empty."
         )
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=f"Image file size ({round(len(contents)/(1024*1024), 2)}MB) exceeds maximum limit of 5MB."
         )
 
@@ -598,7 +598,7 @@ async def upload_engineer_photo(
     except Exception as e:
         logger.error("Unexpected error uploading photo to SharePoint for engineer %s: %s", str(engineer_id), str(e), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=http_status.HTTP_502_BAD_GATEWAY,
             detail=f"Failed to upload photo to SharePoint repository: {str(e)}"
         )
 
@@ -640,7 +640,7 @@ def get_engineer_photo(
     db_engineer = get_engineer_and_verify(db, engineer_id, current_user)
     if not db_engineer.avatar_url:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="No profile photo found for this engineer."
         )
 
@@ -649,7 +649,7 @@ def get_engineer_photo(
         return RedirectResponse(url=db_engineer.avatar_url, status_code=307)
 
     raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
+        status_code=http_status.HTTP_404_NOT_FOUND,
         detail="Engineer photo image is not stored locally."
     )
 

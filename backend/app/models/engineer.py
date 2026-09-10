@@ -17,8 +17,8 @@ class Engineer(Base):
     level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     date_of_joining: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     primary_tool_type: Mapped[Optional[str]] = mapped_column("primary_tool", String(100), nullable=True)
-    lam_experience: Mapped[Optional[float]] = mapped_column("customer_experience", Numeric(4, 1), nullable=True)
-    industry_experience: Mapped[Optional[float]] = mapped_column(Numeric(4, 1), nullable=True)
+    lam_experience: Mapped[Optional[str]] = mapped_column("customer_experience", String(100), nullable=True)
+    industry_experience: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
@@ -35,10 +35,8 @@ class Engineer(Base):
         return self.primary_tool_type
 
     @property
-    def customer_experience(self) -> Optional[float]:
-        if self.lam_experience is not None:
-            return float(self.lam_experience)
-        return None
+    def customer_experience(self) -> Optional[str]:
+        return self.lam_experience
 
     @property
     def current_schedule(self):

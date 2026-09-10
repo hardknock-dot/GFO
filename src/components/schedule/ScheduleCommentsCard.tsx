@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { MessageSquare, Calendar, Building2, User, ArrowUpRight, Clock, Loader2, CheckCircle2, X } from 'lucide-react';
 import { CardSkeleton } from '../common/LoadingSkeleton';
 
+import { useCompany } from '../../context/CompanyContext';
+
 interface ScheduleCommentsCardProps {
   engineerId?: string;
   engineerName?: string;
@@ -22,9 +24,11 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user, canEdit } = useAuth();
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.id === 'all-data' ? undefined : (currentCompany?.company_id || currentCompany?.id);
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
   const { data: scheduleRes, isLoading } = useSchedule(
-    engineerId ? { engineerId, commentAdressal: false, pageSize: 50 } : { companyId: 'all-data', commentAdressal: false, pageSize: 50 }
+    engineerId ? { engineerId, commentAdressal: false, pageSize: 50 } : { companyId, commentAdressal: false, pageSize: 50 }
   );
   const markAddressedMutation = useMarkScheduleCommentAddressed();
 
@@ -46,6 +50,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
     (s) => s.remarks &&
       s.remarks.trim().length > 0 &&
       s.remarks !== 'None' &&
+      s.commentAdressal === false &&
       (!engineerId || String(s.engineerId) === String(engineerId))
   );
 
@@ -91,7 +96,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
           </div>
           <div>
             <h3 className="text-base font-semibold text-stone-900 flex items-center space-x-2">
-              <span>Pending Operational Remarks Requiring Addressal</span>
+              <span>Pending Operational Remarks</span>
               <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full">
                 {pendingComments.length}
               </span>
@@ -99,7 +104,7 @@ export const ScheduleCommentsCard: React.FC<ScheduleCommentsCardProps> = ({
             <p className="text-xs text-stone-500">
               {engineerName
                 ? `Pending operational comments requiring management review for ${engineerName}`
-                : 'Field Engineer remarks requiring operational addressal (comment_adressal = FALSE)'}
+                : 'Field Engineer remarks requiring operational addressal'}
             </p>
           </div>
         </div>

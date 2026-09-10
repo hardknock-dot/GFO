@@ -1898,7 +1898,7 @@ export const EngineerProfilePage: React.FC = () => {
 
           <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800">
             <ScheduleCommentsCard
-              engineerId={targetEngineerId}
+              engineerId={engineerId}
               engineerName={engineer?.name}
               hideShowMore
               hideViewProfile

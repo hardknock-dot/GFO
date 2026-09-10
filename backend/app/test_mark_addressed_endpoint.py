@@ -137,18 +137,18 @@ def test_mark_addressed_lifecycle():
         res_success = client.post(f"/api/schedules/{sch_id}/mark-addressed", headers=headers_mgr_a)
         assert res_success.status_code == 200, f"Expected 200 OK, got {res_success.status_code}: {res_success.text}"
         res_json = res_success.json()
-        assert res_json.get("comment_adressal") is None, f"Response comment_adressal should be null, got {res_json.get('comment_adressal')}"
+        assert res_json.get("comment_adressal") is True, f"Response comment_adressal should be True, got {res_json.get('comment_adressal')}"
         assert str(res_json.get("schedule_id")) == str(sch_id), "Response schedule_id mismatch"
         assert "message" in res_json, "Response must include message"
         print(f"[OK] POST /api/schedules/{sch_id}/mark-addressed returned 200 with: {res_json}")
 
         # 9. Query PostgreSQL directly and verify:
-        # a) comment_adressal IS NULL (None)
+        # a) comment_adressal IS TRUE (True)
         # b) no other fields were modified
         db.expire_all()
         sch_in_db = db.get(Schedule, sch_id)
         assert sch_in_db is not None, "Schedule must exist in DB"
-        assert sch_in_db.comment_adressal is None, f"comment_adressal in DB must be None (NULL), got {sch_in_db.comment_adressal}"
+        assert sch_in_db.comment_adressal is True, f"comment_adressal in DB must be True, got {sch_in_db.comment_adressal}"
         assert sch_in_db.engineer_id == eng_a.engineer_id, "engineer_id must not change"
         assert sch_in_db.remarks == original_remarks, "remarks must not change"
         assert sch_in_db.support_type == original_support_type, "support_type must not change"
@@ -157,14 +157,14 @@ def test_mark_addressed_lifecycle():
         assert sch_in_db.fab_site == original_fab_site, "fab_site must not change"
         assert sch_in_db.start_date == original_start_date, "start_date must not change"
         assert sch_in_db.end_date == original_end_date, "end_date must not change"
-        print("[OK] Verified in DB: schedules.comment_adressal IS NULL and all other schedule fields are unchanged!")
+        print("[OK] Verified in DB: schedules.comment_adressal IS TRUE and all other schedule fields are unchanged!")
 
         # 10. Query schedules with comment_adressal=false and verify this schedule is no longer returned
         res_pending_query = client.get(f"/api/schedules?company_id={comp_a.company_id}&comment_adressal=false", headers=headers_mgr_a)
         assert res_pending_query.status_code == 200
         pending_items = res_pending_query.json().get("items", [])
         addressed_in_pending = [item for item in pending_items if str(item["schedule_id"]) == str(sch_id)]
-        assert len(addressed_in_pending) == 0, "Schedule with comment_adressal=NULL must NOT appear in comment_adressal=false query"
+        assert len(addressed_in_pending) == 0, "Schedule with comment_adressal=TRUE must NOT appear in comment_adressal=false query"
         print("[OK] Confirmed: Addressed schedule is completely excluded from comment_adressal=false query!")
 
         print("\n=============================================================")

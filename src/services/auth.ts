@@ -129,3 +129,43 @@ export const updateUserAccount = async (
 export const deleteUserAccount = async (userId: string): Promise<void> => {
   await api.delete(`/users/${userId}`);
 };
+
+export interface UserProfileUpdate {
+  full_name?: string;
+  goes_by?: string;
+  avatar_url?: string;
+}
+
+export const getCurrentUserProfile = async (): Promise<User> => {
+  const res = await api.get('/users/me');
+  if (res.data) {
+    const existing = localStorage.getItem('ormp_user');
+    let merged = res.data;
+    if (existing) {
+      try {
+        merged = { ...JSON.parse(existing), ...res.data };
+      } catch (_e) {
+        // ignore
+      }
+    }
+    localStorage.setItem('ormp_user', JSON.stringify(merged));
+  }
+  return res.data;
+};
+
+export const updateCurrentUserProfile = async (payload: UserProfileUpdate): Promise<User> => {
+  const res = await api.put('/users/me', payload);
+  if (res.data) {
+    const existing = localStorage.getItem('ormp_user');
+    let merged = res.data;
+    if (existing) {
+      try {
+        merged = { ...JSON.parse(existing), ...res.data };
+      } catch (_e) {
+        // ignore
+      }
+    }
+    localStorage.setItem('ormp_user', JSON.stringify(merged));
+  }
+  return res.data;
+};

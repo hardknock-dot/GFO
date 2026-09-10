@@ -157,8 +157,8 @@ def get_category_report(
         total_count = len(engineers)
 
         # Average Industry Experience & Average Customer Experience
-        avg_ind_stmt = select(func.avg(Engineer.industry_experience))
-        avg_cust_stmt = select(func.avg(Engineer.lam_experience))
+        avg_ind_stmt = select(func.avg(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric)))
+        avg_cust_stmt = select(func.avg(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric)))
         if company_id:
             avg_ind_stmt = avg_ind_stmt.where(Engineer.company_id == company_id)
             avg_cust_stmt = avg_cust_stmt.where(Engineer.company_id == company_id)
@@ -186,8 +186,8 @@ def get_category_report(
                 "status": e.status,
                 "level": e.level,
                 "primary_tool": e.primary_tool,
-                "industry_experience": float(e.industry_experience) if e.industry_experience is not None else None,
-                "customer_experience": float(e.lam_experience) if e.lam_experience is not None else None,
+                "industry_experience": e.industry_experience,
+                "customer_experience": e.lam_experience,
                 "company_name": comp_map.get(e.company_id, "Unknown Company")
             })
 

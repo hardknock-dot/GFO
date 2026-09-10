@@ -11,9 +11,9 @@ from app.database import get_db
 from app.models.user import User
 from app.models.company import Company
 from app.models.user_company import UserCompany
-from app.schemas.user import UserResponse, UserCreateRequest, UserUpdateRequest, CompanySummary
+from app.schemas.user import UserResponse, UserCreateRequest, UserUpdateRequest, CompanySummary, UserProfileUpdateRequest, UserMeResponse
 from app.services.security import get_password_hash
-from app.services.auth_service import get_current_user, is_main_admin, get_user_company_summaries
+from app.services.auth_service import get_current_user, is_main_admin, get_user_company_summaries, get_user_authorized_company_ids
 from app.services.audit_service import log_audit
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,100 @@ def check_global_admin(user: User):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Only Main Admin can manage system users and roles."
         )
+
+@router.get("/me", response_model=UserMeResponse)
+def get_current_user_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Retrieve authenticated user profile with detailed attributes.
+    """
+    cids = get_user_authorized_company_ids(db, current_user)
+    accessible = [str(c) for c in cids]
+    if is_main_admin(current_user):
+        accessible.append("all-data")
+    comp_summaries = get_user_company_summaries(db, current_user)
+    comp = db.get(Company, current_user.company_id) if current_user.company_id else None
+
+    return UserMeResponse(
+        id=current_user.user_id,
+        name=current_user.full_name,
+        email=current_user.email,
+        avatar=current_user.avatar_url or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        avatar_url=current_user.avatar_url,
+        goes_by=current_user.goes_by,
+        role=current_user.role,
+        company_name=comp.company_name if comp else None,
+        currentCompanyId=current_user.company_id,
+        engineer_id=current_user.engineer_id,
+        engineerId=current_user.engineer_id,
+        is_active=bool(current_user.is_active),
+        last_login=current_user.last_login,
+        accessibleCompanies=accessible,
+        companies=[CompanySummary.model_validate(c) for c in comp_summaries]
+    )
+
+@router.put("/me", response_model=UserMeResponse)
+def update_current_user_profile(req: UserProfileUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Self-service profile update for the currently authenticated user.
+    Allows editing non-security sensitive fields: full_name, goes_by, avatar_url.
+    """
+    old_values = {
+        "full_name": current_user.full_name,
+        "goes_by": current_user.goes_by,
+        "avatar_url": current_user.avatar_url,
+    }
+    
+    if req.full_name is not None and req.full_name.strip():
+        current_user.full_name = req.full_name.strip()
+    if req.goes_by is not None:
+        current_user.goes_by = req.goes_by.strip() or None
+    if req.avatar_url is not None:
+        current_user.avatar_url = req.avatar_url.strip() or None
+
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
+
+    log_audit(
+        db=db,
+        user_id=current_user.user_id,
+        company_id=current_user.company_id,
+        action="USER_PROFILE_UPDATED",
+        entity_type="User",
+        entity_id=current_user.user_id,
+        description=f"User updated their own profile: {current_user.full_name}",
+        old_values=old_values,
+        new_values={
+            "full_name": current_user.full_name,
+            "goes_by": current_user.goes_by,
+            "avatar_url": current_user.avatar_url,
+        }
+    )
+
+    cids = get_user_authorized_company_ids(db, current_user)
+    accessible = [str(c) for c in cids]
+    if is_main_admin(current_user):
+        accessible.append("all-data")
+    comp_summaries = get_user_company_summaries(db, current_user)
+    comp = db.get(Company, current_user.company_id) if current_user.company_id else None
+
+    return UserMeResponse(
+        id=current_user.user_id,
+        name=current_user.full_name,
+        email=current_user.email,
+        avatar=current_user.avatar_url or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        avatar_url=current_user.avatar_url,
+        goes_by=current_user.goes_by,
+        role=current_user.role,
+        company_name=comp.company_name if comp else None,
+        currentCompanyId=current_user.company_id,
+        engineer_id=current_user.engineer_id,
+        engineerId=current_user.engineer_id,
+        is_active=bool(current_user.is_active),
+        last_login=current_user.last_login,
+        accessibleCompanies=accessible,
+        companies=[CompanySummary.model_validate(c) for c in comp_summaries]
+    )
 
 @router.get("", response_model=List[UserResponse])
 def get_all_users(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
