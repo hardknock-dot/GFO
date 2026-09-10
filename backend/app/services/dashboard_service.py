@@ -88,9 +88,17 @@ def get_dashboard_metrics(
         if v.visa_end_date is not None and (today <= v.visa_end_date <= visa_threshold_date or v.visa_end_date < today)
     ) if visa_enabled else 0
 
+    def is_pto_schedule(s) -> bool:
+        stype = (s.support_type or '').strip().lower()
+        remarks = (s.remarks or '').strip().lower()
+        return any(k in stype for k in ('pto', 'loa', 'leave', 'time off')) or 'pto' in remarks
+
     active_projects_count = sum(
         1 for s in schedules 
-        if s.schedule_status in ('Active Assignment', 'Active') or (s.start_date <= today and (s.end_date is None or s.end_date >= today))
+        if not is_pto_schedule(s) and (
+            s.schedule_status in ('Active Assignment', 'Active') or 
+            (s.start_date <= today and (s.end_date is None or s.end_date >= today))
+        )
     )
 
     kpi = KPIStats(

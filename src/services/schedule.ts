@@ -11,11 +11,24 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   const commentAdressal = apiSch.comment_adressal !== undefined ? apiSch.comment_adressal : null;
   const commentStatus = commentAdressal === false ? 'UNADDRESSED' : (apiSch.comment_status || null);
 
+  const seId = apiSch.senior_engineer_id || apiSch.seniorEngineerId || null;
+  const seName = apiSch.senior_engineer_name || apiSch.seniorEngineerName || null;
+  const seOrbit = apiSch.senior_engineer_orbit_id || apiSch.seniorEngineerOrbitId || null;
+  const seGoesBy = apiSch.senior_engineer_goes_by || apiSch.seniorEngineerGoesBy || null;
+
   return {
     id: apiSch.schedule_id,
     engineerId: engId,
     engineerName: resolvedName,
     engineerOrbitId: resolvedOrbit,
+    senior_engineer_id: seId,
+    senior_engineer_name: seName,
+    senior_engineer_orbit_id: seOrbit,
+    senior_engineer_goes_by: seGoesBy,
+    seniorEngineerId: seId,
+    seniorEngineerName: seName,
+    seniorEngineerOrbitId: seOrbit,
+    seniorEngineerGoesBy: seGoesBy,
     country: apiSch.country || '',
 
     // Core DB fields:
@@ -128,7 +141,8 @@ export const getScheduleById = async (id: string): Promise<Schedule | null> => {
 };
 
 export const createSchedule = async (engineerId: string, data: Partial<Schedule>): Promise<Schedule> => {
-  const payload = {
+  const seId = data.senior_engineer_id !== undefined ? data.senior_engineer_id : (data as any).seniorEngineerId;
+  const payload: any = {
     support_type: data.supportType,
     country: data.country,
     fab_city: data.fabCity || null,
@@ -137,22 +151,28 @@ export const createSchedule = async (engineerId: string, data: Partial<Schedule>
     end_date: data.endDate || null,
     schedule_status: data.scheduleStatus || 'Upcoming',
     remarks: data.remarks || null,
+    senior_engineer_id: seId !== undefined ? (seId || null) : null,
   };
   const res = await api.post(`/engineers/${engineerId}/schedules`, payload);
   return mapApiScheduleToFrontend(res.data);
 };
 
 export const updateSchedule = async (id: string, data: Partial<Schedule>): Promise<Schedule> => {
-  const payload = {
-    support_type: data.supportType,
-    country: data.country,
-    fab_city: data.fabCity || null,
-    fab_site: data.fabSite || null,
-    start_date: data.startDate || null,
-    end_date: data.endDate || null,
-    schedule_status: data.scheduleStatus || 'Upcoming',
-    remarks: data.remarks || null,
-  };
+  const payload: any = {};
+  if (data.supportType !== undefined) payload.support_type = data.supportType;
+  if (data.country !== undefined) payload.country = data.country;
+  if (data.fabCity !== undefined) payload.fab_city = data.fabCity || null;
+  if (data.fabSite !== undefined) payload.fab_site = data.fabSite || null;
+  if (data.startDate !== undefined) payload.start_date = data.startDate || null;
+  if (data.endDate !== undefined) payload.end_date = data.endDate || null;
+  if (data.scheduleStatus !== undefined) payload.schedule_status = data.scheduleStatus || 'Upcoming';
+  if (data.remarks !== undefined) payload.remarks = data.remarks || null;
+
+  const seId = data.senior_engineer_id !== undefined ? data.senior_engineer_id : (data as any).seniorEngineerId;
+  if (seId !== undefined) {
+    payload.senior_engineer_id = seId || null;
+  }
+
   const res = await api.put(`/schedules/${id}`, payload);
   return mapApiScheduleToFrontend(res.data);
 };

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEngineerDetail, useUpdateEngineer } from '../hooks/useEngineers';
+import { useEngineerDetail, useUpdateEngineer, useEngineers } from '../hooks/useEngineers';
 import { useEngineerMe, useUpdateEngineerMeScheduleComments } from '../hooks/useEngineerSelfService';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
 import { useEngineerOperationalAlerts } from '../hooks/useOperationalAlerts';
@@ -238,6 +238,8 @@ export const EngineerProfilePage: React.FC = () => {
   };
 
   const targetEngineerId = engineer?.id || (isEngineerUser && meEngineer ? meEngineer.id : id);
+  const { data: allEngineersRes } = useEngineers();
+  const engineersList = allEngineersRes?.data || [];
   const { data: engAlerts } = useEngineerOperationalAlerts(targetEngineerId);
   const { data: skills } = useEngineerSkills(targetEngineerId);
   const { data: schedulesRes } = useSchedule({ engineerId: targetEngineerId, pageSize: 1000 });
@@ -451,6 +453,7 @@ export const EngineerProfilePage: React.FC = () => {
 
   // Schedule Form state
   const [scheduleFormData, setScheduleFormData] = useState({
+    seniorEngineerId: '',
     supportType: 'Customer Support',
     country: 'Taiwan',
     fabCity: 'Hsinchu',
@@ -636,6 +639,7 @@ export const EngineerProfilePage: React.FC = () => {
   const handleOpenAddScheduleModal = () => {
     setSelectedSchedule(null);
     setScheduleFormData({
+      seniorEngineerId: '',
       supportType: 'Customer Support',
       country: 'Taiwan',
       fabCity: 'Hsinchu',
@@ -654,6 +658,7 @@ export const EngineerProfilePage: React.FC = () => {
   const handleOpenEditScheduleModal = (sch: Schedule) => {
     setSelectedSchedule(sch);
     setScheduleFormData({
+      seniorEngineerId: sch.senior_engineer_id || sch.seniorEngineerId || '',
       supportType: sch.supportType || 'Customer Support',
       country: sch.country || '',
       fabCity: sch.fabCity || '',
@@ -677,6 +682,9 @@ export const EngineerProfilePage: React.FC = () => {
 
   const validateScheduleForm = () => {
     const errors: Record<string, string> = {};
+    if (scheduleFormData.seniorEngineerId && scheduleFormData.seniorEngineerId === targetEngineerId) {
+      errors.seniorEngineerId = 'Engineer cannot be assigned as their own Senior Engineer';
+    }
     if (!scheduleFormData.supportType.trim()) errors.supportType = 'Support Type is required';
     if (!scheduleFormData.country.trim()) errors.country = 'Country is required';
     if (!scheduleFormData.startDate) errors.startDate = 'Start Date is required';
@@ -707,6 +715,7 @@ export const EngineerProfilePage: React.FC = () => {
       endDate: scheduleFormData.endDate || undefined,
       scheduleStatus: scheduleFormData.scheduleStatus,
       remarks: scheduleFormData.remarks,
+      senior_engineer_id: scheduleFormData.seniorEngineerId || null,
     };
 
     if (selectedSchedule) {
@@ -1359,6 +1368,22 @@ export const EngineerProfilePage: React.FC = () => {
     { key: 'country', header: 'Country', sortable: true },
     { key: 'fabCity', header: 'FAB City', sortable: true },
     { key: 'fabSite', header: 'FAB Site / Customer', sortable: true },
+    {
+      key: 'seniorEngineer',
+      header: 'Senior Engineer',
+      render: (s) => (
+        s.senior_engineer_name ? (
+          <div className="flex flex-col text-xs">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{s.senior_engineer_name}</span>
+            {s.senior_engineer_orbit_id && (
+              <span className="font-mono text-[10px] text-slate-400">Orbit ID: {s.senior_engineer_orbit_id}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400 italic">Not Assigned</span>
+        )
+      ),
+    },
     { key: 'startDate', header: 'Start Date', sortable: true },
     { key: 'endDate', header: 'End Date', sortable: true, render: (s) => <span>{s.endDate || 'Ongoing'}</span> },
     {
@@ -1399,8 +1424,8 @@ export const EngineerProfilePage: React.FC = () => {
         const isPending = s.commentAdressal === false || s.commentStatus === 'UNADDRESSED';
         return (
           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${isPending
-              ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+            ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
             }`}>
             {isPending ? 'Pending (FALSE)' : 'Approved (NULL)'}
           </span>
@@ -1698,11 +1723,11 @@ export const EngineerProfilePage: React.FC = () => {
             <div className="flex items-center space-x-3 self-end md:self-auto">
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-800 text-center">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Customer Exp</p>
-                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.customerExperience} Yrs</p>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.customerExperience} </p>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-800 text-center">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Exp</p>
-                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.yearsExperience} Yrs</p>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-white">{engineer.yearsExperience} </p>
               </div>
               {(canEdit || isEngineerUser) && (
                 <div className="flex items-center space-x-2">
@@ -1769,12 +1794,31 @@ export const EngineerProfilePage: React.FC = () => {
                 <Briefcase className="w-4 h-4 text-[var(--color-secondary)]" />
                 <span>Assignment & Site Allocation</span>
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
                   <span className="text-slate-400 font-medium">Assigned Fab Site (Current Schedule)</span>
                   <p className="font-bold text-slate-900 dark:text-white text-sm">
                     {currentScheduleSite}
                   </p>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
+                  <span className="text-slate-400 font-medium">Assigned Senior Engineer</span>
+                  {currentOngoingSchedule?.senior_engineer_name ? (
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">
+                        {currentOngoingSchedule.senior_engineer_name}
+                      </p>
+                      {currentOngoingSchedule.senior_engineer_orbit_id && (
+                        <p className="text-[11px] font-mono text-slate-500">
+                          Orbit ID: {currentOngoingSchedule.senior_engineer_orbit_id}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-semibold text-slate-400 italic text-xs pt-0.5">
+                      Not Assigned
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
                   <span className="text-slate-400 font-medium">Join Date</span>
@@ -2208,6 +2252,24 @@ export const EngineerProfilePage: React.FC = () => {
               {scheduleSuccessMessage}
             </div>
           )}
+
+          <SearchableDropdown
+            label="Assigned Senior Engineer"
+            value={scheduleFormData.seniorEngineerId}
+            onChange={(val) => setScheduleFormData({ ...scheduleFormData, seniorEngineerId: val })}
+            options={[
+              { value: '', label: 'None (Not Assigned)' },
+              ...engineersList
+                .filter((eng) => eng.id !== targetEngineerId)
+                .map((eng) => ({
+                  value: eng.id,
+                  label: `${eng.name} — ${eng.orbitId || 'N/A'}`,
+                })),
+            ]}
+            placeholder="Search senior engineer..."
+            searchPlaceholder="Search senior engineer name or Orbit ID..."
+            error={scheduleFormErrors.seniorEngineerId}
+          />
 
           <TextInput
             label="Support Type"

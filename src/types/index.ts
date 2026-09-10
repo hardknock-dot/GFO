@@ -195,6 +195,14 @@ export interface Schedule {
   commentAdressal?: boolean | null;
   ownerId?: string;
   owner_id?: string;
+  senior_engineer_id?: string | null;
+  senior_engineer_name?: string | null;
+  senior_engineer_orbit_id?: string | null;
+  senior_engineer_goes_by?: string | null;
+  seniorEngineerId?: string | null;
+  seniorEngineerName?: string | null;
+  seniorEngineerOrbitId?: string | null;
+  seniorEngineerGoesBy?: string | null;
 }
 
 export interface Travel {

@@ -397,6 +397,13 @@ SCHEDULE_HEADER_MAP = {
     "owner": "owner",
     "ownerid": "owner",
     "owneremail": "owner",
+    "seniorengineerorbitid": "senior_engineer_orbit_id",
+    "seniorengineerorbit_id": "senior_engineer_orbit_id",
+    "seniorengineerid": "senior_engineer_orbit_id",
+    "seniorengineer": "senior_engineer_orbit_id",
+    "assignedseniorengineer": "senior_engineer_orbit_id",
+    "assignedseniorengineerorbitid": "senior_engineer_orbit_id",
+    "seniororbitid": "senior_engineer_orbit_id",
 }
 
 
@@ -1178,11 +1185,12 @@ async def bulk_upload(
                     detail="The Schedule sheet is empty or contains no rows."
                 )
 
-            unique_orbit_ids = {
-                norm_str(row.get("orbit_id"))
-                for row in raw_rows
-                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != ""
-            }
+            unique_orbit_ids = set()
+            for row in raw_rows:
+                if row.get("orbit_id") and norm_str(row.get("orbit_id")) != "":
+                    unique_orbit_ids.add(norm_str(row.get("orbit_id")))
+                if row.get("senior_engineer_orbit_id") and norm_str(row.get("senior_engineer_orbit_id")) != "":
+                    unique_orbit_ids.add(norm_str(row.get("senior_engineer_orbit_id")))
 
             db_engineers = []
             if unique_orbit_ids:
@@ -1250,6 +1258,19 @@ async def bulk_upload(
                 row_dict["start_date"] = start_date
                 row_dict["end_date"] = end_date
 
+                # Senior Engineer Orbit ID resolution & validation
+                raw_se_orbit = row_dict.get("senior_engineer_orbit_id")
+                resolved_se_id = None
+                if raw_se_orbit is not None and str(raw_se_orbit).strip() != "":
+                    se_norm = norm_str(raw_se_orbit)
+                    se_info = orbit_to_engineer.get(se_norm)
+                    if not se_info:
+                        row_errors.append({"field": "Senior Engineer Orbit ID", "value": str(raw_se_orbit), "error": f"Senior Engineer with Orbit ID '{raw_se_orbit}' does not exist in the selected company."})
+                    else:
+                        se_id, _ = se_info
+                        resolved_se_id = se_id
+                row_dict["senior_engineer_id"] = resolved_se_id
+
                 if row_errors:
                     row_dict["errors"] = row_errors
                     errors_list.append(row_dict)
@@ -1267,6 +1288,13 @@ async def bulk_upload(
                     eng = db.get(Engineer, db_sched.engineer_id)
                     if not eng or eng.company_id != target_company_id:
                         row_errors.append({"field": "Schedule ID", "value": str(parsed_pk), "error": f"Record with Schedule ID '{parsed_pk}' belongs to another company."})
+                        row_dict["errors"] = row_errors
+                        errors_list.append(row_dict)
+                        continue
+
+                    # Validate Senior Engineer is not self
+                    if resolved_se_id and str(resolved_se_id) == str(db_sched.engineer_id):
+                        row_errors.append({"field": "Senior Engineer Orbit ID", "value": str(raw_se_orbit), "error": "Engineer cannot be assigned as their own Senior Engineer."})
                         row_dict["errors"] = row_errors
                         errors_list.append(row_dict)
                         continue
@@ -1294,6 +1322,13 @@ async def bulk_upload(
                             if not values_are_equal(cur_val, new_val):
                                 changes.append(f"{f_label}: '{cur_val}' -> '{new_val}'")
                                 setattr(db_sched, f_key, new_val)
+
+                    has_se_col = any(k in col_indices for k in ("senior_engineer_orbit_id", "seniorengineerorbitid", "seniorengineer", "assignedseniorengineer"))
+                    if has_se_col:
+                        new_se_id = row_dict.get("senior_engineer_id")
+                        if db_sched.senior_engineer_id != new_se_id:
+                            changes.append(f"Senior Engineer ID: '{db_sched.senior_engineer_id}' -> '{new_se_id}'")
+                            db_sched.senior_engineer_id = new_se_id
 
                     if changes:
                         db_sched.updated_at = datetime.utcnow()
@@ -1335,6 +1370,13 @@ async def bulk_upload(
                         continue
 
                     engineer_id, resolved_engineer_name = eng_info
+
+                    if resolved_se_id and str(resolved_se_id) == str(engineer_id):
+                        row_errors.append({"field": "Senior Engineer Orbit ID", "value": str(raw_se_orbit), "error": "Engineer cannot be assigned as their own Senior Engineer."})
+                        row_dict["errors"] = row_errors
+                        errors_list.append(row_dict)
+                        continue
+
                     row_dict["engineer_id"] = engineer_id
                     row_dict["resolved_engineer_name"] = resolved_engineer_name
                     row_dict["schedule_status"] = row_dict.get("schedule_status") or "Upcoming"
@@ -1360,6 +1402,7 @@ async def bulk_upload(
                     db_sched = Schedule(
                         schedule_id=uuid_pkg.uuid4(),
                         engineer_id=item["engineer_id"],
+                        senior_engineer_id=item.get("senior_engineer_id"),
                         owner_id=item.get("owner_id"),
                         support_type=item["support_type"],
                         country=item["country"],

@@ -78,6 +78,7 @@ export const SchedulePage: React.FC = () => {
   // Form state
   const [formData, setFormData] = useState({
     engineerId: '',
+    seniorEngineerId: '',
     supportType: 'Customer Support',
     country: 'Taiwan',
     fabCity: '',
@@ -129,6 +130,7 @@ export const SchedulePage: React.FC = () => {
     setSelectedSchedule(null);
     setFormData({
       engineerId: engineersList[0]?.id || '',
+      seniorEngineerId: '',
       supportType: 'Customer Support',
       country: 'Taiwan',
       fabCity: '',
@@ -148,6 +150,7 @@ export const SchedulePage: React.FC = () => {
     setSelectedSchedule(sch);
     setFormData({
       engineerId: sch.engineerId || '',
+      seniorEngineerId: sch.senior_engineer_id || sch.seniorEngineerId || '',
       supportType: sch.supportType || 'Customer Support',
       country: sch.country || '',
       fabCity: sch.fabCity || '',
@@ -171,7 +174,11 @@ export const SchedulePage: React.FC = () => {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
+    const targetEngId = selectedSchedule ? selectedSchedule.engineerId : formData.engineerId;
     if (!selectedSchedule && !formData.engineerId) errors.engineerId = 'Engineer Name is required';
+    if (formData.seniorEngineerId && formData.seniorEngineerId === targetEngId) {
+      errors.seniorEngineerId = 'Engineer cannot be assigned as their own Senior Engineer';
+    }
     if (!formData.supportType.trim()) errors.supportType = 'Support Type is required';
     if (!formData.country.trim()) errors.country = 'Country is required';
     if (!formData.startDate) errors.startDate = 'Start Date is required';
@@ -202,6 +209,7 @@ export const SchedulePage: React.FC = () => {
       endDate: formData.endDate || undefined,
       scheduleStatus: formData.scheduleStatus,
       remarks: formData.remarks,
+      senior_engineer_id: formData.seniorEngineerId || null,
     };
 
     if (selectedSchedule) {
@@ -400,6 +408,22 @@ export const SchedulePage: React.FC = () => {
   const columns: Column<Schedule>[] = [
     { key: 'projectCode', header: 'Project Code', sortable: true, render: (s) => <span className="font-mono text-xs font-semibold text-[var(--color-secondary)]">{s.projectCode}</span> },
     { key: 'engineerName', header: 'Engineer Name', sortable: true, render: (s) => <span className="font-semibold text-slate-800 dark:text-slate-200">{s.engineerName}</span> },
+    {
+      key: 'seniorEngineer',
+      header: 'Assigned Senior Engineer',
+      render: (s) => (
+        s.senior_engineer_name ? (
+          <div className="flex flex-col text-xs">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{s.senior_engineer_name}</span>
+            {s.senior_engineer_orbit_id && (
+              <span className="font-mono text-[10px] text-slate-400">ORB: {s.senior_engineer_orbit_id}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400 italic">Not Assigned</span>
+        )
+      ),
+    },
     { key: 'customerName', header: 'Customer Fab', sortable: true, render: (s) => <div className="flex items-center space-x-1.5"><Building2 className="w-3.5 h-3.5 text-slate-400" /><span>{s.customerName}</span></div> },
     { key: 'siteLocation', header: 'Site Location', sortable: true, render: (s) => <div className="flex items-center space-x-1 text-xs text-slate-600 dark:text-slate-400"><MapPin className="w-3.5 h-3.5 text-slate-400" /><span>{s.siteLocation}</span></div> },
     { key: 'startDate', header: 'Start Date', sortable: true },
@@ -673,6 +697,24 @@ export const SchedulePage: React.FC = () => {
               error={formErrors.engineerId}
             />
           )}
+
+          <SearchableDropdown
+            label="Assigned Senior Engineer"
+            value={formData.seniorEngineerId}
+            onChange={(val) => setFormData({ ...formData, seniorEngineerId: val })}
+            options={[
+              { value: '', label: 'None (Not Assigned)' },
+              ...engineersList
+                .filter((eng) => eng.id !== (formData.engineerId || selectedSchedule?.engineerId))
+                .map((eng) => ({
+                  value: eng.id,
+                  label: `${eng.name} — ${eng.orbitId || 'N/A'}`,
+                })),
+            ]}
+            placeholder="Search senior engineer..."
+            searchPlaceholder="Search senior engineer name or Orbit ID..."
+            error={formErrors.seniorEngineerId}
+          />
 
           <TextInput
             label="Support Type"

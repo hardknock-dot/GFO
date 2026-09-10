@@ -13,6 +13,8 @@ from app.models.missed_schedule import MissedSchedule
 from app.schemas.schedule import ScheduleCreate, ScheduleUpdate
 from fastapi import HTTPException, status
 
+from sqlalchemy.orm import Session, aliased
+
 def get_schedules_paginated(
     db: Session,
     company_id: Optional[Union[UUID, List[UUID]]] = None,
@@ -25,7 +27,19 @@ def get_schedules_paginated(
     page: int = 1,
     page_size: int = 20
 ) -> Dict[str, Any]:
-    stmt = select(Schedule, Engineer.engineer_name, Engineer.orbit_id).join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+    SeniorEng = aliased(Engineer)
+    stmt = (
+        select(
+            Schedule,
+            Engineer.engineer_name,
+            Engineer.orbit_id,
+            SeniorEng.engineer_name.label("senior_engineer_name"),
+            SeniorEng.orbit_id.label("senior_engineer_orbit_id"),
+            SeniorEng.goes_by.label("senior_engineer_goes_by")
+        )
+        .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
+        .outerjoin(SeniorEng, Schedule.senior_engineer_id == SeniorEng.engineer_id)
+    )
     
     conditions = []
     if company_id is not None:
@@ -83,7 +97,9 @@ def get_schedules_paginated(
                 Schedule.fab_site.ilike(search_pattern),
                 Schedule.remarks.ilike(search_pattern),
                 Engineer.engineer_name.ilike(search_pattern),
-                Engineer.orbit_id.ilike(search_pattern)
+                Engineer.orbit_id.ilike(search_pattern),
+                SeniorEng.engineer_name.ilike(search_pattern),
+                SeniorEng.orbit_id.ilike(search_pattern)
             )
         )
 
@@ -99,9 +115,12 @@ def get_schedules_paginated(
 
     rows = db.execute(stmt).all()
     items = []
-    for sch, eng_name, orb_id in rows:
+    for sch, eng_name, orb_id, se_name, se_orb_id, se_goes_by in rows:
         sch.engineer_name = eng_name
         sch.orbit_id = orb_id
+        sch._senior_engineer_name = se_name
+        sch._senior_engineer_orbit_id = se_orb_id
+        sch._senior_engineer_goes_by = se_goes_by
         items.append(sch)
 
     return {
@@ -116,9 +135,26 @@ def get_engineer_schedules(db: Session, engineer_id: UUID) -> List[Schedule]:
     """
     Retrieve all schedule records associated with one engineer from PostgreSQL.
     """
-    stmt = select(Schedule).where(Schedule.engineer_id == engineer_id)
-    result = db.scalars(stmt).all()
-    return list(result)
+    SeniorEng = aliased(Engineer)
+    stmt = (
+        select(
+            Schedule,
+            SeniorEng.engineer_name.label("senior_engineer_name"),
+            SeniorEng.orbit_id.label("senior_engineer_orbit_id"),
+            SeniorEng.goes_by.label("senior_engineer_goes_by")
+        )
+        .outerjoin(SeniorEng, Schedule.senior_engineer_id == SeniorEng.engineer_id)
+        .where(Schedule.engineer_id == engineer_id)
+        .order_by(Schedule.start_date.desc())
+    )
+    rows = db.execute(stmt).all()
+    items = []
+    for sch, se_name, se_orb_id, se_goes_by in rows:
+        sch._senior_engineer_name = se_name
+        sch._senior_engineer_orbit_id = se_orb_id
+        sch._senior_engineer_goes_by = se_goes_by
+        items.append(sch)
+    return items
 
 def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreate) -> Schedule:
     """
@@ -132,6 +168,26 @@ def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreat
             detail="Engineer not found"
         )
 
+    senior_engineer_id = schedule_data.senior_engineer_id
+    senior_eng_obj = None
+    if senior_engineer_id is not None:
+        if str(senior_engineer_id) == str(engineer_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Engineer cannot be assigned as their own Senior Engineer."
+            )
+        senior_eng_obj = db.get(Engineer, senior_engineer_id)
+        if senior_eng_obj is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Senior Engineer not found"
+            )
+        if senior_eng_obj.company_id != engineer.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Senior Engineer must belong to the same company as the schedule engineer."
+            )
+
     initial_adressal = schedule_data.comment_adressal
     if initial_adressal is None and schedule_data.remarks and schedule_data.remarks.strip():
         initial_adressal = False
@@ -140,6 +196,7 @@ def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreat
     db_schedule = Schedule(
         schedule_id=uuid.uuid4(),
         engineer_id=engineer_id,
+        senior_engineer_id=senior_engineer_id,
         support_type=schedule_data.support_type,
         country=schedule_data.country,
         fab_city=schedule_data.fab_city,
@@ -156,6 +213,10 @@ def create_schedule(db: Session, engineer_id: UUID, schedule_data: ScheduleCreat
     db.add(db_schedule)
     db.commit()
     db.refresh(db_schedule)
+    if senior_eng_obj:
+        db_schedule._senior_engineer_name = senior_eng_obj.engineer_name
+        db_schedule._senior_engineer_orbit_id = senior_eng_obj.orbit_id
+        db_schedule._senior_engineer_goes_by = senior_eng_obj.goes_by
     return db_schedule
 
 def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdate) -> Schedule:
@@ -180,7 +241,35 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
                 detail="end_date should not be earlier than start_date"
             )
 
-    # 3. Update permitted fields
+    # 3. Update senior engineer if present in payload
+    senior_eng_obj = None
+    if "senior_engineer_id" in schedule_data.model_fields_set:
+        se_id = schedule_data.senior_engineer_id
+        if se_id is not None:
+            schedule_eng = db.get(Engineer, db_schedule.engineer_id)
+            if str(se_id) == str(db_schedule.engineer_id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Engineer cannot be assigned as their own Senior Engineer."
+                )
+            senior_eng_obj = db.get(Engineer, se_id)
+            if senior_eng_obj is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Senior Engineer not found"
+                )
+            if schedule_eng and senior_eng_obj.company_id != schedule_eng.company_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Senior Engineer must belong to the same company as the schedule engineer."
+                )
+            db_schedule.senior_engineer_id = se_id
+        else:
+            db_schedule.senior_engineer_id = None
+    elif db_schedule.senior_engineer_id:
+        senior_eng_obj = db.get(Engineer, db_schedule.senior_engineer_id)
+
+    # 4. Update permitted fields
     if schedule_data.support_type is not None:
         db_schedule.support_type = schedule_data.support_type
     if schedule_data.country is not None:
@@ -228,6 +317,14 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
     db_schedule.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_schedule)
+    if senior_eng_obj:
+        db_schedule._senior_engineer_name = senior_eng_obj.engineer_name
+        db_schedule._senior_engineer_orbit_id = senior_eng_obj.orbit_id
+        db_schedule._senior_engineer_goes_by = senior_eng_obj.goes_by
+    else:
+        db_schedule._senior_engineer_name = None
+        db_schedule._senior_engineer_orbit_id = None
+        db_schedule._senior_engineer_goes_by = None
     return db_schedule
 
 def delete_schedule(db: Session, schedule_id: UUID) -> None:

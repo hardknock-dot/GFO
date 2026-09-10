@@ -14,6 +14,7 @@ class ScheduleCreate(BaseModel):
     remarks: str | None = None
     comment_adressal: bool | None = None
     owner_id: UUID | None = None
+    senior_engineer_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -34,6 +35,7 @@ class ScheduleUpdate(BaseModel):
     comment_adressal: bool | None = None
     comment_status: str | None = None
     owner_id: UUID | None = None
+    senior_engineer_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -58,6 +60,10 @@ class ScheduleMarkAddressedResponse(BaseModel):
 class ScheduleResponse(BaseModel):
     schedule_id: UUID
     engineer_id: UUID
+    senior_engineer_id: UUID | None = None
+    senior_engineer_name: str | None = None
+    senior_engineer_orbit_id: str | None = None
+    senior_engineer_goes_by: str | None = None
     engineer_name: str | None = None
     orbit_id: str | None = None
     owner_id: UUID | None = None
