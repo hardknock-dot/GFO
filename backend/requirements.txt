@@ -9,3 +9,4 @@ bcrypt
 openpyxl
 python-multipart
 pytest
+httpx
