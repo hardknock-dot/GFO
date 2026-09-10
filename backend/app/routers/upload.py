@@ -1567,7 +1567,8 @@ async def bulk_upload(
             existing_list = []
             unchanged_list = []
             valid_rows_to_insert = []
-            seen_keys = set()
+            # NOTE: Visa records allow duplicates (multiple visas per engineer are valid).
+            # seen_keys deduplication is intentionally removed.
 
             total_rows = len(raw_rows)
 
@@ -1694,14 +1695,7 @@ async def bulk_upload(
                     row_dict["engineer_id"] = engineer_id
                     row_dict["resolved_engineer_name"] = resolved_engineer_name
 
-                    visa_type = row_dict.get("visa_type") or ""
-                    row_key = (norm_uuid(engineer_id), (country or "").strip().lower(), (visa_type or "").strip().lower())
-                    if row_key in seen_keys:
-                        row_dict["duplicate_key"] = f"EngineerID: {engineer_id}, Country: {country}, Type: {visa_type}"
-                        duplicates_list.append(row_dict)
-                        continue
-                    seen_keys.add(row_key)
-
+                    # Allow multiple visa records per engineer — no deduplication.
                     valid_rows_to_insert.append(row_dict)
 
             # Persist Inserts & Updates
