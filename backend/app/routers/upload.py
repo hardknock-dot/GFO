@@ -65,6 +65,23 @@ def parse_date(v):
     raise ValueError("Invalid date format")
 
 
+def swap_month_day(d):
+    """
+    Try to swap month and day on a date object.
+    Used to auto-correct dates that Excel misinterpreted due to regional DD/MM/YYYY
+    locale when the user actually entered dates in MM/DD/YYYY format.
+    Returns the swapped date, or None if the swap produces an invalid date
+    (e.g. month=15 when day was 15).
+    """
+    if d is None:
+        return None
+    try:
+        from datetime import date as _date
+        return _date(d.year, d.day, d.month)
+    except ValueError:
+        return None  # day > 12, already unambiguous — swap not possible
+
+
 def parse_experience(v):
     if v is None:
         return None
@@ -756,7 +773,14 @@ async def bulk_upload(
                         row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "Invalid end date format."})
 
                 if start_date and end_date and end_date < start_date:
-                    row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "End date should not be earlier than start_date"})
+                    # Auto-correct: Excel DD/MM/YYYY locale may have swapped month/day.
+                    alt_start = swap_month_day(start_date)
+                    alt_end = swap_month_day(end_date)
+                    if alt_start and alt_end and alt_end >= alt_start:
+                        start_date = alt_start
+                        end_date = alt_end
+                    else:
+                        row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "End date should not be earlier than start date"})
 
                 number_of_tools = None
                 if row_dict.get("number_of_tools") is not None:
@@ -1212,7 +1236,14 @@ async def bulk_upload(
                         row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "Invalid end date format."})
 
                 if start_date and end_date and end_date < start_date:
-                    row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "End date should not be earlier than start_date"})
+                    # Auto-correct: Excel DD/MM/YYYY locale may have swapped month/day.
+                    alt_start = swap_month_day(start_date)
+                    alt_end = swap_month_day(end_date)
+                    if alt_start and alt_end and alt_end >= alt_start:
+                        start_date = alt_start
+                        end_date = alt_end
+                    else:
+                        row_errors.append({"field": "End Date", "value": str(row_dict["end_date"]), "error": "End date should not be earlier than start date"})
 
                 resolved_owner_id = resolve_owner(row_dict.get("owner"))
                 row_dict["owner_id"] = resolved_owner_id
@@ -1648,7 +1679,14 @@ async def bulk_upload(
                         row_errors.append({"field": "End Date / Expiry Date", "value": str(row_dict["visa_end_date"]), "error": "Invalid end date format."})
 
                 if visa_start_date and visa_end_date and visa_end_date < visa_start_date:
-                    row_errors.append({"field": "End Date / Expiry Date", "value": str(row_dict["visa_end_date"]), "error": "visa_end_date should not be earlier than visa_start_date"})
+                    # Auto-correct: Excel DD/MM/YYYY locale may have swapped month/day.
+                    alt_start = swap_month_day(visa_start_date)
+                    alt_end = swap_month_day(visa_end_date)
+                    if alt_start and alt_end and alt_end >= alt_start:
+                        visa_start_date = alt_start
+                        visa_end_date = alt_end
+                    else:
+                        row_errors.append({"field": "End Date / Expiry Date", "value": str(row_dict["visa_end_date"]), "error": "visa_end_date should not be earlier than visa_start_date"})
 
                 resolved_owner_id = resolve_owner(row_dict.get("owner"))
                 row_dict["owner_id"] = resolved_owner_id
@@ -2487,7 +2525,14 @@ async def bulk_upload(
                         row_errors.append({"field": "Actual End Date", "value": str(end_val), "error": "Invalid actual end date format."})
 
                 if actual_start_date and actual_end_date and actual_end_date < actual_start_date:
-                    row_errors.append({"field": "Actual End Date", "value": str(end_val), "error": "actual_end_date should not be earlier than actual_start_date"})
+                    # Auto-correct: Excel DD/MM/YYYY locale may have swapped month/day.
+                    alt_start = swap_month_day(actual_start_date)
+                    alt_end = swap_month_day(actual_end_date)
+                    if alt_start and alt_end and alt_end >= alt_start:
+                        actual_start_date = alt_start
+                        actual_end_date = alt_end
+                    else:
+                        row_errors.append({"field": "Actual End Date", "value": str(end_val), "error": "actual_end_date should not be earlier than actual_start_date"})
 
                 score = None
                 score_val = row_dict.get("score")
