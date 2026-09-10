@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import select, text, and_, or_, func, String, exists, not_
+from sqlalchemy import select, text, and_, or_, func, String, Numeric, exists, not_
 from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
 import uuid
@@ -163,11 +163,14 @@ def get_engineer_filter_options(
     fabs = real_fabs + ["No Schedule"]
 
     # 5. Consumer Experience Min/Max
+    lam_num_expr = func.cast(func.nullif(func.regexp_replace(Engineer.lam_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+    ind_num_expr = func.cast(func.nullif(func.regexp_replace(Engineer.industry_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+
     exp_stmt = select(
-        func.min(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric)),
-        func.max(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric)),
-        func.min(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric)),
-        func.max(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric))
+        func.min(lam_num_expr),
+        func.max(lam_num_expr),
+        func.min(ind_num_expr),
+        func.max(ind_num_expr)
     )
     if company_id:
         if isinstance(company_id, list):
@@ -253,16 +256,19 @@ def get_engineers_paginated(
         )
 
     # 2. Consumer Experience Slider Range Filter (customer_experience / lam_experience)
+    lam_num_filter = func.cast(func.nullif(func.regexp_replace(Engineer.lam_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+    ind_num_filter = func.cast(func.nullif(func.regexp_replace(Engineer.industry_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+
     if consumer_min is not None:
-        conditions.append(func.coalesce(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric), 0.0) >= consumer_min)
+        conditions.append(func.coalesce(lam_num_filter, 0.0) >= consumer_min)
     if consumer_max is not None:
-        conditions.append(func.coalesce(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric), 0.0) <= consumer_max)
+        conditions.append(func.coalesce(lam_num_filter, 0.0) <= consumer_max)
 
     # 3. Industry Experience Slider Range Filter (industry_experience)
     if industry_min is not None:
-        conditions.append(func.coalesce(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric), 0.0) >= industry_min)
+        conditions.append(func.coalesce(ind_num_filter, 0.0) >= industry_min)
     if industry_max is not None:
-        conditions.append(func.coalesce(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric), 0.0) <= industry_max)
+        conditions.append(func.coalesce(ind_num_filter, 0.0) <= industry_max)
 
     # 4. Tool Module Multi-Select Filter (engineers.primary_tool_type & skills.tool_type / wafer_size)
     if tool_modules:

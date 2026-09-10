@@ -68,7 +68,13 @@ export const UploadPage: React.FC = () => {
     if (!selectedCard || !selectedFile) return;
     setUploading(true);
     try {
-      const result = await uploadModuleFile(selectedCard.id, selectedFile);
+      const targetCompanyId = currentCompany.company_id || currentCompany.id;
+      const targetCompanyName = currentCompany.company_name || currentCompany.name;
+
+      const validCompId = targetCompanyId !== 'all-data' ? targetCompanyId : undefined;
+      const validCompName = targetCompanyName !== 'Master All Data' ? targetCompanyName : undefined;
+
+      const result = await uploadModuleFile(selectedCard.id, selectedFile, validCompId, validCompName);
       setSummaryResult(result);
 
       queryClient.invalidateQueries({ queryKey: ['bulk-upload-history'] });
@@ -115,7 +121,12 @@ export const UploadPage: React.FC = () => {
       );
     } catch (err: any) {
       console.error('Failed to execute bulk upload:', err);
-      alert(`Upload failed: ${err.message || 'Server error occurred during processing.'}`);
+      const errMsg = typeof err.message === 'string'
+        ? err.message
+        : Array.isArray(err.message)
+        ? err.message.map((m: any) => (typeof m === 'object' ? m.msg || JSON.stringify(m) : m)).join(', ')
+        : 'Server error occurred during processing.';
+      alert(`Upload failed: ${errMsg}`);
     } finally {
       setUploading(false);
     }
@@ -265,6 +276,26 @@ export const UploadPage: React.FC = () => {
           subtitle={`Target Company Scope: ${currentCompany.company_name || currentCompany.name}`}
         >
           <div className="space-y-5">
+            <div className="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl space-y-1">
+              <label className="block text-xs font-bold text-[var(--color-text-primary)]">
+                Destination Target Company Tenant:
+              </label>
+              <select
+                value={currentCompany.company_id || currentCompany.id}
+                onChange={(e) => setCompany(e.target.value)}
+                disabled={uploading}
+                className="w-full px-3 py-2 bg-[var(--color-card)] text-[var(--color-text-primary)] font-semibold border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 cursor-pointer text-xs shadow-xs"
+              >
+                {companies
+                  .filter((c) => c.id !== 'all-data' && c.company_id !== 'all-data')
+                  .map((c) => (
+                    <option key={c.id || c.company_id} value={c.company_id || c.id}>
+                      {c.company_name || c.name} ({c.code || c.short_name || 'Tenant'})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
             <FileUpload
               acceptedFormats={selectedCard.acceptedFormats}
               onFileSelect={(f) => setSelectedFile(f)}

@@ -427,9 +427,8 @@ export const EngineersPage: React.FC = () => {
             />
           ) : null}
           <div
-            className={`w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 flex-shrink-0 ${
-              item.avatarUrl ? 'hidden' : ''
-            }`}
+            className={`w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 flex-shrink-0 ${item.avatarUrl ? 'hidden' : ''
+              }`}
           >
             <User className="w-4 h-4 text-sky-600 dark:text-sky-400" />
           </div>
@@ -508,7 +507,7 @@ export const EngineersPage: React.FC = () => {
       sortable: true,
       render: (item) => (
         <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-          {item.customerExperience ?? 0} Yrs
+          {item.customerExperience ?? 0}
         </span>
       ),
     },
@@ -518,7 +517,7 @@ export const EngineersPage: React.FC = () => {
       sortable: true,
       render: (item) => (
         <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-          {item.yearsExperience ?? 0} Yrs
+          {item.yearsExperience ?? 0}
         </span>
       ),
     },
@@ -686,11 +685,10 @@ export const EngineersPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                isFilterPanelOpen || activeFiltersCount > 0
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${isFilterPanelOpen || activeFiltersCount > 0
                   ? 'bg-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-accent)]/30 font-bold shadow-2xs'
                   : 'bg-[#C1121F] text-white border-[#C1121F] hover:bg-[#a80f1b] shadow-xs'
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filters</span>
@@ -745,12 +743,12 @@ export const EngineersPage: React.FC = () => {
                     Customer Experience
                   </span>
                   <span className="font-bold text-[var(--color-accent)] px-2 py-0.5 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20">
-                    {currentCustomerMin} – {currentCustomerMax} Yrs
+                    {currentCustomerMin} – {currentCustomerMax}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-400">Min: {currentCustomerMin} Yrs</span>
+                    <span className="text-[10px] text-slate-400">Min: {currentCustomerMin} </span>
                     <input
                       type="range"
                       min={expBounds.customerMin}
@@ -768,7 +766,7 @@ export const EngineersPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400">Max: {currentCustomerMax} Yrs</span>
+                    <span className="text-[10px] text-slate-400">Max: {currentCustomerMax} </span>
                     <input
                       type="range"
                       min={expBounds.customerMin}
@@ -808,12 +806,12 @@ export const EngineersPage: React.FC = () => {
                     Industry Experience
                   </span>
                   <span className="font-bold text-[var(--color-accent)] px-2 py-0.5 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20">
-                    {currentIndustryMin} – {currentIndustryMax} Yrs
+                    {currentIndustryMin} – {currentIndustryMax}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-400">Min: {currentIndustryMin} Yrs</span>
+                    <span className="text-[10px] text-slate-400">Min: {currentIndustryMin} </span>
                     <input
                       type="range"
                       min={expBounds.industryMin}
@@ -831,7 +829,7 @@ export const EngineersPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400">Max: {currentIndustryMax} Yrs</span>
+                    <span className="text-[10px] text-slate-400">Max: {currentIndustryMax} </span>
                     <input
                       type="range"
                       min={expBounds.industryMin}

@@ -499,7 +499,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       const isGlobal =
         createForm.companyId === 'all-data' || createForm.role === 'Main Admin' || createForm.role === 'Global Admin';
       const targetCompanyId = isGlobal
-        ? dbCompanies[0]?.company_id || '11b9d863-b83c-4af3-8db5-b6e773f78235'
+        ? dbCompanies[0]?.company_id || ''
         : createForm.companyId || createForm.accessibleCompanyIds[0] || dbCompanies[0]?.company_id;
 
       const targetRole = createForm.role;
@@ -542,7 +542,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       const isGlobal =
         editForm.companyId === 'all-data' || editForm.role === 'Main Admin' || editForm.role === 'Global Admin';
       const targetCompanyId = isGlobal
-        ? dbCompanies[0]?.company_id || '11b9d863-b83c-4af3-8db5-b6e773f78235'
+        ? dbCompanies[0]?.company_id || ''
         : editForm.companyId || editForm.accessibleCompanyIds[0] || dbCompanies[0]?.company_id;
 
       const targetRole = editForm.role;

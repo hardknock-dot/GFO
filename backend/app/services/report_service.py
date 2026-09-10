@@ -4,7 +4,7 @@ from datetime import date
 import io
 import csv
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, or_, and_
+from sqlalchemy import select, func, or_, and_, Numeric
 from fastapi import HTTPException, status
 
 from app.models.company import Company
@@ -157,8 +157,10 @@ def get_category_report(
         total_count = len(engineers)
 
         # Average Industry Experience & Average Customer Experience
-        avg_ind_stmt = select(func.avg(func.cast(func.nullif(Engineer.industry_experience, ''), Numeric)))
-        avg_cust_stmt = select(func.avg(func.cast(func.nullif(Engineer.lam_experience, ''), Numeric)))
+        ind_num_expr = func.cast(func.nullif(func.regexp_replace(Engineer.industry_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+        lam_num_expr = func.cast(func.nullif(func.regexp_replace(Engineer.lam_experience, r'[^0-9.]', '', 'g'), ''), Numeric)
+        avg_ind_stmt = select(func.avg(ind_num_expr))
+        avg_cust_stmt = select(func.avg(lam_num_expr))
         if company_id:
             avg_ind_stmt = avg_ind_stmt.where(Engineer.company_id == company_id)
             avg_cust_stmt = avg_cust_stmt.where(Engineer.company_id == company_id)

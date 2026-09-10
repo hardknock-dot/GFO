@@ -88,15 +88,30 @@ export const getUploadById = async (id: string): Promise<UploadCardItem | null> 
 
 export const uploadModuleFile = async (
   cardId: string,
-  file: File
+  file: File,
+  companyId?: string,
+  companyName?: string
 ): Promise<{ success: boolean; rowsProcessed: number; errorsCount: number; message: string; report_url?: string }> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('module_id', cardId);
+  if (companyId) {
+    formData.append('company_id', companyId);
+  }
+  if (companyName) {
+    formData.append('company_name', companyName);
+  }
+
+  const reqHeaders: Record<string, string> = {
+    'Content-Type': 'multipart/form-data',
+  };
+  if (companyId) {
+    reqHeaders['X-Company-ID'] = companyId;
+  }
 
   try {
     const res = await api.post('/upload', formData, {
-      headers: { 'Content-Type': undefined },
+      headers: reqHeaders,
     });
     return res.data;
   } catch (err: any) {

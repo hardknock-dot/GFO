@@ -166,8 +166,8 @@ def run_pk_upsert_test_suite():
         assert db_eng_c.engineer_name == "New Eng One Updated"
         assert db_eng_c.lam_id == "CUST-999-UPDATED"
         assert db_eng_c.level == "Level 2 Senior"
-        assert float(db_eng_c.lam_experience) == 5.5
-        assert float(db_eng_c.industry_experience) == 8.0
+        assert str(db_eng_c.lam_experience) == "5.5 yrs"
+        assert str(db_eng_c.industry_experience) == "8.0+"
         print("[PASS] TEST C: Multiple fields updated cleanly.")
 
         # TEST D: Unchanged row

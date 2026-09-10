@@ -456,6 +456,8 @@ async def bulk_upload(
     file: UploadFile = File(...),
     module_id: str = Form(...),
     x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    company_id: Optional[str] = Form(None),
+    company_name: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -482,25 +484,32 @@ async def bulk_upload(
     enforce_write_permission(current_user)
 
     target_company_id = None
-    if x_company_id:
+    raw_comp_ref = x_company_id or company_id or company_name
+    if raw_comp_ref:
+        raw_str = str(raw_comp_ref).strip()
         try:
-            target_company_id = UUID(x_company_id)
+            target_company_id = UUID(raw_str)
         except ValueError:
+            clean_ref = raw_str.replace("-", " ").strip()
             comp = db.scalars(
                 select(Company).where(
-                    (Company.company_code == x_company_id) | 
-                    (Company.company_name.ilike(x_company_id))
+                    (Company.short_name.ilike(raw_str)) | 
+                    (Company.company_name.ilike(raw_str)) |
+                    (Company.company_name.ilike(f"%{clean_ref}%")) |
+                    (Company.short_name.ilike(f"%{clean_ref}%"))
                 )
             ).first()
             if comp:
                 target_company_id = comp.company_id
 
-    if current_user.role != 'Global Admin':
+    if current_user.role != 'Main Admin':
         target_company_id = current_user.company_id
-    elif target_company_id is None:
-        comp = db.scalars(select(Company)).first()
-        if comp:
-            target_company_id = comp.company_id
+
+    if not target_company_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target company tenant not selected or invalid. Please select a valid company before uploading."
+        )
 
     company = db.get(Company, target_company_id)
     if not company:

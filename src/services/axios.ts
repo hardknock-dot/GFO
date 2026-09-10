@@ -20,12 +20,17 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('ormp_auth_token');
-    const companyId = localStorage.getItem('ormp_active_company') || 'lam-research';
+    const companyId = localStorage.getItem('ormp_active_company');
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    config.headers['X-Company-ID'] = companyId;
+    // Only set X-Company-ID from localStorage if the per-request caller hasn't already set it.
+    // This is critical: upload requests set their own X-Company-ID for tenant isolation.
+    const existingCompanyHeader = config.headers['X-Company-ID'] || config.headers['x-company-id'];
+    if (!existingCompanyHeader && companyId && companyId !== 'all-data') {
+      config.headers['X-Company-ID'] = companyId;
+    }
 
     if (import.meta.env.VITE_ENABLE_LOGGING === 'true') {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.params || '');
