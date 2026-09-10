@@ -42,6 +42,13 @@ def parse_date(v):
         return v.date()
     if isinstance(v, date):
         return v
+    # Handle Excel serial date numbers (openpyxl may return float for unformatted date cells)
+    if isinstance(v, (int, float)):
+        try:
+            from openpyxl.utils.datetime import from_excel
+            return from_excel(v).date()
+        except Exception:
+            raise ValueError(f"Cannot convert numeric value '{v}' to a date.")
     if not v:
         return None
     v_str = str(v).strip()
@@ -49,12 +56,14 @@ def parse_date(v):
         return None
     if " " in v_str:
         v_str = v_str.split(" ")[0]
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+    # MM/DD/YYYY is first — matches the user's Excel format and avoids DD/MM ambiguity.
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y"):
         try:
             return datetime.strptime(v_str, fmt).date()
         except ValueError:
             continue
     raise ValueError("Invalid date format")
+
 
 def parse_experience(v):
     if v is None:
@@ -502,7 +511,7 @@ async def bulk_upload(
             if comp:
                 target_company_id = comp.company_id
 
-    if current_user.role != 'Main Admin':
+    if current_user.role not in ('Main Admin', 'Manager'):
         target_company_id = current_user.company_id
 
     if not target_company_id:
