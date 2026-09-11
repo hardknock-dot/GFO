@@ -150,9 +150,36 @@ def get_engineer_schedules(db: Session, engineer_id: UUID) -> List[Schedule]:
     rows = db.execute(stmt).all()
     items = []
     for sch, se_name, se_orb_id, se_goes_by in rows:
+        sch.senior_engineer_name = se_name
+        sch.senior_engineer_orbit_id = se_orb_id
+        sch.senior_engineer_goes_by = se_goes_by
         sch._senior_engineer_name = se_name
         sch._senior_engineer_orbit_id = se_orb_id
         sch._senior_engineer_goes_by = se_goes_by
+
+        # Find engineers assigned under this engineer as Senior Engineer
+        assigned_stmt = (
+            select(Engineer)
+            .join(Schedule, Schedule.engineer_id == Engineer.engineer_id)
+            .where(Schedule.senior_engineer_id == engineer_id)
+        )
+        juniors = db.scalars(assigned_stmt).all()
+        if juniors:
+            seen = set()
+            unique_juniors = []
+            for j in juniors:
+                if j.engineer_id not in seen and j.engineer_id != engineer_id:
+                    seen.add(j.engineer_id)
+                    unique_juniors.append({
+                        "engineer_id": j.engineer_id,
+                        "engineer_name": j.engineer_name,
+                        "orbit_id": j.orbit_id,
+                        "level": j.level
+                    })
+            sch.assigned_engineers = unique_juniors
+        else:
+            sch.assigned_engineers = []
+
         items.append(sch)
     return items
 

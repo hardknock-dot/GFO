@@ -8,7 +8,7 @@ from datetime import datetime
 from app.models.visa import Visa
 from app.models.engineer import Engineer
 from app.models.user import User
-from app.schemas.visa import VisaCreate, VisaUpdate
+from app.schemas.visa import VisaCreate, VisaUpdate, UserOwnerSummary
 from fastapi import HTTPException, status
 
 def get_visa_paginated(
@@ -67,11 +67,11 @@ def get_visa_paginated(
         v.engineer_name = eng_name
         v.orbit_id = orb_id
         if getattr(v, "owner_user", None):
-            v.owner = {
-                "id": v.owner_user.user_id,
-                "name": v.owner_user.full_name,
-                "email": v.owner_user.email
-            }
+            v.owner = UserOwnerSummary(
+                id=v.owner_user.user_id,
+                name=v.owner_user.full_name,
+                email=v.owner_user.email
+            )
         else:
             v.owner = None
         items.append(v)
@@ -92,11 +92,11 @@ def get_engineer_visa(db: Session, engineer_id: UUID) -> List[Visa]:
     result = db.scalars(stmt).all()
     for v in result:
         if getattr(v, "owner_user", None):
-            v.owner = {
-                "id": v.owner_user.user_id,
-                "name": v.owner_user.full_name,
-                "email": v.owner_user.email
-            }
+            v.owner = UserOwnerSummary(
+                id=v.owner_user.user_id,
+                name=v.owner_user.full_name,
+                email=v.owner_user.email
+            )
         else:
             v.owner = None
     return list(result)
@@ -146,11 +146,11 @@ def create_visa(db: Session, engineer_id: UUID, visa_data: VisaCreate, owner_id:
     db.commit()
     db.refresh(db_visa)
     if getattr(db_visa, "owner_user", None):
-        db_visa.owner = {
-            "id": db_visa.owner_user.user_id,
-            "name": db_visa.owner_user.full_name,
-            "email": db_visa.owner_user.email
-        }
+        db_visa.owner = UserOwnerSummary(
+            id=db_visa.owner_user.user_id,
+            name=db_visa.owner_user.full_name,
+            email=db_visa.owner_user.email
+        )
     else:
         db_visa.owner = None
     return db_visa
@@ -216,11 +216,11 @@ def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
     db.expire(db_visa)
     db.refresh(db_visa)
     if getattr(db_visa, "owner_user", None):
-        db_visa.owner = {
-            "id": db_visa.owner_user.user_id,
-            "name": db_visa.owner_user.full_name,
-            "email": db_visa.owner_user.email
-        }
+        db_visa.owner = UserOwnerSummary(
+            id=db_visa.owner_user.user_id,
+            name=db_visa.owner_user.full_name,
+            email=db_visa.owner_user.email
+        )
     else:
         db_visa.owner = None
     return db_visa

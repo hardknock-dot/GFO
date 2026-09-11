@@ -276,7 +276,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
         return [];
       });
 
-      const fetchedEngineersRes = await getEngineers().catch((err) => {
+      const fetchedEngineersRes = await getEngineers({ pageSize: 1000 }).catch((err) => {
         console.warn('Error loading engineers list:', err);
         return { data: [] };
       });
@@ -602,6 +602,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
   const filteredCreateEngineers = allEngineers.filter((eng) => {
     const q = createEngineerSearch.toLowerCase().trim();
     if (!q) return true;
+    if (createForm.engineerId === eng.id) return true;
     return (
       eng.name.toLowerCase().includes(q) ||
       (eng.orbitId && eng.orbitId.toLowerCase().includes(q)) ||
@@ -613,6 +614,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
   const filteredEditEngineers = allEngineers.filter((eng) => {
     const q = editEngineerSearch.toLowerCase().trim();
     if (!q) return true;
+    if (editForm.engineerId === eng.id) return true;
     return (
       eng.name.toLowerCase().includes(q) ||
       (eng.orbitId && eng.orbitId.toLowerCase().includes(q)) ||

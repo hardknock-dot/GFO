@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
 import {
-
   useEngineerMe,
+  useEngineerMeSchedules,
+  useEngineerMeCurrentSchedule,
   useEngineerMeNextSchedule,
   useEngineerMeSkills,
   useEngineerMeVisa,
@@ -34,13 +35,17 @@ import {
   MapPin,
   Plus,
   Trash2,
+  UserCheck,
+  Users,
 } from 'lucide-react';
 
 
 export const EngineerDashboardPage: React.FC = () => {
   const { data: engineer, isLoading: isEngineerLoading, isError: isEngineerError, refetch: refetchEngineer } = useEngineerMe();
 
-  const { data: nextSchedule, isLoading: isNextScheduleLoading } = useEngineerMeNextSchedule();
+  const { data: allSchedules = [], isLoading: isSchedulesLoading } = useEngineerMeSchedules();
+  const { data: currentScheduleFromApi, isLoading: isCurrentScheduleLoading } = useEngineerMeCurrentSchedule();
+  const { data: nextScheduleFromApi, isLoading: isNextScheduleLoading } = useEngineerMeNextSchedule();
   const { data: skills = [], isLoading: isSkillsLoading } = useEngineerMeSkills();
   const { data: visas = [], isLoading: isVisasLoading } = useEngineerMeVisa();
   const { data: performances = [], isLoading: isPerfLoading } = useEngineerMePerformance();
@@ -89,7 +94,7 @@ export const EngineerDashboardPage: React.FC = () => {
   const [skillToDelete, setSkillToDelete] = useState<Skill | null>(null);
 
 
-  if (isEngineerLoading || isNextScheduleLoading || isSkillsLoading || isVisasLoading || isPerfLoading) {
+  if (isEngineerLoading || isSchedulesLoading || isCurrentScheduleLoading || isNextScheduleLoading || isSkillsLoading || isVisasLoading || isPerfLoading) {
     return (
       <div className="p-6 space-y-6">
         <CardSkeleton />
@@ -109,22 +114,6 @@ export const EngineerDashboardPage: React.FC = () => {
         />
       </div>
     );
-  }
-
-  // Calculate Days Until Next Schedule & Alert Logic
-  let daysUntilNext: number | null = null;
-  let isWithin30Days = false;
-
-  if (nextSchedule && nextSchedule.startDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const start = new Date(nextSchedule.startDate);
-    start.setHours(0, 0, 0, 0);
-    const diffTime = start.getTime() - today.getTime();
-    daysUntilNext = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (daysUntilNext >= 0 && daysUntilNext <= 30) {
-      isWithin30Days = true;
-    }
   }
 
   // Handlers for Schedule Comment
@@ -246,6 +235,64 @@ export const EngineerDashboardPage: React.FC = () => {
   };
 
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // 1. Resolve Current Schedule (Ongoing Active Assignment)
+  const currentSchedule = currentScheduleFromApi || allSchedules.find((s) => {
+    if (!s.startDate) return false;
+    const isStarted = s.startDate <= todayStr;
+    const isNotEnded = !s.endDate || s.endDate >= todayStr;
+    const isNotCompleted = s.scheduleStatus !== 'Completed' && s.status !== 'Completed';
+    return isStarted && isNotEnded && isNotCompleted;
+  }) || allSchedules.find((s) => (s.scheduleStatus === 'Active Assignment' || s.status === 'Active Assignment' || s.scheduleStatus === 'Ongoing') && s.scheduleStatus !== 'Completed') || null;
+
+  // 2. Resolve Immediate Next Schedule (Nearest Upcoming Schedule AFTER Current)
+  let nextSchedule: Schedule | null = nextScheduleFromApi;
+  if (!nextSchedule || (currentSchedule && nextSchedule.id === currentSchedule.id)) {
+    const upcomingList = allSchedules
+      .filter((s) => {
+        if (currentSchedule && s.id === currentSchedule.id) return false;
+        if (s.scheduleStatus === 'Completed' || s.status === 'Completed') return false;
+        if (s.startDate && s.startDate > todayStr) return true;
+        if (currentSchedule?.endDate && s.startDate && s.startDate >= currentSchedule.endDate) return true;
+        if (s.scheduleStatus === 'Upcoming' || s.status === 'Upcoming') return true;
+        return false;
+      })
+      .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+    nextSchedule = upcomingList.length > 0 ? upcomingList[0] : null;
+  }
+
+  // Calculate Days Until Next Schedule & Alert Logic
+  let daysUntilNext: number | null = null;
+  let isWithin30Days = false;
+
+  if (nextSchedule && nextSchedule.startDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(nextSchedule.startDate);
+    start.setHours(0, 0, 0, 0);
+    const diffTime = start.getTime() - today.getTime();
+    daysUntilNext = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (daysUntilNext >= 0 && daysUntilNext <= 30) {
+      isWithin30Days = true;
+    }
+  }
+
+  const currentSeniorName = currentSchedule?.seniorEngineerName || currentSchedule?.senior_engineer_name;
+  const currentSeniorOrbitId = currentSchedule?.seniorEngineerOrbitId || currentSchedule?.senior_engineer_orbit_id;
+  const currentJuniorEngs = currentSchedule?.assignedEngineers || [];
+  const hasCurrentSenior = !!currentSeniorName;
+  const hasCurrentJuniors = !!(currentJuniorEngs && currentJuniorEngs.length > 0);
+  const isCurrentAssignedVisible = hasCurrentSenior || hasCurrentJuniors;
+
+  const nextSeniorName = nextSchedule?.seniorEngineerName || nextSchedule?.senior_engineer_name;
+  const nextSeniorOrbitId = nextSchedule?.seniorEngineerOrbitId || nextSchedule?.senior_engineer_orbit_id;
+  const nextJuniorEngs = nextSchedule?.assignedEngineers || [];
+  const hasNextSenior = !!nextSeniorName;
+  const hasNextJuniors = !!(nextJuniorEngs && nextJuniorEngs.length > 0);
+  const isNextAssignedVisible = hasNextSenior || hasNextJuniors;
+
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -310,6 +357,142 @@ export const EngineerDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* Current Schedule Section */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Current Schedule</h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                  Active Assignment
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Current active customer field assignment and team details</p>
+            </div>
+          </div>
+        </div>
+
+        {currentSchedule ? (
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200/60 dark:border-slate-800 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Destination</span>
+                <div className="flex items-center space-x-2 mt-1 font-semibold text-slate-900 dark:text-white">
+                  <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span>{currentSchedule.fabCity || currentSchedule.country} / {currentSchedule.fabSite || 'Customer Fab'}</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Support Type</span>
+                <div className="font-semibold text-slate-900 dark:text-white mt-1">
+                  {currentSchedule.supportType || 'Field Support'}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Start Date</span>
+                <div className="font-semibold text-slate-900 dark:text-white mt-1">
+                  {currentSchedule.startDate} {currentSchedule.endDate ? `to ${currentSchedule.endDate}` : ''}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Schedule Status</span>
+                <div className="mt-1">
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
+                    {currentSchedule.scheduleStatus || currentSchedule.status || 'Active Assignment'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ONLY visible if any engineer (Senior Engineer or Junior Engineers) has been assigned */}
+            {isCurrentAssignedVisible && (
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-2">
+                {hasCurrentSenior && (
+                  <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-indigo-600 text-white rounded-lg">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Assigned Senior Engineer</span>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white">{currentSeniorName}</span>
+                          {currentSeniorOrbitId && (
+                            <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                              Orbit ID: {currentSeniorOrbitId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                      Senior Mentor
+                    </span>
+                  </div>
+                )}
+
+                {hasCurrentJuniors && (
+                  <div className="p-3 bg-sky-50/80 dark:bg-sky-950/40 rounded-xl border border-sky-200/60 dark:border-sky-800/60 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                      <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">Engineers Assigned To Me</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {currentJuniorEngs.map((j) => (
+                        <div key={j.id} className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-700/60 rounded-lg px-3 py-1.5 flex items-center space-x-2 text-xs shadow-sm">
+                          <span className="font-bold text-slate-900 dark:text-white">{j.name}</span>
+                          {j.orbitId && <span className="font-mono text-[10px] text-slate-400">({j.orbitId})</span>}
+                          {j.level && <span className="text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-semibold">{j.level}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentSchedule.remarks ? (
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Schedule Remarks: </span>
+                  {currentSchedule.remarks}
+                </div>
+                <button
+                  onClick={() => handleOpenScheduleCommentModal(currentSchedule)}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center space-x-1"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit Comment</span>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  onClick={() => handleOpenScheduleCommentModal(currentSchedule)}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center space-x-1"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Add Comment</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <Clock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">No active current schedule logged.</p>
+          </div>
+        )}
+      </div>
+
       {/* Next Schedule Section */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -325,43 +508,89 @@ export const EngineerDashboardPage: React.FC = () => {
         </div>
 
         {nextSchedule ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200/60 dark:border-slate-800">
-            <div>
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Destination</span>
-              <div className="flex items-center space-x-2 mt-1 font-semibold text-slate-900 dark:text-white">
-                <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                <span>{nextSchedule.fabCity || nextSchedule.country} / {nextSchedule.fabSite || 'Customer Fab'}</span>
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200/60 dark:border-slate-800 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Destination</span>
+                <div className="flex items-center space-x-2 mt-1 font-semibold text-slate-900 dark:text-white">
+                  <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                  <span>{nextSchedule.fabCity || nextSchedule.country} / {nextSchedule.fabSite || 'Customer Fab'}</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Support Type</span>
+                <div className="font-semibold text-slate-900 dark:text-white mt-1">
+                  {nextSchedule.supportType || 'Field Support'}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Start Date</span>
+                <div className="font-semibold text-slate-900 dark:text-white mt-1">
+                  {nextSchedule.startDate}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Days Until</span>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">
+                    {daysUntilNext !== null ? `${daysUntilNext} Days` : 'N/A'}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">
+                    {nextSchedule.scheduleStatus || 'Upcoming'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div>
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Support Type</span>
-              <div className="font-semibold text-slate-900 dark:text-white mt-1">
-                {nextSchedule.supportType || 'Field Support'}
-              </div>
-            </div>
+            {/* ONLY visible if an engineer has been assigned */}
+            {isNextAssignedVisible && (
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-2">
+                {hasNextSenior && (
+                  <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-indigo-600 text-white rounded-lg">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Assigned Senior Engineer</span>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white">{nextSeniorName}</span>
+                          {nextSeniorOrbitId && (
+                            <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                              Orbit ID: {nextSeniorOrbitId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-            <div>
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Start Date</span>
-              <div className="font-semibold text-slate-900 dark:text-white mt-1">
-                {nextSchedule.startDate}
+                {hasNextJuniors && (
+                  <div className="p-3 bg-sky-50/80 dark:bg-sky-950/40 rounded-xl border border-sky-200/60 dark:border-sky-800/60 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                      <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">Engineers Assigned To Me</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {nextJuniorEngs.map((j) => (
+                        <div key={j.id} className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-700/60 rounded-lg px-3 py-1.5 flex items-center space-x-2 text-xs shadow-sm">
+                          <span className="font-bold text-slate-900 dark:text-white">{j.name}</span>
+                          {j.orbitId && <span className="font-mono text-[10px] text-slate-400">({j.orbitId})</span>}
+                          {j.level && <span className="text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-semibold">{j.level}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-
-            <div>
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Days Until</span>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">
-                  {daysUntilNext !== null ? `${daysUntilNext} Days` : 'N/A'}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">
-                  {nextSchedule.scheduleStatus || 'Upcoming'}
-                </span>
-              </div>
-            </div>
+            )}
 
             {nextSchedule.remarks && (
-              <div className="md:col-span-4 mt-2 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
                 <div className="text-xs text-slate-600 dark:text-slate-300">
                   <span className="font-semibold text-slate-700 dark:text-slate-200">My Remarks: </span>
                   {nextSchedule.remarks}
@@ -376,7 +605,7 @@ export const EngineerDashboardPage: React.FC = () => {
               </div>
             )}
             {!nextSchedule.remarks && (
-              <div className="md:col-span-4 mt-2 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
                 <button
                   onClick={() => handleOpenScheduleCommentModal(nextSchedule)}
                   className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center space-x-1"

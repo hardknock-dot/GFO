@@ -57,6 +57,12 @@ class ScheduleMarkAddressedResponse(BaseModel):
     schedule_id: UUID
     comment_adressal: bool | None = True
 
+class AssignedEngineerSummary(BaseModel):
+    engineer_id: UUID
+    engineer_name: str
+    orbit_id: str | None = None
+    level: str | None = None
+
 class ScheduleResponse(BaseModel):
     schedule_id: UUID
     engineer_id: UUID
@@ -64,6 +70,7 @@ class ScheduleResponse(BaseModel):
     senior_engineer_name: str | None = None
     senior_engineer_orbit_id: str | None = None
     senior_engineer_goes_by: str | None = None
+    assigned_engineers: List[AssignedEngineerSummary] | None = None
     engineer_name: str | None = None
     orbit_id: str | None = None
     owner_id: UUID | None = None

@@ -45,7 +45,17 @@ const mapApiScheduleToFrontend = (item: any): Schedule => {
     remarks: item.remarks || '',
     commentStatus: item.comment_status || 'UNADDRESSED',
     ownerId: item.owner_id,
-    owner_id: item.owner_id
+    owner_id: item.owner_id,
+    seniorEngineerId: item.senior_engineer_id || item.seniorEngineerId || null,
+    seniorEngineerName: item.senior_engineer_name || item._senior_engineer_name || item.seniorEngineerName || null,
+    seniorEngineerOrbitId: item.senior_engineer_orbit_id || item._senior_engineer_orbit_id || item.seniorEngineerOrbitId || null,
+    seniorEngineerGoesBy: item.senior_engineer_goes_by || item._senior_engineer_goes_by || item.seniorEngineerGoesBy || null,
+    assignedEngineers: item.assigned_engineers ? item.assigned_engineers.map((e: any) => ({
+      id: e.engineer_id,
+      name: e.engineer_name,
+      orbitId: e.orbit_id,
+      level: e.level,
+    })) : [],
   };
 };
 
@@ -124,6 +134,11 @@ export const getEngineerMe = async (): Promise<Engineer> => {
 export const getEngineerMeSchedules = async (): Promise<Schedule[]> => {
   const res = await api.get('/engineer/me/schedules');
   return (res.data || []).map(mapApiScheduleToFrontend);
+};
+
+export const getEngineerMeCurrentSchedule = async (): Promise<Schedule | null> => {
+  const res = await api.get('/engineer/me/schedules/current');
+  return res.data ? mapApiScheduleToFrontend(res.data) : null;
 };
 
 export const getEngineerMeNextSchedule = async (): Promise<Schedule | null> => {

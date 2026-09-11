@@ -91,6 +91,18 @@ app.include_router(upload.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
 
 
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled server error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred."}
+    )
+
+
+
 
 
 @app.get("/")

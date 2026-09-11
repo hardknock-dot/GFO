@@ -35,7 +35,7 @@ def get_current_engineer_profile(db: Session, current_user: User) -> Engineer:
     if current_user.engineer_id:
         eng = db.get(Engineer, current_user.engineer_id)
         if eng:
-            enforce_company_isolation(current_user, eng.company_id)
+            enforce_company_isolation(db, current_user, eng.company_id)
             return eng
     
     # Fallback lookup by email if users.engineer_id is not yet set
@@ -164,28 +164,178 @@ def get_my_schedules(
     eng = get_current_engineer_profile(db, current_user)
     return schedule_service.get_engineer_schedules(db, eng.engineer_id)
 
+@router.get("/schedules/current", response_model=Optional[ScheduleResponse])
+def get_my_current_schedule(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve current active/ongoing schedule for authenticated engineer.
+    """
+    eng = get_current_engineer_profile(db, current_user)
+    today = date.today()
+
+    stmt = (
+        select(Schedule)
+        .where(
+            and_(
+                Schedule.engineer_id == eng.engineer_id,
+                Schedule.start_date <= today,
+                or_(Schedule.end_date.is_(None), Schedule.end_date >= today),
+                or_(Schedule.schedule_status.is_(None), Schedule.schedule_status != 'Completed')
+            )
+        )
+        .order_by(Schedule.start_date.desc())
+        .limit(1)
+    )
+    current_sch = db.scalar(stmt)
+
+    if not current_sch:
+        stmt_active = (
+            select(Schedule)
+            .where(
+                and_(
+                    Schedule.engineer_id == eng.engineer_id,
+                    or_(
+                        Schedule.schedule_status == 'Active Assignment',
+                        Schedule.schedule_status == 'Ongoing',
+                        Schedule.schedule_status == 'In Progress'
+                    )
+                )
+            )
+            .order_by(Schedule.start_date.desc())
+            .limit(1)
+        )
+        current_sch = db.scalar(stmt_active)
+
+    if current_sch:
+        current_sch.engineer_name = eng.engineer_name
+        current_sch.orbit_id = eng.orbit_id
+        if current_sch.senior_engineer_id:
+            se = db.get(Engineer, current_sch.senior_engineer_id)
+            if se:
+                current_sch.senior_engineer_name = se.engineer_name
+                current_sch.senior_engineer_orbit_id = se.orbit_id
+                current_sch.senior_engineer_goes_by = se.goes_by
+                current_sch._senior_engineer_name = se.engineer_name
+                current_sch._senior_engineer_orbit_id = se.orbit_id
+                current_sch._senior_engineer_goes_by = se.goes_by
+
+        juniors = db.scalars(
+            select(Engineer)
+            .join(Schedule, Schedule.engineer_id == Engineer.engineer_id)
+            .where(Schedule.senior_engineer_id == eng.engineer_id)
+        ).all()
+        if juniors:
+            seen = set()
+            unique_juniors = []
+            for j in juniors:
+                if j.engineer_id not in seen and j.engineer_id != eng.engineer_id:
+                    seen.add(j.engineer_id)
+                    unique_juniors.append({
+                        "engineer_id": j.engineer_id,
+                        "engineer_name": j.engineer_name,
+                        "orbit_id": j.orbit_id,
+                        "level": j.level
+                    })
+            current_sch.assigned_engineers = unique_juniors
+        else:
+            current_sch.assigned_engineers = []
+
+    return current_sch
+
 @router.get("/schedules/next", response_model=Optional[ScheduleResponse])
 def get_my_next_schedule(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve nearest future schedule for authenticated engineer.
+    Retrieve nearest future schedule starting AFTER today / current schedule for authenticated engineer.
     """
     eng = get_current_engineer_profile(db, current_user)
     today = date.today()
-    stmt = (
-        select(Schedule)
+
+    current_stmt = (
+        select(Schedule.schedule_id)
         .where(
             and_(
                 Schedule.engineer_id == eng.engineer_id,
-                Schedule.start_date >= today
+                Schedule.start_date <= today,
+                or_(Schedule.end_date.is_(None), Schedule.end_date >= today),
+                or_(Schedule.schedule_status.is_(None), Schedule.schedule_status != 'Completed')
             )
         )
+        .limit(1)
+    )
+    current_id = db.scalar(current_stmt)
+
+    conditions = [
+        Schedule.engineer_id == eng.engineer_id,
+        or_(Schedule.schedule_status.is_(None), Schedule.schedule_status != 'Completed')
+    ]
+    if current_id:
+        conditions.append(Schedule.schedule_id != current_id)
+
+    # Next schedule starts after today or in the future
+    conditions.append(Schedule.start_date >= today)
+
+    stmt = (
+        select(Schedule)
+        .where(and_(*conditions))
         .order_by(Schedule.start_date.asc())
         .limit(1)
     )
     next_sch = db.scalar(stmt)
+
+    # Fallback if no start_date >= today, pick earliest upcoming schedule that is not current_id
+    if not next_sch and current_id:
+        stmt_fallback = (
+            select(Schedule)
+            .where(
+                and_(
+                    Schedule.engineer_id == eng.engineer_id,
+                    Schedule.schedule_id != current_id,
+                    or_(Schedule.schedule_status.is_(None), Schedule.schedule_status != 'Completed')
+                )
+            )
+            .order_by(Schedule.start_date.asc())
+            .limit(1)
+        )
+        next_sch = db.scalar(stmt_fallback)
+
+    if next_sch:
+        next_sch.engineer_name = eng.engineer_name
+        next_sch.orbit_id = eng.orbit_id
+        if next_sch.senior_engineer_id:
+            se = db.get(Engineer, next_sch.senior_engineer_id)
+            if se:
+                next_sch.senior_engineer_name = se.engineer_name
+                next_sch.senior_engineer_orbit_id = se.orbit_id
+                next_sch.senior_engineer_goes_by = se.goes_by
+                next_sch._senior_engineer_name = se.engineer_name
+                next_sch._senior_engineer_orbit_id = se.orbit_id
+                next_sch._senior_engineer_goes_by = se.goes_by
+
+        juniors = db.scalars(
+            select(Engineer)
+            .join(Schedule, Schedule.engineer_id == Engineer.engineer_id)
+            .where(Schedule.senior_engineer_id == eng.engineer_id)
+        ).all()
+        if juniors:
+            seen = set()
+            unique_juniors = []
+            for j in juniors:
+                if j.engineer_id not in seen and j.engineer_id != eng.engineer_id:
+                    seen.add(j.engineer_id)
+                    unique_juniors.append({
+                        "engineer_id": j.engineer_id,
+                        "engineer_name": j.engineer_name,
+                        "orbit_id": j.orbit_id,
+                        "level": j.level
+                    })
+            next_sch.assigned_engineers = unique_juniors
+        else:
+            next_sch.assigned_engineers = []
     return next_sch
 
 @router.patch("/schedules/{schedule_id}/comments", response_model=ScheduleResponse)

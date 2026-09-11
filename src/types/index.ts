@@ -173,6 +173,13 @@ export interface Skill {
   comments?: string;
 }
 
+export interface AssignedEngineerInfo {
+  id: string;
+  name: string;
+  orbitId?: string;
+  level?: string;
+}
+
 export interface Schedule {
   id: string;
   engineerId: string;
@@ -203,6 +210,7 @@ export interface Schedule {
   seniorEngineerName?: string | null;
   seniorEngineerOrbitId?: string | null;
   seniorEngineerGoesBy?: string | null;
+  assignedEngineers?: AssignedEngineerInfo[];
 }
 
 export interface Travel {

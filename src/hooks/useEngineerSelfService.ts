@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   getEngineerMe,
   getEngineerMeSchedules,
+  getEngineerMeCurrentSchedule,
   getEngineerMeNextSchedule,
   updateScheduleComments,
   getEngineerMeSkills,
@@ -60,6 +61,17 @@ export const useEngineerMeSchedules = () => {
   });
 };
 
+export const useEngineerMeCurrentSchedule = () => {
+  const { user } = useAuth();
+  const engineerId = user?.engineerId || user?.id || 'me';
+
+  return useQuery({
+    queryKey: ['engineer-me-current-schedule', engineerId],
+    queryFn: () => getEngineerMeCurrentSchedule(),
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
 export const useEngineerMeNextSchedule = () => {
   const { user } = useAuth();
   const engineerId = user?.engineerId || user?.id || 'me';
@@ -81,6 +93,7 @@ export const useUpdateEngineerMeScheduleComments = () => {
       updateScheduleComments(scheduleId, remarks),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engineer-me-schedules', engineerId] });
+      queryClient.invalidateQueries({ queryKey: ['engineer-me-current-schedule', engineerId] });
       queryClient.invalidateQueries({ queryKey: ['engineer-me-next-schedule', engineerId] });
       queryClient.invalidateQueries({ queryKey: ['engineer-me-reports', engineerId] });
       queryClient.invalidateQueries({ queryKey: ['engineer-report-summary'] });

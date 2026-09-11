@@ -76,7 +76,7 @@ export const VisaPage: React.FC = () => {
 
   // Query company-filtered engineer list for creation dropdown
   const { data: engineersRes } = useEngineers(
-    companyId ? { company_id: companyId } : undefined
+    companyId ? { company_id: companyId, pageSize: 1000 } : { pageSize: 1000 }
   );
   const engineersList = engineersRes?.data || [];
 
