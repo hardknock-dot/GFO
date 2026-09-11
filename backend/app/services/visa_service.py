@@ -189,11 +189,12 @@ def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
                     detail="Owner user not found"
                 )
             engineer = db.get(Engineer, db_visa.engineer_id)
-            if engineer and owner_user.company_id != engineer.company_id:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Cross-company owner assignment is not allowed. Owner must belong to the same company."
-                )
+            if engineer and owner_user.company_id and engineer.company_id:
+                if str(owner_user.company_id).lower() != str(engineer.company_id).lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Cross-company owner assignment is not allowed. Owner must belong to the same company."
+                    )
             db_visa.owner_id = visa_data.owner_id
 
     # 4. Update other fields
@@ -212,6 +213,7 @@ def update_visa(db: Session, visa_id: UUID, visa_data: VisaUpdate) -> Visa:
 
     db_visa.updated_at = datetime.utcnow()
     db.commit()
+    db.expire(db_visa)
     db.refresh(db_visa)
     if getattr(db_visa, "owner_user", None):
         db_visa.owner = {

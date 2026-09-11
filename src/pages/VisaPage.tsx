@@ -82,8 +82,13 @@ export const VisaPage: React.FC = () => {
 
   // Filter users by current active company for owner assignment
   const companyUsers = useMemo(() => {
-    if (!companyId) return usersList;
-    return usersList.filter((u) => u.company_id === companyId);
+    if (!companyId || companyId === 'all-data') return usersList;
+    const target = String(companyId).toLowerCase();
+    return usersList.filter((u) => {
+      if (!u.company_id) return true;
+      const userComp = String(u.company_id).toLowerCase();
+      return userComp === target || userComp.includes(target) || target.includes(userComp);
+    });
   }, [usersList, companyId]);
 
   // Mutations
@@ -138,7 +143,7 @@ export const VisaPage: React.FC = () => {
       appliedOn: v.appliedOn || '',
       issueDate: v.issueDate || '',
       expiryDate: v.expiryDate || '',
-      ownerId: v.ownerId || (v.owner ? v.owner.id : ''),
+      ownerId: v.ownerId || v.owner_id || (v.owner ? v.owner.id : ''),
     });
     setFormErrors({});
     setApiError(null);
@@ -180,7 +185,8 @@ export const VisaPage: React.FC = () => {
       appliedOn: formData.appliedOn || undefined,
       issueDate: formData.issueDate || undefined,
       expiryDate: formData.expiryDate || undefined,
-      ownerId: formData.ownerId ? formData.ownerId : undefined,
+      ownerId: formData.ownerId ? formData.ownerId : null,
+      owner_id: formData.ownerId ? formData.ownerId : null,
     };
 
     if (selectedVisa) {

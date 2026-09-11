@@ -258,11 +258,12 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Senior Engineer not found"
                 )
-            if schedule_eng and senior_eng_obj.company_id != schedule_eng.company_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Senior Engineer must belong to the same company as the schedule engineer."
-                )
+            if schedule_eng and senior_eng_obj.company_id and schedule_eng.company_id:
+                if str(senior_eng_obj.company_id).lower() != str(schedule_eng.company_id).lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Senior Engineer must belong to the same company as the schedule engineer."
+                    )
             db_schedule.senior_engineer_id = se_id
         else:
             db_schedule.senior_engineer_id = None
@@ -316,11 +317,14 @@ def update_schedule(db: Session, schedule_id: UUID, schedule_data: ScheduleUpdat
 
     db_schedule.updated_at = datetime.utcnow()
     db.commit()
+    db.expire(db_schedule)
     db.refresh(db_schedule)
-    if senior_eng_obj:
-        db_schedule._senior_engineer_name = senior_eng_obj.engineer_name
-        db_schedule._senior_engineer_orbit_id = senior_eng_obj.orbit_id
-        db_schedule._senior_engineer_goes_by = senior_eng_obj.goes_by
+    if db_schedule.senior_engineer_id:
+        se_check = senior_eng_obj or db.get(Engineer, db_schedule.senior_engineer_id)
+        if se_check:
+            db_schedule._senior_engineer_name = se_check.engineer_name
+            db_schedule._senior_engineer_orbit_id = se_check.orbit_id
+            db_schedule._senior_engineer_goes_by = se_check.goes_by
     else:
         db_schedule._senior_engineer_name = None
         db_schedule._senior_engineer_orbit_id = None

@@ -72,6 +72,7 @@ export const useCreateVisa = () => {
     mutationFn: ({ engineerId, data }: { engineerId: string; data: Partial<Visa> }) => createVisaRecord(engineerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['progressive-visas'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -83,6 +84,7 @@ export const useUpdateVisa = () => {
     mutationFn: ({ id, data }: { id: string; data: Partial<Visa> }) => updateVisaRecord(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['progressive-visas'] });
       queryClient.invalidateQueries({ queryKey: ['visa-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
@@ -95,6 +97,7 @@ export const useDeleteVisa = () => {
     mutationFn: (id: string) => deleteVisaRecord(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['progressive-visas'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -118,6 +121,7 @@ export const useRenewVisa = () => {
     mutationFn: (visaId: string) => renewVisa(visaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['progressive-visas'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-visas'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
@@ -131,6 +135,7 @@ export const useUpdateVisaCommentStatus = () => {
       updateVisaCommentStatus(id, commentStatus),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['visas'] });
+      queryClient.invalidateQueries({ queryKey: ['progressive-visas'] });
       queryClient.invalidateQueries({ queryKey: ['visa-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['company-operational-alerts'] });
     },

@@ -12,8 +12,8 @@ const mapApiScheduleToFrontend = (apiSch: any, engineerName?: string, orbitId?: 
   const commentStatus = commentAdressal === false ? 'UNADDRESSED' : (apiSch.comment_status || null);
 
   const seId = apiSch.senior_engineer_id || apiSch.seniorEngineerId || null;
-  const seName = apiSch.senior_engineer_name || apiSch.seniorEngineerName || null;
-  const seOrbit = apiSch.senior_engineer_orbit_id || apiSch.seniorEngineerOrbitId || null;
+  const seName = apiSch.senior_engineer_name || apiSch.seniorEngineerName || (seId ? resolveEngineerName(seId) : null);
+  const seOrbit = apiSch.senior_engineer_orbit_id || apiSch.seniorEngineerOrbitId || (seId ? resolveEngineerOrbitId(seId) : null);
   const seGoesBy = apiSch.senior_engineer_goes_by || apiSch.seniorEngineerGoesBy || null;
 
   return {

@@ -75,10 +75,10 @@ export const DashboardPage: React.FC = () => {
 
     // Axcelis Technologies Theme
     if (companyId.includes('f81bd16c') || currentCompany.code === 'AXCELIS') {
-      if (s.includes('deploy')) return '#E26D5C';
-      if (s.includes('support')) return '#723D46';
-      if (s.includes('pto') || s.includes('leave')) return '#C9CBA3';
-      return index === 0 ? '#E26D5C' : index === 1 ? '#723D46' : '#C9CBA3';
+      if (s.includes('deploy')) return '#A2D2FF';
+      if (s.includes('support')) return '#FFAFCC';
+      if (s.includes('pto') || s.includes('leave')) return '#CDB4DB';
+      return index === 0 ? '#A2D2FF' : index === 1 ? '#FFAFCC' : index === 2 ? '#CDB4DB' : '#FFC8DD';
     }
 
     // Vishay Semiconductor Theme
