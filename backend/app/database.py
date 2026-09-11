@@ -7,9 +7,10 @@ from app.config import settings
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=2,
-    max_overflow=0,
-    pool_timeout=10,
+    pool_size=15,
+    max_overflow=15,
+    pool_timeout=30,
+    pool_recycle=1800,
     connect_args={"prepare_threshold": None}
 )
 

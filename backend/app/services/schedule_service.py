@@ -150,9 +150,6 @@ def get_engineer_schedules(db: Session, engineer_id: UUID) -> List[Schedule]:
     rows = db.execute(stmt).all()
     items = []
     for sch, se_name, se_orb_id, se_goes_by in rows:
-        sch.senior_engineer_name = se_name
-        sch.senior_engineer_orbit_id = se_orb_id
-        sch.senior_engineer_goes_by = se_goes_by
         sch._senior_engineer_name = se_name
         sch._senior_engineer_orbit_id = se_orb_id
         sch._senior_engineer_goes_by = se_goes_by

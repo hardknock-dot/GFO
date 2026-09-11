@@ -34,17 +34,29 @@ class Schedule(Base):
             return self._senior_engineer_name
         return self.senior_engineer.engineer_name if self.senior_engineer else None
 
+    @senior_engineer_name.setter
+    def senior_engineer_name(self, value: Optional[str]):
+        self._senior_engineer_name = value
+
     @property
     def senior_engineer_orbit_id(self) -> Optional[str]:
         if hasattr(self, "_senior_engineer_orbit_id") and self._senior_engineer_orbit_id is not None:
             return self._senior_engineer_orbit_id
         return self.senior_engineer.orbit_id if self.senior_engineer else None
 
+    @senior_engineer_orbit_id.setter
+    def senior_engineer_orbit_id(self, value: Optional[str]):
+        self._senior_engineer_orbit_id = value
+
     @property
     def senior_engineer_goes_by(self) -> Optional[str]:
         if hasattr(self, "_senior_engineer_goes_by") and self._senior_engineer_goes_by is not None:
             return self._senior_engineer_goes_by
         return self.senior_engineer.goes_by if self.senior_engineer else None
+
+    @senior_engineer_goes_by.setter
+    def senior_engineer_goes_by(self, value: Optional[str]):
+        self._senior_engineer_goes_by = value
 
 
 

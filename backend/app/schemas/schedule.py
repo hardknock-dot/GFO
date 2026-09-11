@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Self
+from typing import List, Self
 
 class ScheduleCreate(BaseModel):
     support_type: str
@@ -88,5 +88,7 @@ class ScheduleResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+ScheduleResponse.model_rebuild()
 
 
