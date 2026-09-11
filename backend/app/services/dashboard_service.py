@@ -155,33 +155,42 @@ def get_dashboard_metrics(
 
     # 5. Status Distribution Computation
     deployed_status = 0
+    free_status = 0
     support_status = 0
     pto_status = 0
 
     for eng in engineers:
         active_s = next(
-            (s for s in schedules if s.engineer_id == eng.engineer_id and s.start_date <= today and (s.end_date is None or s.end_date >= today)),
+            (
+                s for s in schedules 
+                if s.engineer_id == eng.engineer_id 
+                and s.start_date <= today 
+                and (s.end_date is None or s.end_date >= today)
+                and (s.schedule_status is None or s.schedule_status != 'Completed')
+            ),
             None
         )
         if active_s:
             stype = (active_s.support_type or '').lower()
-            if 'deployment' in stype or 'install' in stype or 'support' in stype:
-                deployed_status += 1
-            elif 'pto' in stype or 'loa' in stype or 'leave' in stype:
+            if 'pto' in stype or 'loa' in stype or 'leave' in stype:
                 pto_status += 1
+            elif 'deployment' in stype or 'install' in stype or 'field' in stype:
+                deployed_status += 1
             else:
                 support_status += 1
         else:
             status_lower = (eng.status or '').lower()
-            if 'deployed' in status_lower:
-                deployed_status += 1
-            elif 'leave' in status_lower or 'pto' in status_lower:
+            if 'leave' in status_lower or 'pto' in status_lower:
                 pto_status += 1
+            elif 'deployed' in status_lower:
+                deployed_status += 1
             else:
-                support_status += 1
+                # No active ongoing schedule today -> Free / Unassigned
+                free_status += 1
 
     status_distribution = [
         StatusDistributionItem(name="Deployed", value=deployed_status, color="#10B981"),
+        StatusDistributionItem(name="Free", value=free_status, color="#3B82F6"),
         StatusDistributionItem(name="Support", value=support_status, color="#64748B"),
         StatusDistributionItem(name="PTO", value=pto_status, color="#F59E0B")
     ]
