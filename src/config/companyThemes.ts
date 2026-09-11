@@ -98,7 +98,7 @@ export const AXCELIS_THEME: CompanyTheme = {
   id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
   name: 'Axcelis Technologies',
   primaryColor: '#A2D2FF',
-  primaryHover: '#7DB5EC',
+  primaryHover: '#88C0FA',
   secondaryColor: '#CDB4DB',
   accentColor: '#FFAFCC',
   accentSoft: '#FFC8DD',

@@ -1,4 +1,4 @@
-export type EngineerStatus = 'Active' | 'Deployed' | 'On Leave' | 'In Transit' | 'Training';
+export type EngineerStatus = 'Active' | 'Deployed' | 'On Leave' | 'In Transit' | 'Training' | 'Resigned / Terminated' | 'Resigned/Terminated';
 export type CompetencyLevel = 'L1 Junior' | 'L2 Specialist' | 'L3 Senior' | 'L4 Master' | 'L5 Principal Expert';
 export type VisaStatus = 'Valid' | 'Expiring Soon' | 'Expired' | 'In Progress' | 'Renewal Pending';
 export type TravelStatus = 'Confirmed' | 'Pending Approval' | 'In Transit' | 'Completed' | 'Cancelled';
@@ -135,6 +135,8 @@ export interface Engineer {
   email?: string | null;
   phoneNumber?: string | null;
   status: EngineerStatus;
+  statusReason?: string;
+  resignationReason?: string;
   primaryTool: string;
   level: CompetencyLevel;
   country: string;

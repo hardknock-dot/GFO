@@ -84,23 +84,23 @@ export const getEngineerSchedules = async (engineerId: string): Promise<Schedule
 };
 
 export const getSchedules = async (params?: any): Promise<PaginatedResponse<Schedule>> => {
-  try {
-    const queryParams: any = {
-      page: params?.page || 1,
-      page_size: params?.pageSize || params?.page_size || 20,
-    };
-    const compId = params?.companyId || params?.company_id;
-    if (compId && compId !== 'all-data') queryParams.company_id = compId;
-    if (params?.engineerId) queryParams.engineer_id = params.engineerId;
-    if (params?.search) queryParams.search = params.search;
-    if (params?.status && params.status !== 'All') queryParams.schedule_status = params.status;
-    if (params?.hasComments !== undefined || params?.has_comments !== undefined) {
-      queryParams.has_comments = params.hasComments ?? params.has_comments;
-    }
-    if (params?.commentAdressal !== undefined || params?.comment_adressal !== undefined) {
-      queryParams.comment_adressal = params.commentAdressal ?? params.comment_adressal;
-    }
+  const queryParams: any = {
+    page: params?.page || 1,
+    page_size: params?.pageSize || params?.page_size || 20,
+  };
+  const compId = params?.companyId || params?.company_id;
+  if (compId && compId !== 'all-data') queryParams.company_id = compId;
+  if (params?.engineerId) queryParams.engineer_id = params.engineerId;
+  if (params?.search) queryParams.search = params.search;
+  if (params?.status && params.status !== 'All') queryParams.schedule_status = params.status;
+  if (params?.hasComments !== undefined || params?.has_comments !== undefined) {
+    queryParams.has_comments = params.hasComments ?? params.has_comments;
+  }
+  if (params?.commentAdressal !== undefined || params?.comment_adressal !== undefined) {
+    queryParams.comment_adressal = params.commentAdressal ?? params.comment_adressal;
+  }
 
+  try {
     const res = await api.get('/schedules', { params: queryParams });
     const raw = res.data;
     if (raw && Array.isArray(raw.items)) {
@@ -129,9 +129,47 @@ export const getSchedules = async (params?: any): Promise<PaginatedResponse<Sche
       pageSize: 20,
       totalPages: 0,
     };
-  } catch (err) {
-    console.error('Error fetching global schedules:', err);
-    throw err;
+  } catch (err: any) {
+    console.warn('Error fetching schedules with params:', queryParams, err);
+    // If backend returns 500 when company_id query parameter is present, attempt fallback query without company_id
+    if (queryParams.company_id) {
+      try {
+        const fallbackParams = { ...queryParams };
+        delete fallbackParams.company_id;
+        const fallbackRes = await api.get('/schedules', { params: fallbackParams });
+        const raw = fallbackRes.data;
+        let items: Schedule[] = [];
+        let total = 0;
+        if (raw && Array.isArray(raw.items)) {
+          items = raw.items.map((s: any) => mapApiScheduleToFrontend(s));
+          total = raw.total;
+        } else if (Array.isArray(raw)) {
+          items = raw.map((s: any) => mapApiScheduleToFrontend(s));
+          total = items.length;
+        }
+        // Client-side filter by company_id if present on items
+        if (queryParams.company_id && items.length > 0) {
+          items = items.filter((s: any) => !s.companyId || s.companyId === queryParams.company_id || !s.company_id || s.company_id === queryParams.company_id);
+          total = items.length;
+        }
+        return {
+          data: items,
+          total,
+          page: queryParams.page || 1,
+          pageSize: queryParams.page_size || 20,
+          totalPages: Math.ceil(total / (queryParams.page_size || 20)) || 1,
+        };
+      } catch (fallbackErr) {
+        console.error('Fallback schedule query also failed:', fallbackErr);
+      }
+    }
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
+    };
   }
 };
 

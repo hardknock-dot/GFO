@@ -108,6 +108,7 @@ export const EngineersPage: React.FC = () => {
     customerExperience: '',
     yearsExperience: '',
     status: 'Active',
+    statusReason: '',
     email: '',
     phoneNumber: '',
   });
@@ -248,6 +249,7 @@ export const EngineersPage: React.FC = () => {
       customerExperience: '',
       yearsExperience: '',
       status: 'Active',
+      statusReason: '',
       email: '',
       phoneNumber: '',
     });
@@ -270,6 +272,7 @@ export const EngineersPage: React.FC = () => {
       customerExperience: engineer.customerExperience !== undefined ? String(engineer.customerExperience) : '',
       yearsExperience: engineer.yearsExperience !== undefined ? String(engineer.yearsExperience) : '',
       status: engineer.status,
+      statusReason: (engineer as any).statusReason || (engineer as any).resignationReason || (engineer as any).reason || '',
       email: engineer.email || '',
       phoneNumber: engineer.phoneNumber || '',
     });
@@ -289,6 +292,11 @@ export const EngineersPage: React.FC = () => {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = 'Engineer Name is required';
     if (!formData.orbitId.trim()) errors.orbitId = 'Orbit ID is required';
+
+    const isTerminated = formData.status === 'Resigned / Terminated' || formData.status === 'Resigned/Terminated';
+    if (isTerminated && !formData.statusReason.trim()) {
+      errors.statusReason = 'Reason for resignation or termination is required';
+    }
 
     const custExp = Number(formData.customerExperience);
     if (formData.customerExperience && (isNaN(custExp) || custExp < 0)) {
@@ -319,7 +327,7 @@ export const EngineersPage: React.FC = () => {
 
     if (!validateForm()) return;
 
-    const payload: Partial<Engineer> & { company_id?: string } = {
+    const payload: Partial<Engineer> & { company_id?: string; statusReason?: string; resignationReason?: string } = {
       name: formData.name,
       goesBy: formData.goesBy,
       customerId: formData.customerId,
@@ -330,6 +338,8 @@ export const EngineersPage: React.FC = () => {
       customerExperience: formData.customerExperience ? Number(formData.customerExperience) : undefined,
       yearsExperience: formData.yearsExperience ? Number(formData.yearsExperience) : undefined,
       status: formData.status as any,
+      statusReason: formData.statusReason,
+      resignationReason: formData.statusReason,
       email: formData.email,
       phoneNumber: formData.phoneNumber,
     };
@@ -468,6 +478,8 @@ export const EngineersPage: React.FC = () => {
           'On Leave': 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/40',
           'In Transit': 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/40',
           Training: 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
+          'Resigned / Terminated': 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/40',
+          'Resigned/Terminated': 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/40',
         };
         return (
           <span
@@ -678,7 +690,7 @@ export const EngineersPage: React.FC = () => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training']}
+                options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training', 'Resigned / Terminated']}
               />
             </div>
 
@@ -1140,9 +1152,20 @@ export const EngineersPage: React.FC = () => {
           <Dropdown
             label="Status"
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            options={['Active', 'Deployed', 'On Leave', 'In Transit', 'Training']}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+            options={['Active', 'Deployed', 'On Leave', 'In Transit', 'Training', 'Resigned / Terminated']}
           />
+
+          {(formData.status === 'Resigned / Terminated' || formData.status === 'Resigned/Terminated') && (
+            <TextInput
+              label="Reason for Resignation / Termination"
+              placeholder="Enter detailed reason for resignation or termination..."
+              value={formData.statusReason}
+              onChange={(e) => setFormData({ ...formData, statusReason: e.target.value })}
+              error={formErrors.statusReason}
+              required
+            />
+          )}
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
