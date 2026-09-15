@@ -261,6 +261,22 @@ export const EngineersPage: React.FC = () => {
 
   const handleOpenEditModal = (engineer: Engineer) => {
     setSelectedEngineer(engineer);
+    const custExpVal =
+      engineer.customerExperience !== undefined && engineer.customerExperience !== null && String(engineer.customerExperience).trim() !== ''
+        ? String(engineer.customerExperience)
+        : (engineer as any).customer_experience !== undefined && (engineer as any).customer_experience !== null
+        ? String((engineer as any).customer_experience)
+        : (engineer as any).lam_experience !== undefined && (engineer as any).lam_experience !== null
+        ? String((engineer as any).lam_experience)
+        : '';
+
+    const indExpVal =
+      engineer.yearsExperience !== undefined && engineer.yearsExperience !== null && String(engineer.yearsExperience).trim() !== ''
+        ? String(engineer.yearsExperience)
+        : (engineer as any).industry_experience !== undefined && (engineer as any).industry_experience !== null
+        ? String((engineer as any).industry_experience)
+        : '';
+
     setFormData({
       name: engineer.name,
       goesBy: engineer.goesBy || '',
@@ -269,8 +285,8 @@ export const EngineersPage: React.FC = () => {
       level: engineer.level,
       joinDate: engineer.joinDate || '',
       primaryTool: engineer.primaryTool || 'Etch',
-      customerExperience: engineer.customerExperience !== undefined ? String(engineer.customerExperience) : '',
-      yearsExperience: engineer.yearsExperience !== undefined ? String(engineer.yearsExperience) : '',
+      customerExperience: custExpVal,
+      yearsExperience: indExpVal,
       status: engineer.status,
       statusReason: (engineer as any).statusReason || (engineer as any).resignationReason || (engineer as any).reason || '',
       email: engineer.email || '',
@@ -296,16 +312,6 @@ export const EngineersPage: React.FC = () => {
     const isTerminated = formData.status === 'Resigned / Terminated' || formData.status === 'Resigned/Terminated';
     if (isTerminated && !formData.statusReason.trim()) {
       errors.statusReason = 'Reason for resignation or termination is required';
-    }
-
-    const custExp = Number(formData.customerExperience);
-    if (formData.customerExperience && (isNaN(custExp) || custExp < 0)) {
-      errors.customerExperience = 'Customer Experience must be >= 0';
-    }
-
-    const yrsExp = Number(formData.yearsExperience);
-    if (formData.yearsExperience && (isNaN(yrsExp) || yrsExp < 0)) {
-      errors.yearsExperience = 'Industry Experience must be >= 0';
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
@@ -335,8 +341,8 @@ export const EngineersPage: React.FC = () => {
       level: formData.level as any,
       joinDate: formData.joinDate,
       primaryTool: formData.primaryTool,
-      customerExperience: formData.customerExperience ? Number(formData.customerExperience) : undefined,
-      yearsExperience: formData.yearsExperience ? Number(formData.yearsExperience) : undefined,
+      customerExperience: formData.customerExperience ? String(formData.customerExperience) : undefined,
+      yearsExperience: formData.yearsExperience ? String(formData.yearsExperience) : undefined,
       status: formData.status as any,
       statusReason: formData.statusReason,
       resignationReason: formData.statusReason,
@@ -690,7 +696,7 @@ export const EngineersPage: React.FC = () => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                options={['All', 'Deployed', 'Active', 'On Leave', 'In Transit', 'Training', 'Resigned / Terminated']}
+                options={['All', 'Active', 'Resigned / Terminated']}
               />
             </div>
 
@@ -1116,17 +1122,15 @@ export const EngineersPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <TextInput
-              label="Customer Experience (Yrs)"
-              type="number"
-              step="0.1"
+              label="Customer Experience"
+              placeholder="e.g. 1.5 or 1yr 5 months"
               value={formData.customerExperience}
               onChange={(e) => setFormData({ ...formData, customerExperience: e.target.value })}
               error={formErrors.customerExperience}
             />
             <TextInput
-              label="Industry Experience (Yrs)"
-              type="number"
-              step="0.1"
+              label="Industry Experience"
+              placeholder="e.g. 3.5 or 3yr 6 months"
               value={formData.yearsExperience}
               onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
               error={formErrors.yearsExperience}
@@ -1153,7 +1157,7 @@ export const EngineersPage: React.FC = () => {
             label="Status"
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-            options={['Active', 'Deployed', 'On Leave', 'In Transit', 'Training', 'Resigned / Terminated']}
+            options={['Active', 'Resigned / Terminated']}
           />
 
           {(formData.status === 'Resigned / Terminated' || formData.status === 'Resigned/Terminated') && (
