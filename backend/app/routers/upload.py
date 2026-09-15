@@ -406,6 +406,26 @@ SCHEDULE_HEADER_MAP = {
     "seniororbitid": "senior_engineer_orbit_id",
 }
 
+MISSED_SCHEDULE_HEADER_MAP = {
+    "missedscheduleid": "missed_schedule_id",
+    "missed_schedule_id": "missed_schedule_id",
+    "scheduleid": "schedule_id",
+    "schedule_id": "schedule_id",
+    "id": "missed_schedule_id",
+    "delayreason": "delay_reason",
+    "delay_reason": "delay_reason",
+    "reasonfordelay": "delay_reason",
+    "responsiblefordelay": "delay_responsible",
+    "delayresponsible": "delay_responsible",
+    "delay_responsible": "delay_responsible",
+    "responsible": "delay_responsible",
+    "delaycomment": "delay_comment",
+    "delay_comment": "delay_comment",
+    "commentfordelay": "delay_comment",
+    "reason": "reason",
+    "evidence": "evidence",
+}
+
 
 VISA_HEADER_MAP = {
     "visaid": "visa_id",

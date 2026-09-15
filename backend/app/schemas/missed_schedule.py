@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Self
+from typing import Self, Any
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 class MissedScheduleCreate(BaseModel):
     requested_start_date: date | None = None
@@ -10,6 +10,18 @@ class MissedScheduleCreate(BaseModel):
     actual_end_date: date | None = None
     reason: str | None = None
     evidence: str | None = None
+    delay_reason: str | None = None
+    delay_responsible: str | None = None
+    delay_comment: str | None = None
+
+    @field_validator("delay_responsible", mode="before")
+    @classmethod
+    def validate_delay_responsible(cls, v: Any) -> str | None:
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            return None
+        if v not in ("Engineer", "Operations Team"):
+            raise ValueError("delay_responsible must be 'Engineer', 'Operations Team', or NULL")
+        return v
 
     @model_validator(mode="after")
     def validate_date_ranges(self) -> Self:
@@ -28,6 +40,18 @@ class MissedScheduleUpdate(BaseModel):
     actual_end_date: date | None = None
     reason: str | None = None
     evidence: str | None = None
+    delay_reason: str | None = None
+    delay_responsible: str | None = None
+    delay_comment: str | None = None
+
+    @field_validator("delay_responsible", mode="before")
+    @classmethod
+    def validate_delay_responsible(cls, v: Any) -> str | None:
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            return None
+        if v not in ("Engineer", "Operations Team"):
+            raise ValueError("delay_responsible must be 'Engineer', 'Operations Team', or NULL")
+        return v
 
     @model_validator(mode="after")
     def validate_date_ranges(self) -> Self:
@@ -52,6 +76,9 @@ class MissedScheduleResponse(BaseModel):
     actual_end_date: date | None = None
     reason: str | None = None
     evidence: str | None = None
+    delay_reason: str | None = None
+    delay_responsible: str | None = None
+    delay_comment: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

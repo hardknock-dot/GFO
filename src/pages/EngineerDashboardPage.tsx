@@ -21,6 +21,7 @@ import { Modal } from '../components/forms/Modal';
 import { TextInput } from '../components/forms/TextInput';
 import { Dropdown } from '../components/forms/Dropdown';
 import { Button } from '../components/forms/Button';
+import { DeploymentDiarySection } from '../components/engineer/DeploymentDiarySection';
 import type { Skill, Visa, Schedule } from '../types';
 import {
   Calendar,
@@ -623,6 +624,13 @@ export const EngineerDashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Deployment Diary Section */}
+      <DeploymentDiarySection
+        schedules={allSchedules}
+        currentSchedule={currentSchedule}
+        engineerId={engineer?.id}
+      />
 
       {/* MY VISA Section */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">

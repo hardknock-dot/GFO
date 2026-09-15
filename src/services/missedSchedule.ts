@@ -24,6 +24,12 @@ const mapApiMissedScheduleToFrontend = (apiMs: any, engineerName?: string, orbit
     ownerId: apiMs.owner_id || undefined,
     reason: apiMs.reason || '',
     evidence: apiMs.evidence || '',
+    delayReason: apiMs.delay_reason ?? null,
+    delayResponsible: apiMs.delay_responsible ?? null,
+    delayComment: apiMs.delay_comment ?? null,
+    delay_reason: apiMs.delay_reason ?? null,
+    delay_responsible: apiMs.delay_responsible ?? null,
+    delay_comment: apiMs.delay_comment ?? null,
   };
 };
 
@@ -108,13 +114,16 @@ export const createMissedScheduleRecord = async (scheduleId: string, data: Parti
     actual_end_date: data.actualEndDate || null,
     reason: data.reason || data.reasonForChange || null,
     evidence: data.evidence || data.notesAttachEvidence || null,
+    delay_reason: data.delayReason !== undefined ? data.delayReason : (data.delay_reason !== undefined ? data.delay_reason : null),
+    delay_responsible: data.delayResponsible !== undefined ? data.delayResponsible : (data.delay_responsible !== undefined ? data.delay_responsible : null),
+    delay_comment: data.delayComment !== undefined ? data.delayComment : (data.delay_comment !== undefined ? data.delay_comment : null),
   };
   const res = await api.post(`/schedules/${scheduleId}/missed-schedules`, payload);
   return mapApiMissedScheduleToFrontend(res.data);
 };
 
 export const updateMissedScheduleRecord = async (id: string, data: Partial<MissedSchedule>): Promise<MissedSchedule> => {
-  const payload = {
+  const payload: any = {
     requested_start_date: data.requestedStartDate || undefined,
     requested_end_date: data.requestedEndDate || undefined,
     actual_start_date: data.actualStartDate || undefined,
@@ -122,6 +131,15 @@ export const updateMissedScheduleRecord = async (id: string, data: Partial<Misse
     reason: data.reason !== undefined ? data.reason : data.reasonForChange,
     evidence: data.evidence !== undefined ? data.evidence : data.notesAttachEvidence,
   };
+  if (data.delayReason !== undefined) payload.delay_reason = data.delayReason;
+  else if (data.delay_reason !== undefined) payload.delay_reason = data.delay_reason;
+
+  if (data.delayResponsible !== undefined) payload.delay_responsible = data.delayResponsible;
+  else if (data.delay_responsible !== undefined) payload.delay_responsible = data.delay_responsible;
+
+  if (data.delayComment !== undefined) payload.delay_comment = data.delayComment;
+  else if (data.delay_comment !== undefined) payload.delay_comment = data.delay_comment;
+
   const res = await api.put(`/missed-schedules/${id}`, payload);
   return mapApiMissedScheduleToFrontend(res.data);
 };

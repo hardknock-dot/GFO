@@ -71,7 +71,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   return (
     <div ref={containerRef} className="w-full flex flex-col space-y-1.5 relative">
       {label && (
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
           {label} {required && <span className="text-rose-500">*</span>}
         </span>
       )}
@@ -81,37 +81,37 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 px-3.5 py-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${
+          className={`w-full flex items-center justify-between rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] px-3.5 py-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
             error
               ? 'border-rose-400 focus:ring-rose-400'
-              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
           }`}
         >
-          <span className={selectedOption ? 'text-slate-800 dark:text-slate-100 font-medium' : 'text-slate-400'}>
+          <span className={selectedOption ? 'text-[var(--color-text)] font-medium' : 'text-[var(--color-text-secondary)]'}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-[var(--color-text-secondary)] transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {/* Dropdown Menu Container */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 overflow-hidden flex flex-col max-h-64">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-card)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl shadow-lg z-50 overflow-hidden flex flex-col max-h-64">
             {/* Search Input Box */}
-            <div className="p-2 border-b border-slate-100 dark:border-slate-800 flex items-center relative bg-slate-50/50 dark:bg-slate-800/40">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-4" />
+            <div className="p-2 border-b border-[var(--color-border)] flex items-center relative bg-white/40 dark:bg-black/20">
+              <Search className="w-3.5 h-3.5 text-[var(--color-text-secondary)] absolute left-4" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-xs pl-8 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] focus:border-transparent text-slate-800 dark:text-slate-100"
+                className="w-full bg-white/80 dark:bg-black/30 border border-[var(--color-border)] rounded-lg text-xs pl-8 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-transparent text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)]"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                  className="absolute right-4 p-0.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] rounded"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -119,9 +119,9 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             </div>
 
             {/* Options List */}
-            <div className="overflow-y-auto max-h-48 divide-y divide-slate-100 dark:divide-slate-800/40">
+            <div className="overflow-y-auto max-h-48 divide-y divide-[var(--color-border)]/40">
               {filteredOptions.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-400 bg-slate-50/20 dark:bg-slate-800/10">
+                <div className="p-4 text-center text-xs text-[var(--color-text-secondary)]">
                   No matching records found
                 </div>
               ) : (
@@ -134,8 +134,8 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                       onClick={() => handleSelect(opt.value)}
                       className={`w-full text-left px-3.5 py-2 text-xs transition-colors duration-100 ${
                         isSelected
-                          ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-900 dark:text-sky-200 font-bold hover:bg-sky-200 dark:hover:bg-sky-900/70'
-                          : 'hover:bg-sky-50 dark:hover:bg-sky-950/40 text-slate-700 dark:text-slate-300 hover:text-sky-900 dark:hover:text-sky-200'
+                          ? 'bg-[var(--color-primary)]/15 text-[var(--color-text)] font-bold hover:bg-[var(--color-primary)]/20'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-text)]'
                       }`}
                     >
                       {opt.label}

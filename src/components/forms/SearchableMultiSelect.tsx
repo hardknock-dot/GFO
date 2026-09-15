@@ -78,44 +78,44 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-        {label} {count > 0 && <span className="text-[var(--color-accent)] font-bold">({count})</span>}
+      <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">
+        {label} {count > 0 && <span className="text-[var(--color-primary)] font-bold">({count})</span>}
       </label>
 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-800 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:border-[var(--color-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
       >
-        <span className="truncate text-left">
+        <span className="truncate text-left font-medium">
           {count === 0 ? (
-            <span className="text-slate-400">All {label}s</span>
+            <span className="text-[var(--color-text-secondary)]">All {label}s</span>
           ) : count === 1 ? (
             selectedValues[0]
           ) : (
             `${label} (${count})`
           )}
         </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-[var(--color-text-secondary)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-2.5 min-w-[260px] animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-[var(--color-card)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl shadow-xl p-2.5 min-w-[260px] animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Search Bar */}
           <div className="relative mb-2">
-            <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-[var(--color-text-secondary)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={placeholder}
-              className="w-full pl-8 pr-7 py-1.5 bg-slate-50 dark:bg-slate-800 text-xs border border-slate-200 dark:border-slate-700 rounded-md text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              className="w-full pl-8 pr-7 py-1.5 bg-white/70 dark:bg-black/20 text-xs border border-[var(--color-border)] rounded-md text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2 top-2.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -123,11 +123,11 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
           </div>
 
           {/* Quick Actions Header */}
-          <div className="flex items-center justify-between px-1 py-1 mb-1 border-b border-slate-100 dark:border-slate-800 text-[11px]">
+          <div className="flex items-center justify-between px-1 py-1 mb-1 border-b border-[var(--color-border)] text-[11px]">
             <button
               type="button"
               onClick={handleSelectAll}
-              className="text-[var(--color-accent)] font-semibold hover:underline flex items-center space-x-1"
+              className="text-[var(--color-primary)] font-semibold hover:underline flex items-center space-x-1"
             >
               <CheckSquare className="w-3 h-3" />
               <span>{isAllSelected ? 'Deselect All' : 'Select All'}</span>
@@ -136,7 +136,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="text-slate-400 hover:text-rose-500 font-medium transition-colors"
+                className="text-[var(--color-text-secondary)] hover:text-rose-500 font-medium transition-colors"
               >
                 Clear ({count})
               </button>
@@ -146,7 +146,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
           {/* Checkbox Options List */}
           <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1">
             {filteredOptions.length === 0 ? (
-              <div className="py-3 text-center text-xs text-slate-400">No matching options</div>
+              <div className="py-3 text-center text-xs text-[var(--color-text-secondary)]">No matching options</div>
             ) : (
               filteredOptions.map((option) => {
                 const checked = selectedValues.includes(option);
@@ -156,15 +156,15 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
                     onClick={() => toggleOption(option)}
                     className={`flex items-center space-x-2.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer select-none transition-colors ${
                       checked
-                        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                        ? 'bg-[var(--color-primary)]/15 text-[var(--color-text)] font-semibold'
+                        : 'hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-text)]'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => {}} // Handled by container label
-                      className="rounded border-slate-300 dark:border-slate-700 text-[var(--color-accent)] focus:ring-[var(--color-accent)] w-3.5 h-3.5"
+                      className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] w-3.5 h-3.5"
                     />
                     <span className="truncate flex-1">{option}</span>
                   </label>

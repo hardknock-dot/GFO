@@ -17,5 +17,8 @@ class MissedSchedule(Base):
     actual_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     evidence: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delay_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delay_responsible: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delay_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

@@ -107,6 +107,9 @@ export const SchedulePage: React.FC = () => {
     actualEndDate: '',
     reason: '',
     evidence: '',
+    delayReason: '',
+    delayResponsible: '' as '' | 'Engineer' | 'Operations Team',
+    delayComment: '',
   });
 
   const [missedFormErrors, setMissedFormErrors] = useState<Record<string, string>>({});
@@ -312,6 +315,9 @@ export const SchedulePage: React.FC = () => {
       actualEndDate: '',
       reason: '',
       evidence: '',
+      delayReason: '',
+      delayResponsible: '',
+      delayComment: '',
     });
     setMissedFormErrors({});
     setMissedApiError(null);
@@ -350,6 +356,9 @@ export const SchedulePage: React.FC = () => {
       actualEndDate: missedFormData.actualEndDate || undefined,
       reason: missedFormData.reason,
       evidence: missedFormData.evidence,
+      delayReason: missedFormData.delayReason || null,
+      delayResponsible: missedFormData.delayResponsible ? missedFormData.delayResponsible : null,
+      delayComment: missedFormData.delayComment || null,
     };
 
     if (selectedMissedSchedule) {
@@ -905,19 +914,46 @@ export const SchedulePage: React.FC = () => {
           </div>
 
           <div className="w-full flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
               Reason for Change / Delay
             </label>
             <textarea
               value={missedFormData.reason}
               onChange={(e) => setMissedFormData({ ...missedFormData, reason: e.target.value })}
-              className="w-full rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 px-3.5 py-2 transition-colors duration-150 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[70px]"
+              className="w-full rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] px-3.5 py-2 transition-colors duration-150 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] min-h-[70px]"
               placeholder="Explain why the schedule was missed or modified..."
             />
           </div>
 
           <div className="w-full flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Responsible for Delay
+            </label>
+            <select
+              value={missedFormData.delayResponsible}
+              onChange={(e) => setMissedFormData({ ...missedFormData, delayResponsible: e.target.value as '' | 'Engineer' | 'Operations Team' })}
+              className="w-full rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] px-3.5 py-2 transition-colors duration-150 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer"
+            >
+              <option value="">-- None / Unselected --</option>
+              <option value="Engineer">Engineer</option>
+              <option value="Operations Team">Operations Team</option>
+            </select>
+          </div>
+
+          <div className="w-full flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Delay Comment
+            </label>
+            <textarea
+              value={missedFormData.delayComment}
+              onChange={(e) => setMissedFormData({ ...missedFormData, delayComment: e.target.value })}
+              className="w-full rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] px-3.5 py-2 transition-colors duration-150 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] min-h-[70px]"
+              placeholder="Detailed explanation of why the schedule was delayed..."
+            />
+          </div>
+
+          <div className="w-full flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
               Evidence / Notes Reference
             </label>
             <textarea

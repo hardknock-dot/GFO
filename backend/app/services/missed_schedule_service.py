@@ -45,6 +45,8 @@ def get_missed_schedules_paginated(
             or_(
                 MissedSchedule.reason.ilike(search_pattern),
                 MissedSchedule.evidence.ilike(search_pattern),
+                MissedSchedule.delay_reason.ilike(search_pattern),
+                MissedSchedule.delay_comment.ilike(search_pattern),
                 Engineer.engineer_name.ilike(search_pattern),
                 Engineer.orbit_id.ilike(search_pattern)
             )
@@ -113,6 +115,15 @@ def create_missed_schedule(db: Session, schedule_id: UUID, missed_schedule_data:
             detail="Schedule not found"
         )
 
+    delay_resp = missed_schedule_data.delay_responsible
+    if delay_resp == "":
+        delay_resp = None
+    if delay_resp is not None and delay_resp not in ("Engineer", "Operations Team"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="delay_responsible must be 'Engineer', 'Operations Team', or NULL"
+        )
+
     db_ms = MissedSchedule(
         missed_schedule_id=uuid.uuid4(),
         schedule_id=schedule_id,
@@ -123,6 +134,9 @@ def create_missed_schedule(db: Session, schedule_id: UUID, missed_schedule_data:
         actual_end_date=missed_schedule_data.actual_end_date,
         reason=missed_schedule_data.reason,
         evidence=missed_schedule_data.evidence,
+        delay_reason=missed_schedule_data.delay_reason,
+        delay_responsible=delay_resp,
+        delay_comment=missed_schedule_data.delay_comment,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -172,6 +186,24 @@ def update_missed_schedule(db: Session, missed_schedule_id: UUID, missed_schedul
         db_ms.reason = missed_schedule_data.reason
     if missed_schedule_data.evidence is not None:
         db_ms.evidence = missed_schedule_data.evidence
+
+    fields_set = missed_schedule_data.model_fields_set
+    if "delay_reason" in fields_set or missed_schedule_data.delay_reason is not None:
+        db_ms.delay_reason = missed_schedule_data.delay_reason
+
+    if "delay_responsible" in fields_set:
+        resp = missed_schedule_data.delay_responsible
+        if resp == "":
+            resp = None
+        if resp is not None and resp not in ("Engineer", "Operations Team"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="delay_responsible must be 'Engineer', 'Operations Team', or NULL"
+            )
+        db_ms.delay_responsible = resp
+
+    if "delay_comment" in fields_set or missed_schedule_data.delay_comment is not None:
+        db_ms.delay_comment = missed_schedule_data.delay_comment
 
     db_ms.updated_at = datetime.utcnow()
     db.commit()

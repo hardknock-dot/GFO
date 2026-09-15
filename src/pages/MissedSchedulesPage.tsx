@@ -56,6 +56,9 @@ export const MissedSchedulesPage: React.FC = () => {
     actualEndDate: '',
     reason: '',
     evidence: '',
+    delayReason: '',
+    delayResponsible: '' as '' | 'Engineer' | 'Operations Team',
+    delayComment: '',
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -73,6 +76,9 @@ export const MissedSchedulesPage: React.FC = () => {
       actualEndDate: '',
       reason: '',
       evidence: '',
+      delayReason: '',
+      delayResponsible: '',
+      delayComment: '',
     });
     setFormErrors({});
     setApiError(null);
@@ -90,6 +96,9 @@ export const MissedSchedulesPage: React.FC = () => {
       actualEndDate: ms.actualEndDate || '',
       reason: ms.reason || ms.reasonForChange || '',
       evidence: ms.evidence || ms.notesAttachEvidence || '',
+      delayReason: ms.delayReason ?? ms.delay_reason ?? '',
+      delayResponsible: (ms.delayResponsible ?? ms.delay_responsible ?? '') as '' | 'Engineer' | 'Operations Team',
+      delayComment: ms.delayComment ?? ms.delay_comment ?? '',
     });
     setFormErrors({});
     setApiError(null);
@@ -137,6 +146,9 @@ export const MissedSchedulesPage: React.FC = () => {
       actualEndDate: formData.actualEndDate || undefined,
       reason: formData.reason,
       evidence: formData.evidence,
+      delayReason: formData.delayReason || null,
+      delayResponsible: formData.delayResponsible ? formData.delayResponsible : null,
+      delayComment: formData.delayComment || null,
     };
 
     if (selectedMissedSchedule) {
@@ -227,6 +239,35 @@ export const MissedSchedulesPage: React.FC = () => {
       header: 'Reason for Change / Delay',
       sortable: true,
       render: (ms) => <span>{ms.reason || ms.reasonForChange || 'No reason provided'}</span>,
+    },
+    {
+      key: 'delayReason',
+      header: 'Delay Reason',
+      sortable: true,
+      render: (ms) => <span>{ms.delayReason || ms.delay_reason || '-'}</span>,
+    },
+    {
+      key: 'delayResponsible',
+      header: 'Responsible for Delay',
+      sortable: true,
+      render: (ms) => {
+        const val = ms.delayResponsible || ms.delay_responsible;
+        if (!val) return <span className="text-slate-400 font-mono text-xs">N/A</span>;
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            val === 'Engineer' 
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200/50' 
+              : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200/50'
+          }`}>
+            {val}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'delayComment',
+      header: 'Delay Comment',
+      render: (ms) => <span className="text-xs text-slate-600 dark:text-slate-400">{ms.delayComment || ms.delay_comment || '-'}</span>,
     },
     {
       key: 'evidence',
@@ -375,14 +416,41 @@ export const MissedSchedulesPage: React.FC = () => {
           </div>
 
           <div className="w-full flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
               Reason for Change / Delay
             </label>
             <textarea
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              className="w-full rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 px-3.5 py-2 transition-colors duration-150 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[70px]"
+              className="w-full rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] px-3.5 py-2 transition-colors duration-150 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] min-h-[70px]"
               placeholder="Explain why the schedule was missed or modified..."
+            />
+          </div>
+
+          <div className="w-full flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Responsible for Delay
+            </label>
+            <select
+              value={formData.delayResponsible}
+              onChange={(e) => setFormData({ ...formData, delayResponsible: e.target.value as '' | 'Engineer' | 'Operations Team' })}
+              className="w-full rounded-lg border bg-[var(--color-card)] text-sm text-[var(--color-text)] px-3.5 py-2 transition-colors duration-150 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer"
+            >
+              <option value="">-- None / Unselected --</option>
+              <option value="Engineer">Engineer</option>
+              <option value="Operations Team">Operations Team</option>
+            </select>
+          </div>
+
+          <div className="w-full flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Delay Comment
+            </label>
+            <textarea
+              value={formData.delayComment}
+              onChange={(e) => setFormData({ ...formData, delayComment: e.target.value })}
+              className="w-full rounded-lg border bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 px-3.5 py-2 transition-colors duration-150 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[70px]"
+              placeholder="Detailed explanation of why the schedule was delayed..."
             />
           </div>
 

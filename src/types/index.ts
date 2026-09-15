@@ -421,6 +421,12 @@ export interface MissedSchedule {
   ownerId?: string;
   reason?: string;
   evidence?: string;
+  delayReason?: string | null;
+  delayResponsible?: 'Engineer' | 'Operations Team' | null;
+  delayComment?: string | null;
+  delay_reason?: string | null;
+  delay_responsible?: 'Engineer' | 'Operations Team' | null;
+  delay_comment?: string | null;
 }
 
 export interface KPIStats {
@@ -476,4 +482,33 @@ export interface DashboardMetrics {
   country_distribution: CountryDistributionItem[];
   recent_activity: RecentActivityItem[];
   action_checklist: ActionChecklistItem[];
+}
+
+export interface DeploymentDiary {
+  id: string;
+  engineer_id: string;
+  company_id: string;
+  schedule_id: string | null;
+  entry_date: string;
+  entry: string;
+  created_at: string;
+  updated_at: string;
+  engineer_name?: string | null;
+  fab_site?: string | null;
+  fab_city?: string | null;
+  country?: string | null;
+  support_type?: string | null;
+}
+
+export interface DeploymentDiaryCreatePayload {
+  entry_date?: string;
+  entry: string;
+  schedule_id?: string | null;
+  engineer_id?: string;
+}
+
+export interface DeploymentDiaryUpdatePayload {
+  entry_date?: string;
+  entry?: string;
+  schedule_id?: string | null;
 }

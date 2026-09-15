@@ -8,7 +8,7 @@ from app.routers import (
     health, companies, engineers, skills, schedules, visa, travel,
     performance, leave, missed_schedule, dashboard, operational,
     reports, auth, users, upload, engineer_me, engineer_deletion_requests,
-    admin, delete_requests, settings as settings_router
+    admin, delete_requests, settings as settings_router, deployment_diary
 )
 
 # Setup logging
@@ -36,6 +36,21 @@ try:
         conn.execute(text("ALTER TABLE visa_details ADD COLUMN IF NOT EXISTS comment_status VARCHAR(30) DEFAULT 'UNADDRESSED';"))
         conn.execute(text("ALTER TABLE engineer_deletion_requests ALTER COLUMN engineer_id DROP NOT NULL;"))
         conn.execute(text("ALTER TABLE engineers ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(1000);"))
+        conn.execute(text("ALTER TABLE missed_schedules ADD COLUMN IF NOT EXISTS delay_reason TEXT;"))
+        conn.execute(text("ALTER TABLE missed_schedules ADD COLUMN IF NOT EXISTS delay_responsible TEXT;"))
+        conn.execute(text("ALTER TABLE missed_schedules ADD COLUMN IF NOT EXISTS delay_comment TEXT;"))
+        conn.execute(text("""
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'chk_missed_schedules_delay_responsible'
+                ) THEN 
+                    ALTER TABLE missed_schedules 
+                    ADD CONSTRAINT chk_missed_schedules_delay_responsible 
+                    CHECK (delay_responsible IS NULL OR delay_responsible IN ('Engineer', 'Operations Team'));
+                END IF;
+            END $$;
+        """))
         
         # Add performance indexes
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_engineers_company_id ON engineers(company_id);"))
@@ -89,6 +104,7 @@ app.include_router(operational.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
+app.include_router(deployment_diary.router, prefix="/api")
 
 
 from fastapi.responses import JSONResponse
