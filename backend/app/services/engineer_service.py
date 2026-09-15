@@ -25,7 +25,7 @@ def get_engineer_filter_options(
     db: Session,
     company_id: Optional[Union[UUID, List[UUID]]] = None
 ) -> Dict[str, Any]:
-    # 1. Distinct Tool Modules (from engineers.primary_tool_type and skills.tool_type)
+    # 1. Distinct Tool Modules (from engineers.primary_tool_type / primary_tool column)
     tm_stmt = select(Engineer.primary_tool_type).where(
         Engineer.primary_tool_type.isnot(None),
         Engineer.primary_tool_type != ""
@@ -42,24 +42,8 @@ def get_engineer_filter_options(
         logger.warning("Error fetching tool modules from DB: %s", e)
         raw_tms = []
 
-    sk_stmt = select(Skill.tool_type).where(
-        Skill.tool_type.isnot(None),
-        Skill.tool_type != ""
-    )
-    if company_id:
-        if isinstance(company_id, list):
-            sk_stmt = sk_stmt.join(Engineer, Skill.engineer_id == Engineer.engineer_id).where(Engineer.company_id.in_(company_id))
-        else:
-            sk_stmt = sk_stmt.join(Engineer, Skill.engineer_id == Engineer.engineer_id).where(Engineer.company_id == company_id)
-
-    try:
-        sk_tms = db.scalars(sk_stmt.distinct()).all()
-    except Exception as e:
-        logger.warning("Error fetching skill tool modules from DB: %s", e)
-        sk_tms = []
-
     all_tms = set()
-    for tm in (list(raw_tms) + list(sk_tms)):
+    for tm in raw_tms:
         if not tm or not str(tm).strip():
             continue
         s_val = str(tm).strip()

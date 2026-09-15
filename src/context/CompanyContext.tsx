@@ -218,7 +218,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isEngineer = true;
         }
       }
-    } catch (_e) {}
+    } catch (_e) { }
 
     if (isEngineer) {
       applyEngineerTheme();

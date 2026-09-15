@@ -146,6 +146,8 @@ def get_or_create_company_theme(db: Session, company_id: UUID) -> CompanyThemeSe
 
     return theme
 
+from sqlalchemy.orm.attributes import flag_modified
+
 def update_company_theme(
     db: Session,
     company_id: UUID,
@@ -168,44 +170,61 @@ def update_company_theme(
     # Always update provided values
     if req.primary_color is not None:
         theme.color_1 = req.primary_color
+        flag_modified(theme, "color_1")
     elif req.color_1 is not None:
         theme.color_1 = req.color_1
+        flag_modified(theme, "color_1")
 
     if req.primary_hover is not None:
         theme.primary_hover = req.primary_hover
+        flag_modified(theme, "primary_hover")
 
     if req.secondary_color is not None:
         theme.color_2 = req.secondary_color
+        flag_modified(theme, "color_2")
     elif req.color_2 is not None:
         theme.color_2 = req.color_2
+        flag_modified(theme, "color_2")
 
     if req.accent_color is not None:
         theme.color_3 = req.accent_color
+        flag_modified(theme, "color_3")
     elif req.color_3 is not None:
         theme.color_3 = req.color_3
+        flag_modified(theme, "color_3")
 
     if req.accent_soft is not None:
         theme.accent_soft = req.accent_soft
+        flag_modified(theme, "accent_soft")
 
     if req.background_color is not None:
         theme.color_4 = req.background_color
+        flag_modified(theme, "color_4")
     elif req.surface_color is not None:
         theme.color_4 = req.surface_color
+        flag_modified(theme, "color_4")
     elif req.color_4 is not None:
         theme.color_4 = req.color_4
+        flag_modified(theme, "color_4")
 
     if req.dark_neutral is not None:
         theme.dark_neutral = req.dark_neutral
+        flag_modified(theme, "dark_neutral")
 
     if req.text_color is not None:
         theme.color_5 = req.text_color
+        flag_modified(theme, "color_5")
     elif req.color_5 is not None:
         theme.color_5 = req.color_5
+        flag_modified(theme, "color_5")
 
     if req.border_color is not None:
         theme.border_color = req.border_color
+        flag_modified(theme, "border_color")
 
     theme.updated_at = datetime.utcnow()
+    flag_modified(theme, "updated_at")
+    db.add(theme)
     db.commit()
     db.refresh(theme)
 
