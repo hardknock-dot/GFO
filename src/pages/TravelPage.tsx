@@ -27,8 +27,9 @@ export const TravelPage: React.FC = () => {
   // Query travel arrangements with active company context
   const { data: res, isLoading, isError, refetch } = useTravel({
     search,
-    status: statusFilter,
+    status: statusFilter !== 'All' ? statusFilter : undefined,
     companyId,
+    pageSize: 1000,
   });
   const travelList = res?.data || [];
 

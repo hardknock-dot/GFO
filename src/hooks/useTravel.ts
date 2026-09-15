@@ -15,6 +15,7 @@ export const useTravel = (params?: any) => {
   const activeCompanyId = (companyId && companyId !== 'all-data') ? companyId : undefined;
 
   const queryParams = {
+    pageSize: params?.pageSize || 1000,
     ...params,
     companyId: params?.companyId !== undefined ? params.companyId : (params?.company_id !== undefined ? params.company_id : activeCompanyId),
   };

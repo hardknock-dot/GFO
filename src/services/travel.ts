@@ -61,7 +61,7 @@ export const getTravelRecords = async (params?: any): Promise<PaginatedResponse<
   try {
     const queryParams: any = {
       page: params?.page || 1,
-      page_size: params?.pageSize || params?.page_size || 20,
+      page_size: params?.pageSize || params?.page_size || 1000,
     };
     const compId = params?.companyId || params?.company_id;
     if (compId && compId !== 'all-data') queryParams.company_id = compId;
