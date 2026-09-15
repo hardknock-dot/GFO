@@ -319,20 +319,20 @@ export const EngineerDashboardPage: React.FC = () => {
               className="w-20 h-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-lg"
             />
             <div>
-              <span className="text-xs font-mono tracking-widest uppercase font-bold opacity-90">
+              <span className="text-xs font-mono tracking-widest uppercase font-bold opacity-90 text-black">
                 Field Engineer Self-Service
               </span>
-              <h1 className="text-3xl font-extrabold tracking-tight mt-1">
+              <h1 className="text-3xl font-extrabold tracking-tight mt-1 text-black">
                 WELCOME, {engineer.name.toUpperCase()}
               </h1>
               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 font-mono">
+                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 font-mono text-black">
                   ORBIT ID: {engineer.orbitId}
                 </span>
-                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20">
+                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 text-black">
                   Level: {engineer.level}
                 </span>
-                <span className="bg-white/25 text-white px-2.5 py-1 rounded-lg border border-white/30 font-bold">
+                <span className="bg-white/25 px-2.5 py-1 rounded-lg border border-white/30 font-bold text-black">
                   {engineer.status}
                 </span>
               </div>

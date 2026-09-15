@@ -513,44 +513,43 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                 Entry Date
               </label>
               <input
                 type="date"
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2"
-                style={{ focusRingColor: primaryColor }}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                 Deployment / Schedule
               </label>
               {activeSchedules.length > 0 ? (
                 <select
                   value={selectedScheduleId}
                   onChange={(e) => setSelectedScheduleId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
                 >
-                  <option value="">-- Select Deployment --</option>
+                  <option value="" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">-- Select Deployment --</option>
                   {activeSchedules.map((sch) => (
-                    <option key={sch.id} value={sch.id}>
+                    <option key={sch.id} value={sch.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
                       {sch.fabSite || sch.fabCity || 'Fab'} ({sch.country || 'N/A'}) - {sch.supportType || 'Support'}
                     </option>
                   ))}
                 </select>
               ) : (
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
                   No active deployment linked (optional entry without schedule)
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                 Diary Entry <span className="text-rose-500">*</span>
               </label>
               <textarea
@@ -558,19 +557,21 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
                 value={entryText}
                 onChange={(e) => setEntryText(e.target.value)}
                 placeholder="Write a short note about today's work (e.g. Completed PM on Chamber 2, performed qualification)..."
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent placeholder:text-slate-400 transition-all"
               />
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <Button
-                variant="secondary"
+                variant="outline"
+                type="button"
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </Button>
               <Button
                 variant="primary"
+                type="button"
                 onClick={handleSaveEntry}
                 isLoading={createMutation.isPending || updateMutation.isPending}
               >
