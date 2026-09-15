@@ -15,6 +15,7 @@ import {
   useUpdateEngineerMeVisaComments,
   useCreateEngineerMeLeave,
 } from '../hooks/useEngineerSelfService';
+import { useCompany } from '../context/CompanyContext';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import { ErrorState } from '../components/common/ErrorState';
 import { Modal } from '../components/forms/Modal';
@@ -42,6 +43,7 @@ import {
 
 
 export const EngineerDashboardPage: React.FC = () => {
+  const { currentCompany } = useCompany();
   const { data: engineer, isLoading: isEngineerLoading, isError: isEngineerError, refetch: refetchEngineer } = useEngineerMe();
 
   const { data: allSchedules = [], isLoading: isSchedulesLoading } = useEngineerMeSchedules();
@@ -297,41 +299,51 @@ export const EngineerDashboardPage: React.FC = () => {
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-xl border border-slate-800 relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div
+        className="rounded-3xl p-8 shadow-xl border relative overflow-hidden transition-all"
+        style={{
+          backgroundColor: currentCompany?.sidebarColor || 'var(--color-primary)',
+          borderColor: currentCompany?.borderColor || 'rgba(255,255,255,0.15)',
+          color: currentCompany?.sidebarTextColor || '#FFFFFF'
+        }}
+      >
+        <div
+          className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 rounded-full blur-3xl pointer-events-none opacity-20"
+          style={{ backgroundColor: currentCompany?.primaryColor || 'var(--color-primary)' }}
+        />
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center space-x-5">
             <img
               src={engineer.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300'}
               alt={engineer.name}
-              className="w-20 h-20 rounded-2xl object-cover ring-4 ring-white/10 shadow-lg"
+              className="w-20 h-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-lg"
             />
             <div>
-              <span className="text-xs font-mono tracking-widest text-indigo-400 uppercase font-semibold">
+              <span className="text-xs font-mono tracking-widest uppercase font-bold opacity-90">
                 Field Engineer Self-Service
               </span>
-              <h1 className="text-3xl font-extrabold tracking-tight mt-1 text-white">
+              <h1 className="text-3xl font-extrabold tracking-tight mt-1">
                 WELCOME, {engineer.name.toUpperCase()}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-300">
-                <span className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 font-mono">
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
+                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 font-mono">
                   ORBIT ID: {engineer.orbitId}
                 </span>
-                <span className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
+                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20">
                   Level: {engineer.level}
                 </span>
-                <span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30 font-semibold">
+                <span className="bg-white/25 text-white px-2.5 py-1 rounded-lg border border-white/30 font-bold">
                   {engineer.status}
                 </span>
               </div>
             </div>
           </div>
 
-
           <div className="flex items-center space-x-3">
             <Button
               onClick={() => setPtoModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 border border-indigo-400/30"
+              variant="primary"
+              className="font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2"
             >
               <Calendar className="w-4 h-4" />
               <span>Request PTO</span>
@@ -362,7 +374,14 @@ export const EngineerDashboardPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <div
+              className="p-2.5 rounded-xl border"
+              style={{
+                backgroundColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}15`,
+                borderColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}30`,
+                color: currentCompany?.primaryColor || 'var(--color-primary)'
+              }}
+            >
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
@@ -498,7 +517,14 @@ export const EngineerDashboardPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl">
+            <div
+              className="p-2.5 rounded-xl border"
+              style={{
+                backgroundColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}15`,
+                borderColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}30`,
+                color: currentCompany?.primaryColor || 'var(--color-primary)'
+              }}
+            >
               <Calendar className="w-5 h-5" />
             </div>
             <div>
