@@ -18,7 +18,6 @@ import {
   useUpdateDeploymentDiary,
   useDeleteDeploymentDiary
 } from '../../hooks/useDeploymentDiary';
-import { useCompany } from '../../context/CompanyContext';
 import { Modal } from '../forms/Modal';
 import { Button } from '../forms/Button';
 import { CardSkeleton } from '../common/LoadingSkeleton';
@@ -30,12 +29,27 @@ interface DeploymentDiarySectionProps {
   engineerId?: string;
 }
 
+/**
+ * Compulsory Palette Constants for Field Engineer Dashboard:
+ * 1. Primary Dark Sage Green: #6B9080
+ * 2. Medium Sage Green:       #A4C3B2
+ * 3. Soft Mint / Border:      #CCE3DE
+ * 4. Light Card Background:   #EAF4F4
+ * 5. Page Tint / Subcard:     #F6FFF8
+ */
+const C_PRIMARY = '#6B9080';
+const C_PRIMARY_HOVER = '#527364';
+const C_MEDIUM_SAGE = '#A4C3B2';
+const C_BORDER = '#CCE3DE';
+const C_CARD_BG = '#EAF4F4';
+const C_SUBCARD_BG = '#F6FFF8';
+const C_TEXT_MAIN = '#253830';
+
 export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
   schedules = [],
   currentSchedule = null,
   engineerId
 }) => {
-  const { currentCompany } = useCompany();
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Fetch deployment diaries
@@ -175,16 +189,12 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
     }
   };
 
-  // Primary Theme Color style helpers
-  const primaryColor = currentCompany?.primaryColor || 'var(--color-primary)';
-  const primaryHover = currentCompany?.primaryHover || 'var(--color-primary-hover)';
-
   if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
-          <BookOpen className="w-6 h-6" style={{ color: primaryColor }} />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Deployment Diary</h2>
+          <BookOpen className="w-6 h-6" style={{ color: C_PRIMARY }} />
+          <h2 className="text-xl font-bold" style={{ color: C_TEXT_MAIN }}>Deployment Diary</h2>
         </div>
         <CardSkeleton />
       </div>
@@ -195,8 +205,8 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
     return (
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
-          <BookOpen className="w-6 h-6" style={{ color: primaryColor }} />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Deployment Diary</h2>
+          <BookOpen className="w-6 h-6" style={{ color: C_PRIMARY }} />
+          <h2 className="text-xl font-bold" style={{ color: C_TEXT_MAIN }}>Deployment Diary</h2>
         </div>
         <ErrorState
           title="Failed to load Deployment Diary"
@@ -209,26 +219,25 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Banner following Company Theme */}
+      {/* Header Banner - Compulsory Theme (#6B9080) */}
       <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl shadow-md border relative overflow-hidden transition-all"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl shadow-md border relative overflow-hidden transition-all text-white"
         style={{
-          backgroundColor: currentCompany?.sidebarColor || primaryColor,
-          borderColor: currentCompany?.borderColor || 'rgba(255,255,255,0.15)',
-          color: currentCompany?.sidebarTextColor || '#FFFFFF'
+          backgroundColor: C_PRIMARY,
+          borderColor: C_BORDER
         }}
       >
         <div
-          className="absolute top-0 right-0 -mt-6 -mr-6 w-40 h-40 rounded-full blur-3xl pointer-events-none opacity-25"
-          style={{ backgroundColor: primaryColor }}
+          className="absolute top-0 right-0 -mt-6 -mr-6 w-40 h-40 rounded-full blur-3xl pointer-events-none opacity-20"
+          style={{ backgroundColor: C_MEDIUM_SAGE }}
         />
 
         <div className="flex items-center space-x-4 z-10">
           <div
             className="p-3 rounded-xl border backdrop-blur-sm"
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              borderColor: 'rgba(255, 255, 255, 0.25)',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
               color: '#FFFFFF'
             }}
           >
@@ -236,21 +245,21 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-extrabold tracking-tight">
+              <h2 className="text-xl font-extrabold tracking-tight text-white">
                 Deployment Diary
               </h2>
               <span
                 className="text-xs px-2.5 py-0.5 rounded-full font-semibold border backdrop-blur-md"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                  borderColor: 'rgba(255, 255, 255, 0.35)',
                   color: '#FFFFFF'
                 }}
               >
                 Operational Notes
               </span>
             </div>
-            <p className="text-xs opacity-90 mt-1 max-w-xl">
+            <p className="text-xs opacity-90 mt-1 max-w-xl text-white">
               Record daily work notes, customer requested checks, and field updates in under a minute.
             </p>
           </div>
@@ -258,10 +267,11 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
 
         <button
           onClick={() => handleOpenAddModal(todayStr)}
-          className="z-10 inline-flex items-center justify-center space-x-2 px-4 py-2.5 font-bold text-xs rounded-xl shadow-lg transition-all duration-200 active:scale-95"
+          className="z-10 inline-flex items-center justify-center space-x-2 px-4 py-2.5 font-bold text-xs rounded-xl shadow-md transition-all duration-200 active:scale-95"
           style={{
-            backgroundColor: primaryColor,
-            color: '#FFFFFF',
+            backgroundColor: C_MEDIUM_SAGE,
+            color: C_TEXT_MAIN,
+            borderColor: C_BORDER
           }}
         >
           <Plus className="w-4 h-4" />
@@ -269,20 +279,27 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
         </button>
       </div>
 
-      {/* Current Active Deployment Card */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <span className="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <Building2 className="w-4 h-4" style={{ color: primaryColor }} />
+      {/* Current Active Deployment Card (#EAF4F4) */}
+      <div
+        className="p-6 rounded-2xl border shadow-xs space-y-4"
+        style={{
+          backgroundColor: C_CARD_BG,
+          borderColor: C_BORDER,
+          color: C_TEXT_MAIN
+        }}
+      >
+        <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: C_BORDER }}>
+          <span className="text-xs uppercase tracking-wider font-bold flex items-center gap-2" style={{ color: C_PRIMARY }}>
+            <Building2 className="w-4 h-4" />
             Current Deployment
           </span>
           {activeSchedules.length > 1 && (
             <span
               className="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
               style={{
-                backgroundColor: `${primaryColor}15`,
-                color: primaryColor,
-                borderColor: `${primaryColor}30`
+                backgroundColor: C_BORDER,
+                color: C_PRIMARY,
+                borderColor: C_MEDIUM_SAGE
               }}
             >
               {activeSchedules.length} Active Deployments
@@ -291,60 +308,79 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
         </div>
 
         {activeSchedules.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div
+            className="grid grid-cols-1 md:grid-cols-4 gap-5 p-4 rounded-xl border shadow-2xs"
+            style={{
+              backgroundColor: C_SUBCARD_BG,
+              borderColor: C_BORDER
+            }}
+          >
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Fab / Site</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-1.5">
+              <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C_PRIMARY }}>Fab / Site</p>
+              <p className="text-sm font-bold mt-1 flex items-center gap-1.5" style={{ color: C_TEXT_MAIN }}>
                 {primaryActiveSchedule.fabSite || primaryActiveSchedule.fabCity || 'Active Fab'}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Country</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-1.5">
+              <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C_PRIMARY }}>Country</p>
+              <p className="text-sm font-bold mt-1 flex items-center gap-1.5" style={{ color: C_TEXT_MAIN }}>
                 <MapPin className="w-3.5 h-3.5 text-rose-500 inline" />
                 {primaryActiveSchedule.country || 'N/A'}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Support Type</p>
-              <p className="text-sm font-bold mt-1" style={{ color: primaryColor }}>
+              <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C_PRIMARY }}>Support Type</p>
+              <p className="text-sm font-extrabold mt-1" style={{ color: C_PRIMARY }}>
                 {primaryActiveSchedule.supportType || 'Deployment'}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Period</p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C_PRIMARY }}>Period</p>
+              <p className="text-sm font-semibold mt-1 flex items-center gap-1.5" style={{ color: C_TEXT_MAIN }}>
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
                 {formatDate(primaryActiveSchedule.startDate)} - {primaryActiveSchedule.endDate ? formatDate(primaryActiveSchedule.endDate) : 'Ongoing'}
               </p>
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-center">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300 flex items-center justify-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
+          <div
+            className="p-4 rounded-xl border text-center"
+            style={{
+              backgroundColor: C_SUBCARD_BG,
+              borderColor: C_BORDER
+            }}
+          >
+            <p className="text-sm font-medium flex items-center justify-center gap-2" style={{ color: C_PRIMARY }}>
+              <AlertCircle className="w-4 h-4" />
               No active deployment found.
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs opacity-80 mt-1" style={{ color: C_TEXT_MAIN }}>
               You can still record notes and view previous diary entries.
             </p>
           </div>
         )}
       </div>
 
-      {/* Today's Entry Section */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      {/* Today's Entry Section (#EAF4F4) */}
+      <div
+        className="p-6 rounded-2xl border shadow-xs space-y-4"
+        style={{
+          backgroundColor: C_CARD_BG,
+          borderColor: C_BORDER,
+          color: C_TEXT_MAIN
+        }}
+      >
+        <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: C_BORDER }}>
           <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Today's Entry</h3>
-            <span className="text-xs text-slate-400 font-medium">({formatDate(todayStr)})</span>
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <h3 className="text-base font-bold" style={{ color: C_TEXT_MAIN }}>Today's Entry</h3>
+            <span className="text-xs opacity-75 font-medium">({formatDate(todayStr)})</span>
           </div>
           {hasTodayEntry && (
             <button
               onClick={() => handleOpenAddModal(todayStr)}
               className="text-xs font-bold hover:underline flex items-center gap-1"
-              style={{ color: primaryColor }}
+              style={{ color: C_PRIMARY }}
             >
               <Plus className="w-3.5 h-3.5" />
               Add Another Entry
@@ -357,7 +393,11 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
             {todayEntries.map((entry) => (
               <div
                 key={entry.id}
-                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 shadow-xs"
+                className="p-4 rounded-xl border shadow-2xs"
+                style={{
+                  backgroundColor: C_SUBCARD_BG,
+                  borderColor: C_BORDER
+                }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1.5">
@@ -365,35 +405,36 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
                       <span
                         className="text-xs font-semibold px-2.5 py-0.5 rounded border"
                         style={{
-                          backgroundColor: `${primaryColor}15`,
-                          color: primaryColor,
-                          borderColor: `${primaryColor}30`
+                          backgroundColor: C_BORDER,
+                          color: C_PRIMARY,
+                          borderColor: C_MEDIUM_SAGE
                         }}
                       >
                         {entry.fab_site || entry.fab_city || primaryActiveSchedule?.fabSite || 'Deployment Note'}
                       </span>
                       {entry.country && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span className="text-xs flex items-center gap-1" style={{ color: C_TEXT_MAIN }}>
                           <MapPin className="w-3 h-3 text-rose-500" />
                           {entry.country}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap pt-1 leading-relaxed">
+                    <p className="text-sm whitespace-pre-wrap pt-1 leading-relaxed" style={{ color: C_TEXT_MAIN }}>
                       {entry.entry}
                     </p>
                   </div>
                   <div className="flex items-center space-x-1 shrink-0">
                     <button
                       onClick={() => handleOpenEditModal(entry)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
+                      style={{ color: C_PRIMARY }}
                       title="Edit Today's Entry"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleOpenDeleteModal(entry)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                       title="Delete Entry"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -404,39 +445,55 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
             ))}
           </div>
         ) : (
-          <div className="p-6 rounded-xl bg-slate-50/70 dark:bg-slate-800/30 border border-dashed border-slate-300 dark:border-slate-700 text-center space-y-3">
+          <div
+            className="p-6 rounded-xl border border-dashed text-center space-y-3"
+            style={{
+              backgroundColor: C_SUBCARD_BG,
+              borderColor: C_MEDIUM_SAGE
+            }}
+          >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mx-auto"
-              style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
+              style={{ backgroundColor: C_BORDER, color: C_PRIMARY }}
             >
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">No entry recorded for today yet</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+              <p className="text-sm font-bold" style={{ color: C_TEXT_MAIN }}>No entry recorded for today yet</p>
+              <p className="text-xs mt-1 max-w-md mx-auto opacity-80" style={{ color: C_TEXT_MAIN }}>
                 Quickly record what you worked on today (e.g. chamber qualification, PM check, customer request).
               </p>
             </div>
-            <Button
-              variant="primary"
-              size="sm"
+            <button
               onClick={() => handleOpenAddModal(todayStr)}
-              icon={<Plus className="w-3.5 h-3.5" />}
+              className="inline-flex items-center space-x-2 px-4 py-2 font-bold text-xs rounded-xl shadow-sm transition-all"
+              style={{
+                backgroundColor: C_PRIMARY,
+                color: '#FFFFFF'
+              }}
             >
-              + Add Today's Entry
-            </Button>
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add Today's Entry</span>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Previous Entries Section */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-4 h-4" style={{ color: primaryColor }} />
+      {/* Previous Entries Section (#EAF4F4) */}
+      <div
+        className="p-6 rounded-2xl border shadow-xs space-y-4"
+        style={{
+          backgroundColor: C_CARD_BG,
+          borderColor: C_BORDER,
+          color: C_TEXT_MAIN
+        }}
+      >
+        <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: C_BORDER }}>
+          <h3 className="text-base font-bold flex items-center gap-2" style={{ color: C_TEXT_MAIN }}>
+            <Clock className="w-4 h-4" style={{ color: C_PRIMARY }} />
             Previous Entries
           </h3>
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total: {diaryEntries.length} entries</span>
+          <span className="text-xs font-semibold opacity-80">Total: {diaryEntries.length} entries</span>
         </div>
 
         {diaryEntries.length > 0 ? (
@@ -444,41 +501,46 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
             {diaryEntries.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                className="p-4 rounded-xl border transition-colors shadow-2xs"
+                style={{
+                  backgroundColor: C_SUBCARD_BG,
+                  borderColor: C_BORDER
+                }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1.5">
                     <div className="flex items-center flex-wrap gap-2 text-xs">
-                      <span className="font-bold flex items-center gap-1" style={{ color: primaryColor }}>
+                      <span className="font-bold flex items-center gap-1" style={{ color: C_PRIMARY }}>
                         <Calendar className="w-3.5 h-3.5" />
                         {formatDate(item.entry_date)}
                       </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      <span className="opacity-40">•</span>
+                      <span className="font-semibold" style={{ color: C_TEXT_MAIN }}>
                         {item.fab_site || item.fab_city || 'Deployment Note'}
                       </span>
                       {item.country && (
                         <>
-                          <span className="text-slate-400">•</span>
-                          <span className="text-slate-500 dark:text-slate-400">{item.country}</span>
+                          <span className="opacity-40">•</span>
+                          <span className="opacity-80" style={{ color: C_TEXT_MAIN }}>{item.country}</span>
                         </>
                       )}
                     </div>
-                    <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: C_TEXT_MAIN }}>
                       {item.entry}
                     </p>
                   </div>
                   <div className="flex items-center space-x-1 shrink-0">
                     <button
                       onClick={() => handleOpenEditModal(item)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
+                      style={{ color: C_PRIMARY }}
                       title="Edit Entry"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleOpenDeleteModal(item)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                       title="Delete Entry"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -489,67 +551,83 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
             ))}
           </div>
         ) : (
-          <div className="p-8 rounded-xl bg-slate-50/70 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 text-center space-y-2">
-            <BookOpen className="w-8 h-8 text-slate-400 mx-auto" />
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">No diary entries yet.</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Add your first deployment note for today using the button above.</p>
+          <div
+            className="p-8 rounded-xl border text-center space-y-2"
+            style={{
+              backgroundColor: C_SUBCARD_BG,
+              borderColor: C_BORDER
+            }}
+          >
+            <BookOpen className="w-8 h-8 opacity-40 mx-auto" style={{ color: C_PRIMARY }} />
+            <p className="text-sm font-medium" style={{ color: C_TEXT_MAIN }}>No diary entries yet.</p>
+            <p className="text-xs opacity-75" style={{ color: C_TEXT_MAIN }}>Add your first deployment note for today using the button above.</p>
           </div>
         )}
       </div>
 
-      {/* Add / Edit Entry Modal */}
+      {/* Add / Edit Entry Modal (#EAF4F4) */}
       {modalOpen && (
         <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           title={editingEntry ? 'Edit Deployment Diary Entry' : 'Add Deployment Diary Entry'}
         >
-          <div className="space-y-4">
+          <div className="space-y-4" style={{ backgroundColor: C_CARD_BG, color: C_TEXT_MAIN }}>
             {formError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5" style={{ color: C_TEXT_MAIN }}>
                 Entry Date
               </label>
               <input
                 type="date"
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border text-sm shadow-2xs focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  backgroundColor: C_SUBCARD_BG,
+                  borderColor: C_BORDER,
+                  color: C_TEXT_MAIN
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5" style={{ color: C_TEXT_MAIN }}>
                 Deployment / Schedule
               </label>
               {activeSchedules.length > 0 ? (
                 <select
                   value={selectedScheduleId}
                   onChange={(e) => setSelectedScheduleId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border text-sm shadow-2xs focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: C_SUBCARD_BG,
+                    borderColor: C_BORDER,
+                    color: C_TEXT_MAIN
+                  }}
                 >
-                  <option value="" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">-- Select Deployment --</option>
+                  <option value="" style={{ backgroundColor: C_SUBCARD_BG, color: C_TEXT_MAIN }}>-- Select Deployment --</option>
                   {activeSchedules.map((sch) => (
-                    <option key={sch.id} value={sch.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                    <option key={sch.id} value={sch.id} style={{ backgroundColor: C_SUBCARD_BG, color: C_TEXT_MAIN }}>
                       {sch.fabSite || sch.fabCity || 'Fab'} ({sch.country || 'N/A'}) - {sch.supportType || 'Support'}
                     </option>
                   ))}
                 </select>
               ) : (
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                <div className="p-3 rounded-xl border text-xs opacity-80" style={{ backgroundColor: C_SUBCARD_BG, borderColor: C_BORDER }}>
                   No active deployment linked (optional entry without schedule)
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5" style={{ color: C_TEXT_MAIN }}>
                 Diary Entry <span className="text-rose-500">*</span>
               </label>
               <textarea
@@ -557,26 +635,39 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
                 value={entryText}
                 onChange={(e) => setEntryText(e.target.value)}
                 placeholder="Write a short note about today's work (e.g. Completed PM on Chamber 2, performed qualification)..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent placeholder:text-slate-400 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border text-sm shadow-2xs focus:outline-none focus:ring-2 placeholder:text-slate-400 transition-all"
+                style={{
+                  backgroundColor: C_SUBCARD_BG,
+                  borderColor: C_BORDER,
+                  color: C_TEXT_MAIN
+                }}
               />
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                variant="outline"
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t" style={{ borderColor: C_BORDER }}>
+              <button
                 type="button"
                 onClick={() => setModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border transition-all"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: C_BORDER,
+                  color: C_TEXT_MAIN
+                }}
               >
                 Cancel
-              </Button>
-              <Button
-                variant="primary"
+              </button>
+              <button
                 type="button"
                 onClick={handleSaveEntry}
-                isLoading={createMutation.isPending || updateMutation.isPending}
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-white shadow-md transition-all disabled:opacity-50"
+                style={{
+                  backgroundColor: C_PRIMARY,
+                }}
               >
-                Save Entry
-              </Button>
+                {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Entry'}
+              </button>
             </div>
           </div>
         </Modal>
@@ -589,18 +680,27 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
           onClose={() => setDeleteModalOpen(false)}
           title="Confirm Delete Entry"
         >
-          <div className="space-y-4">
-            <p className="text-sm text-slate-700 dark:text-slate-300">
+          <div className="space-y-4" style={{ backgroundColor: C_CARD_BG, color: C_TEXT_MAIN }}>
+            <p className="text-sm">
               Are you sure you want to delete this diary entry from{' '}
-              <span className="font-bold text-slate-900 dark:text-white">{formatDate(entryToDelete.entry_date)}</span>?
+              <span className="font-bold">{formatDate(entryToDelete.entry_date)}</span>?
             </p>
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 italic">
+            <div className="p-3 rounded-xl border text-xs italic" style={{ backgroundColor: C_SUBCARD_BG, borderColor: C_BORDER }}>
               "{entryToDelete.entry}"
             </div>
-            <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
+            <div className="flex items-center justify-end space-x-3 pt-2 border-t" style={{ borderColor: C_BORDER }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border transition-all"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: C_BORDER,
+                  color: C_TEXT_MAIN
+                }}
+              >
                 Cancel
-              </Button>
+              </button>
               <Button
                 variant="danger"
                 onClick={handleConfirmDelete}

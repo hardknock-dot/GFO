@@ -44,6 +44,32 @@ import {
 
 export const EngineerDashboardPage: React.FC = () => {
   const { currentCompany } = useCompany();
+
+  // Enforce Compulsory Field Engineer Dashboard Theme (#6B9080, #A4C3B2, #CCE3DE, #EAF4F4, #F6FFF8)
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--color-primary', '#6B9080');
+    root.style.setProperty('--color-primary-hover', '#527364');
+    root.style.setProperty('--color-secondary', '#A4C3B2');
+    root.style.setProperty('--color-accent', '#6B9080');
+    root.style.setProperty('--color-accent-soft', '#EAF4F4');
+    root.style.setProperty('--color-dark-accent', '#6B9080');
+    root.style.setProperty('--color-dark-neutral', '#253830');
+    root.style.setProperty('--color-bg', '#F6FFF8');
+    root.style.setProperty('--color-card', '#EAF4F4');
+    root.style.setProperty('--color-sidebar', '#6B9080');
+    root.style.setProperty('--color-sidebar-active', 'rgba(255, 255, 255, 0.2)');
+    root.style.setProperty('--color-sidebar-text', '#FFFFFF');
+    root.style.setProperty('--color-sidebar-text-muted', 'rgba(255, 255, 255, 0.8)');
+    root.style.setProperty('--color-sidebar-border', '#CCE3DE');
+    root.style.setProperty('--color-sidebar-hover', 'rgba(255, 255, 255, 0.12)');
+    root.style.setProperty('--color-text', '#253830');
+    root.style.setProperty('--color-text-primary', '#253830');
+    root.style.setProperty('--color-text-secondary', '#527364');
+    root.style.setProperty('--color-text-accent', '#6B9080');
+    root.style.setProperty('--color-border', '#CCE3DE');
+  }, []);
+
   const { data: engineer, isLoading: isEngineerLoading, isError: isEngineerError, refetch: refetchEngineer } = useEngineerMe();
 
   const { data: allSchedules = [], isLoading: isSchedulesLoading } = useEngineerMeSchedules();
@@ -298,18 +324,18 @@ export const EngineerDashboardPage: React.FC = () => {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
-      {/* Header Banner */}
+      {/* Header Banner - Compulsory Theme (#6B9080) */}
       <div
-        className="rounded-3xl p-8 shadow-xl border relative overflow-hidden transition-all"
+        className="rounded-3xl p-8 shadow-xl border relative overflow-hidden transition-all text-white"
         style={{
-          backgroundColor: currentCompany?.sidebarColor || 'var(--color-primary)',
-          borderColor: currentCompany?.borderColor || 'rgba(255,255,255,0.15)',
-          color: currentCompany?.sidebarTextColor || '#FFFFFF'
+          backgroundColor: '#6B9080',
+          borderColor: '#CCE3DE',
+          color: '#FFFFFF'
         }}
       >
         <div
           className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 rounded-full blur-3xl pointer-events-none opacity-20"
-          style={{ backgroundColor: currentCompany?.primaryColor || 'var(--color-primary)' }}
+          style={{ backgroundColor: '#A4C3B2' }}
         />
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center space-x-5">
@@ -319,20 +345,20 @@ export const EngineerDashboardPage: React.FC = () => {
               className="w-20 h-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-lg"
             />
             <div>
-              <span className="text-xs font-mono tracking-widest uppercase font-bold opacity-90 text-black">
+              <span className="text-xs font-mono tracking-widest uppercase font-bold opacity-90 text-white">
                 Field Engineer Self-Service
               </span>
-              <h1 className="text-3xl font-extrabold tracking-tight mt-1 text-black">
+              <h1 className="text-3xl font-extrabold tracking-tight mt-1 text-white">
                 WELCOME, {engineer.name.toUpperCase()}
               </h1>
               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 font-mono text-black">
+                <span className="bg-white/20 px-2.5 py-1 rounded-lg border border-white/30 font-mono text-white">
                   ORBIT ID: {engineer.orbitId}
                 </span>
-                <span className="bg-white/15 px-2.5 py-1 rounded-lg border border-white/20 text-black">
+                <span className="bg-white/20 px-2.5 py-1 rounded-lg border border-white/30 text-white">
                   Level: {engineer.level}
                 </span>
-                <span className="bg-white/25 px-2.5 py-1 rounded-lg border border-white/30 font-bold text-black">
+                <span className="bg-[#CCE3DE] text-[#253830] px-2.5 py-1 rounded-lg border border-white/40 font-bold">
                   {engineer.status}
                 </span>
               </div>
@@ -340,14 +366,18 @@ export const EngineerDashboardPage: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Button
+            <button
               onClick={() => setPtoModalOpen(true)}
-              variant="primary"
-              className="font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2"
+              className="font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center space-x-2 transition-all"
+              style={{
+                backgroundColor: '#A4C3B2',
+                color: '#253830',
+                borderColor: '#CCE3DE'
+              }}
             >
               <Calendar className="w-4 h-4" />
               <span>Request PTO</span>
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -355,50 +385,50 @@ export const EngineerDashboardPage: React.FC = () => {
 
       {/* 30-Day Alert Banner */}
       {isWithin30Days && daysUntilNext !== null && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-600/60 rounded-2xl p-5 shadow-lg flex items-center space-x-4 animate-pulse">
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-5 shadow-md flex items-center space-x-4 animate-pulse">
           <div className="p-3 bg-amber-500 text-slate-950 rounded-xl flex-shrink-0 font-bold">
-            <AlertTriangle className="w-6 h-6" />
+            <AlertTriangle className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-bold text-amber-900 dark:text-amber-200">
+            <h3 className="text-base font-bold text-amber-900">
               UPCOMING SCHEDULE ALERT
             </h3>
-            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
-              Your next schedule starts in <span className="font-extrabold text-amber-950 dark:text-amber-100">{daysUntilNext} days</span>. Please review your travel arrangements and visa requirements.
+            <p className="text-sm text-amber-800 font-medium">
+              Your next schedule starts in <span className="font-extrabold text-amber-950">{daysUntilNext} days</span>. Please review your travel arrangements and visa requirements.
             </p>
           </div>
         </div>
       )}
 
       {/* Current Schedule Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+      <div className="rounded-2xl p-6 border shadow-xs space-y-4" style={{ backgroundColor: '#EAF4F4', borderColor: '#CCE3DE', color: '#253830' }}>
+        <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: '#CCE3DE' }}>
           <div className="flex items-center space-x-3">
             <div
               className="p-2.5 rounded-xl border"
               style={{
-                backgroundColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}15`,
-                borderColor: `${currentCompany?.primaryColor || 'var(--color-primary)'}30`,
-                color: currentCompany?.primaryColor || 'var(--color-primary)'
+                backgroundColor: '#CCE3DE',
+                borderColor: '#A4C3B2',
+                color: '#6B9080'
               }}
             >
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Current Schedule</h2>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                <h2 className="text-lg font-bold" style={{ color: '#253830' }}>Current Schedule</h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border" style={{ backgroundColor: '#CCE3DE', color: '#6B9080', borderColor: '#A4C3B2' }}>
+                  <span className="w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse" style={{ backgroundColor: '#6B9080' }} />
                   Active Assignment
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Current active customer field assignment and team details</p>
+              <p className="text-xs opacity-80" style={{ color: '#527364' }}>Current active customer field assignment and team details</p>
             </div>
           </div>
         </div>
 
         {currentSchedule ? (
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200/60 dark:border-slate-800 space-y-4">
+          <div className="rounded-xl p-5 border space-y-4" style={{ backgroundColor: '#F6FFF8', borderColor: '#CCE3DE' }}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
                 <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Destination</span>
