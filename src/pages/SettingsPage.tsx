@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCompanySettings, useUpdateCompanySettings } from '../hooks/useSettings';
 import { Button } from '../components/forms/Button';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
+import { CompanyThemeSection } from '../components/settings/CompanyThemeSection';
 import {
   Bell,
   Sliders,
@@ -304,57 +305,63 @@ export const SettingsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SECTION 1: ALERT & NOTIFICATION SETTINGS */}
-        <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
-            <div className="flex items-center space-x-2.5">
-              <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-white">1. Alert & Notification Rules</h3>
-                <p className="text-[11px] text-stone-400">Controls backend alert generation and notification bell display</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
-              7 Channels
-            </span>
-          </div>
-
-          <div className="divide-y divide-[var(--color-border)] space-y-1">
-            {ALERT_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isEnabled = formState[item.key];
-              return (
-                <div key={item.key} className="pt-3 pb-3 first:pt-0 flex items-center justify-between gap-4">
-                  <div className="flex items-start space-x-3">
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${isEnabled ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-stone-900 dark:text-white">{item.title}</p>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">{item.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Toggle switch */}
-                  <button
-                    type="button"
-                    disabled={!canModify}
-                    onClick={() => handleToggle(item.key)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isEnabled ? 'bg-[var(--color-primary)]' : 'bg-stone-300 dark:bg-stone-700'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    role="switch"
-                    aria-checked={isEnabled}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-5' : 'translate-x-0'}`}
-                    />
-                  </button>
+        {/* LEFT COLUMN: Alert & Notification Settings + Company Theme */}
+        <div className="space-y-6">
+          {/* SECTION 1: ALERT & NOTIFICATION SETTINGS */}
+          <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                  <Bell className="w-4 h-4" />
                 </div>
-              );
-            })}
+                <div>
+                  <h3 className="text-sm font-bold text-stone-900 dark:text-white">1. Alert & Notification Rules</h3>
+                  <p className="text-[11px] text-stone-400">Controls backend alert generation and notification bell display</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+                7 Channels
+              </span>
+            </div>
+
+            <div className="divide-y divide-[var(--color-border)] space-y-1">
+              {ALERT_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isEnabled = formState[item.key];
+                return (
+                  <div key={item.key} className="pt-3 pb-3 first:pt-0 flex items-center justify-between gap-4">
+                    <div className="flex items-start space-x-3">
+                      <div className={`p-1.5 rounded-lg mt-0.5 ${isEnabled ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-stone-900 dark:text-white">{item.title}</p>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">{item.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Toggle switch */}
+                    <button
+                      type="button"
+                      disabled={!canModify}
+                      onClick={() => handleToggle(item.key)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isEnabled ? 'bg-[var(--color-primary)]' : 'bg-stone-300 dark:bg-stone-700'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      role="switch"
+                      aria-checked={isEnabled}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+
+          {/* SECTION: COMPANY THEME CONFIGURATION */}
+          <CompanyThemeSection companyId={companyId} canModify={canModify} />
         </div>
 
         {/* RIGHT COLUMN: Operational Thresholds + Dashboard Settings + System Info */}

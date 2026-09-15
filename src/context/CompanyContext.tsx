@@ -127,6 +127,38 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
   const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
 
+export const applyCustomThemeVars = (colors: {
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  accent_color?: string | null;
+  background_color?: string | null;
+  surface_color?: string | null;
+  text_color?: string | null;
+  color_1?: string | null;
+  color_2?: string | null;
+  color_3?: string | null;
+  color_4?: string | null;
+  color_5?: string | null;
+}) => {
+  const root = document.documentElement;
+  const primary = colors.primary_color || colors.color_1;
+  const secondary = colors.secondary_color || colors.color_2;
+  const accent = colors.accent_color || colors.color_3;
+  const bg = colors.background_color || colors.color_4;
+  const surface = colors.surface_color || colors.color_4;
+  const text = colors.text_color || colors.color_5;
+
+  if (primary) root.style.setProperty('--color-primary', primary);
+  if (secondary) root.style.setProperty('--color-secondary', secondary);
+  if (accent) root.style.setProperty('--color-accent', accent);
+  if (bg) root.style.setProperty('--color-bg', bg);
+  if (surface) root.style.setProperty('--color-card', surface);
+  if (text) {
+    root.style.setProperty('--color-text', text);
+    root.style.setProperty('--color-text-primary', text);
+  }
+};
+
   const applyCompanyTheme = (company?: Company | null) => {
     const theme = getCompanyTheme(company?.company_id || company?.id || company?.name);
     const root = document.documentElement;
@@ -158,6 +190,20 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     root.style.setProperty('--color-stat-3-text', theme.statCard3Text);
     root.style.setProperty('--color-stat-4-bg', theme.statCard4Bg);
     root.style.setProperty('--color-stat-4-text', theme.statCard4Text);
+
+    const cId = company?.company_id || company?.id;
+    if (cId && cId !== 'all-data') {
+      getCompanyThemeSettings(cId)
+        .then((dbTheme) => {
+          if (dbTheme) {
+            applyCustomThemeVars(dbTheme);
+          }
+        })
+        .catch((err) => {
+          // Fall back gracefully to default theme
+          console.debug('No custom DB company theme or failed to fetch, using default.', err);
+        });
+    }
   };
 
   useEffect(() => {

@@ -15,6 +15,7 @@ from app.models.delete_request import DeleteRequest
 from app.models.user_company import UserCompany
 from app.models.company_settings import CompanySettings
 from app.models.deployment_diary import DeploymentDiary
+from app.models.company_theme import CompanyThemeSettings
 
 
 
