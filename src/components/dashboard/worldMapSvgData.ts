@@ -12,6 +12,12 @@ export const WORLD_MAP_VIEWBOX = "0 0 2000 857";
 
 export const WORLD_MAP_PATHS: CountrySvgPath[] = [
   {
+    "id": "SGP",
+    "name": "Singapore",
+    "cls": "Singapore",
+    "d": "M 1492.5 482.2 L 1496.8 482.5 L 1497.5 485.8 L 1493.2 486.2 L 1492.5 482.2 Z"
+  },
+  {
     "id": "AF",
     "name": "Afghanistan",
     "cls": null,

@@ -37,10 +37,10 @@ export const PRESET_COMPANIES: Company[] = [
   },
   {
     id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
-    name: 'Axcelis Technologies',
+    name: 'Axcelis Technologies(ION)',
     code: 'AXCELIS',
     company_id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
-    company_name: 'Axcelis Technologies',
+    company_name: 'Axcelis Technologies(ION)',
     short_name: 'AXCELIS',
     logo: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=120&auto=format&fit=crop&q=80',
     tagline: 'Ion Implantation Solutions for Semiconductor Fabrication',

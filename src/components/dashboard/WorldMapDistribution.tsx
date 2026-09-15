@@ -3,13 +3,83 @@ import { useCompany } from '../../context/CompanyContext';
 import { normalizeCountryName } from '../../utils/countryNormalization';
 import { WORLD_MAP_PATHS, WORLD_MAP_VIEWBOX, type CountrySvgPath } from './worldMapSvgData';
 import type { CountryDistributionItem } from '../../types';
-import { Globe, MapPin, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Globe, MapPin, ZoomIn, ZoomOut, RotateCcw, ChevronDown, Navigation } from 'lucide-react';
 import { getCompanyTheme } from '../../config/companyThemes';
 
 interface WorldMapDistributionProps {
   data: CountryDistributionItem[];
   totalEngineers: number;
   className?: string;
+}
+
+/**
+ * Calculates exact SVG path bounding box (minX, maxX, minY, maxY)
+ * supporting both absolute and relative commands with cumulative coordinates.
+ */
+function getPathBounds(d: string): { minX: number; maxX: number; minY: number; maxY: number } {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+
+  const regex = /([a-zA-Z])([^a-zA-Z]*)/g;
+  let match;
+  let currentX = 0;
+  let currentY = 0;
+
+  while ((match = regex.exec(d)) !== null) {
+    const cmd = match[1];
+    const argsStr = match[2].trim();
+    if (!argsStr) continue;
+
+    const nums = argsStr.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    if (nums.length === 0) continue;
+
+    const isRelative = cmd === cmd.toLowerCase() && cmd !== 'z' && cmd !== 'Z';
+    const isAbsolute = cmd === cmd.toUpperCase();
+
+    if (cmd === 'M' || cmd === 'L') {
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        currentX = nums[i];
+        currentY = nums[i + 1];
+        if (currentX < minX) minX = currentX;
+        if (currentX > maxX) maxX = currentX;
+        if (currentY < minY) minY = currentY;
+        if (currentY > maxY) maxY = currentY;
+      }
+    } else if (cmd === 'm' || cmd === 'l') {
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        currentX += nums[i];
+        currentY += nums[i + 1];
+        if (currentX < minX) minX = currentX;
+        if (currentX > maxX) maxX = currentX;
+        if (currentY < minY) minY = currentY;
+        if (currentY > maxY) maxY = currentY;
+      }
+    } else if (isAbsolute) {
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        currentX = nums[i];
+        currentY = nums[i + 1];
+        if (currentX < minX) minX = currentX;
+        if (currentX > maxX) maxX = currentX;
+        if (currentY < minY) minY = currentY;
+        if (currentY > maxY) maxY = currentY;
+      }
+    } else if (isRelative) {
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        currentX += nums[i];
+        currentY += nums[i + 1];
+        if (currentX < minX) minX = currentX;
+        if (currentX > maxX) maxX = currentX;
+        if (currentY < minY) minY = currentY;
+        if (currentY > maxY) maxY = currentY;
+      }
+    }
+  }
+
+  if (minX === Infinity) {
+    return { minX: 1000, maxX: 1000, minY: 428.5, maxY: 428.5 };
+  }
+
+  return { minX, maxX, minY, maxY };
 }
 
 export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
@@ -19,7 +89,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
 }) => {
   const { currentCompany } = useCompany();
   const theme = getCompanyTheme(currentCompany.company_id || currentCompany.id || currentCompany.code);
-  
+
   // Interactive Zoom & Pan State
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -27,6 +97,9 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [initialPan, setInitialPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dropdown Location Selection State
+  const [selectedLocationCode, setSelectedLocationCode] = useState<string>('');
 
   const [hoveredCountry, setHoveredCountry] = useState<{
     name: string;
@@ -37,7 +110,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     y: number;
   } | null>(null);
 
-  // Block page scroll when wheeling or interacting with map
+  // Block page scroll when wheeling over map
   React.useEffect(() => {
     const el = mapContainerRef.current;
     if (!el) return;
@@ -61,7 +134,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     e.preventDefault();
   };
 
-  // Drag & Pan Handlers (Fast & responsive movement)
+  // Drag & Pan Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -73,7 +146,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     e.preventDefault();
-    const DRAG_SPEED = 2.2; // Fast grab & move sensitivity
+    const DRAG_SPEED = 2.2;
     const dx = (e.clientX - dragStart.x) * DRAG_SPEED;
     const dy = (e.clientY - dragStart.y) * DRAG_SPEED;
     setPan({
@@ -98,6 +171,8 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
   const handleResetZoom = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    setSelectedLocationCode('');
+    setHoveredCountry(null);
   };
 
   // 1. Build lookup dictionary of normalized country counts
@@ -122,7 +197,11 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     if (norm.code === 'IND') codeToCount['in'] = existing;
     if (norm.code === 'TWN') codeToCount['tw'] = existing;
     if (norm.code === 'KOR') codeToCount['kr'] = existing;
-    if (norm.code === 'SGP') codeToCount['sg'] = existing;
+    if (norm.code === 'SGP') {
+      codeToCount['sg'] = existing;
+      codeToCount['sgp'] = existing;
+      codeToCount['singapore'] = existing;
+    }
     if (norm.code === 'MYS') codeToCount['my'] = existing;
     if (norm.code === 'JPN') codeToCount['jp'] = existing;
     if (norm.code === 'DEU') codeToCount['de'] = existing;
@@ -147,7 +226,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
 
   const effectiveTotal = totalEngineers > 0 ? totalEngineers : computedTotal;
 
-  // Active countries list for footer pills
+  // Active countries list for dropdown & footer pills
   const activeCountriesList = Object.entries(countryCounts)
     .filter(([_, item]) => item.count > 0)
     .sort((a, b) => b[1].count - a[1].count);
@@ -177,26 +256,110 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     return 'Unknown Country';
   };
 
+  // Center & zoom map to focused location code
+  const focusOnCountry = (targetCode: string) => {
+    if (!targetCode) {
+      handleResetZoom();
+      return;
+    }
+
+    setSelectedLocationCode(targetCode);
+
+    // Find all matching SVG paths for this country
+    const matchingPaths = WORLD_MAP_PATHS.filter((p) => {
+      const dataMatch = getPathData(p);
+      return dataMatch && dataMatch.code === targetCode;
+    });
+
+    if (matchingPaths.length === 0) return;
+
+    // Compute global bounding box across all matching paths
+    let globalMinX = Infinity, globalMaxX = -Infinity;
+    let globalMinY = Infinity, globalMaxY = -Infinity;
+
+    matchingPaths.forEach((p) => {
+      const { minX, maxX, minY, maxY } = getPathBounds(p.d);
+      if (minX < globalMinX) globalMinX = minX;
+      if (maxX > globalMaxX) globalMaxX = maxX;
+      if (minY < globalMinY) globalMinY = minY;
+      if (maxY > globalMaxY) globalMaxY = maxY;
+    });
+
+    if (globalMinX === Infinity) return;
+
+    const cx = (globalMinX + globalMaxX) / 2;
+    const cy = (globalMinY + globalMaxY) / 2;
+
+    // Determine target zoom based on country bounding box dimensions
+    const bboxWidth = globalMaxX - globalMinX;
+    const bboxHeight = globalMaxY - globalMinY;
+    const maxDim = Math.max(bboxWidth, bboxHeight);
+
+    let targetZoom = 3.0;
+    if (maxDim < 30) targetZoom = 4.5;
+    else if (maxDim < 80) targetZoom = 3.8;
+    else if (maxDim < 200) targetZoom = 3.0;
+    else targetZoom = 2.2;
+
+    // Center point (1000, 428.5) of 2000x857 SVG viewBox
+    const targetPanX = (1000 - cx) * targetZoom;
+    const targetPanY = (428.5 - cy) * targetZoom;
+
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+
+    // Scroll map container into view smoothly if needed
+    if (mapContainerRef.current) {
+      mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const handleDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    focusOnCountry(val);
+  };
+
+  const handleViewOnMapClick = () => {
+    if (selectedLocationCode) {
+      focusOnCountry(selectedLocationCode);
+    }
+  };
+
   const activeColor = currentCompany.primaryColor || theme.primaryColor;
   const activeHoverColor = currentCompany.primaryHover || theme.primaryHover;
   const inactiveColor = currentCompany.secondaryColor || theme.accentSoft || theme.secondaryColor || '#CCB7AE';
   const inactiveHoverColor = currentCompany.accentColor || theme.darkAccent || activeColor;
 
   return (
-    <div className={`p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-3 flex flex-col justify-between relative overflow-hidden ${className}`}>
+    <div
+      style={{
+        backgroundColor: currentCompany.cardColor || 'var(--color-card)',
+        borderColor: currentCompany.borderColor || 'var(--color-border)',
+      }}
+      className={`p-5 border rounded-2xl shadow-md shadow-black/20 space-y-3.5 flex flex-col justify-between relative overflow-hidden transition-colors duration-200 ${className}`}
+    >
       {/* Header & Legend */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h3 className="text-base font-semibold text-[var(--color-text-primary)] flex items-center space-x-2">
+          <h3
+            style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}
+            className="text-base font-semibold flex items-center space-x-2"
+          >
             <span>Engineer Location</span>
           </h3>
-          <p className="text-xs text-[var(--color-text-secondary)] opacity-80">
+          <p
+            style={{ color: currentCompany.textMutedColor || 'var(--color-text-secondary)' }}
+            className="text-xs opacity-80"
+          >
             Current workforce location based on ongoing schedules
           </p>
         </div>
 
         {/* Intensity Legend */}
-        <div className="flex items-center space-x-3 text-[11px] font-semibold text-[var(--color-text-primary)]">
+        <div
+          style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}
+          className="flex items-center space-x-3 text-[11px] font-semibold"
+        >
           <span className="flex items-center space-x-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"
@@ -206,12 +369,62 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
           </span>
           <span className="flex items-center space-x-1.5">
             <span
-              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs border border-[var(--color-border)]"
+              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs border border-stone-300"
               style={{ backgroundColor: inactiveColor }}
             />
-            <span className="text-[var(--color-text-secondary)] opacity-90">Inactive</span>
+            <span style={{ color: currentCompany.textMutedColor || 'var(--color-text-secondary)' }} className="opacity-90">Inactive</span>
           </span>
         </div>
+      </div>
+
+      {/* Interactive Dropdown & View on Map Action Button (Styled with Selected Company Theme) */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <select
+            value={selectedLocationCode}
+            onChange={handleDropdownChange}
+            style={{
+              backgroundColor: currentCompany.cardColor || 'var(--color-card)',
+              borderColor: currentCompany.borderColor || 'var(--color-border)',
+              color: currentCompany.textColor || 'var(--color-text-primary)',
+            }}
+            className="w-full pl-3 pr-8 py-2 text-xs font-semibold border rounded-xl focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-2xs appearance-none truncate"
+          >
+            <option value="">-- Select Engineer Location ({activeCountriesList.length}) --</option>
+            {activeCountriesList.map(([code, item]) => {
+              const pct = effectiveTotal > 0 ? ((item.count / effectiveTotal) * 100).toFixed(1) : '0';
+              return (
+                <option key={code} value={code}>
+                  {item.name}: {item.count} {item.count === 1 ? 'engineer' : 'engineers'} ({pct}%)
+                </option>
+              );
+            })}
+          </select>
+          <div
+            style={{ color: currentCompany.primaryColor || theme.primaryColor }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-80"
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleViewOnMapClick}
+          disabled={!selectedLocationCode}
+          style={{
+            backgroundColor: selectedLocationCode
+              ? (currentCompany.primaryColor || theme.primaryColor)
+              : undefined,
+            color: selectedLocationCode
+              ? (currentCompany.textOnPrimary || '#FFFFFF')
+              : undefined,
+          }}
+          className="flex items-center justify-center space-x-1.5 px-3.5 py-2 text-xs font-semibold bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-all shadow-sm active:scale-95 flex-shrink-0"
+        >
+          <Navigation className="w-3.5 h-3.5" />
+          <span>View on Map</span>
+        </button>
       </div>
 
       {/* World Map SVG Container (Transparent Background with Interactive Zoom & Pan) */}
@@ -225,31 +438,43 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
           handleMouseUp();
           setHoveredCountry(null);
         }}
-        className={`relative w-full h-56 sm:h-64 flex items-center justify-center bg-transparent rounded-xl overflow-hidden p-1 border border-[var(--color-border)] select-none ${
+        style={{
+          borderColor: currentCompany.borderColor || 'var(--color-border)',
+        }}
+        className={`relative w-full h-56 sm:h-64 flex items-center justify-center bg-transparent rounded-xl overflow-hidden p-1 border select-none ${
           zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
         }`}
       >
         {/* Floating Zoom Control Buttons */}
-        <div className="absolute top-2 right-2 z-20 flex items-center space-x-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs p-1 rounded-lg border border-[var(--color-border)] shadow-md">
+        <div
+          style={{
+            backgroundColor: currentCompany.cardColor || 'var(--color-card)',
+            borderColor: currentCompany.borderColor || 'var(--color-border)',
+          }}
+          className="absolute top-2 right-2 z-20 flex items-center space-x-1 backdrop-blur-xs p-1 rounded-lg border shadow-md"
+        >
           <button
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-700 dark:text-slate-200"
+            style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}
+            className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-700 dark:text-slate-200"
+            style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}
+            className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
-          {zoom > 1 && (
+          {(zoom > 1 || selectedLocationCode) && (
             <button
               onClick={handleResetZoom}
               title="Reset View"
-              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-700 dark:text-slate-200 flex items-center text-[10px] font-semibold"
+              style={{ color: currentCompany.primaryColor || theme.primaryColor }}
+              className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded flex items-center text-[10px] font-semibold"
             >
               <RotateCcw className="w-3 h-3 mr-0.5" />
               <span>Reset</span>
@@ -272,7 +497,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                 transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
                 style={{
                   transformOrigin: 'center center',
-                  transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                  transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               >
                 {WORLD_MAP_PATHS.map((pathItem, idx) => {
@@ -282,16 +507,21 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                   const displayName = getCountryDisplayName(pathItem);
                   const isActive = count > 0;
                   const isHovered = hoveredCountry?.name === displayName;
+                  const isFocused = dataMatch && selectedLocationCode && dataMatch.code === selectedLocationCode;
 
-                  const fillColor = isActive
-                    ? activeColor
-                    : isHovered
-                      ? inactiveHoverColor
-                      : inactiveColor;
-
-                  const strokeColor = isActive
+                  const fillColor = isFocused
                     ? activeHoverColor
-                    : (currentCompany.borderColor || 'rgba(255,255,255,0.6)');
+                    : isActive
+                      ? activeColor
+                      : isHovered
+                        ? inactiveHoverColor
+                        : inactiveColor;
+
+                  const strokeColor = isFocused
+                    ? (currentCompany.accentColor || '#F59E0B')
+                    : isActive
+                      ? activeHoverColor
+                      : (currentCompany.borderColor || 'rgba(255,255,255,0.6)');
 
                   return (
                     <path
@@ -299,11 +529,11 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                       d={pathItem.d}
                       fill={fillColor}
                       stroke={strokeColor}
-                      strokeWidth={isActive ? 1.4 : 0.6}
+                      strokeWidth={isFocused ? 2.8 : isActive ? 1.4 : 0.6}
                       strokeLinejoin="round"
                       className="transition-colors duration-150 cursor-pointer"
                       style={{
-                        opacity: isActive ? 1 : isHovered ? 0.95 : 0.85,
+                        opacity: isFocused ? 1 : isActive ? 0.95 : isHovered ? 0.9 : 0.8,
                       }}
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -328,13 +558,16 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                             : null
                         );
                       }}
+                      onMouseLeave={() => {
+                        setHoveredCountry(null);
+                      }}
                     />
                   );
                 })}
               </g>
             </svg>
 
-            {/* Interactive Tooltip Card */}
+            {/* Interactive Tooltip Card (Appears ONLY while actively hovering mouse over a country) */}
             {hoveredCountry && (
               <div
                 className="absolute z-30 pointer-events-none bg-stone-950/95 backdrop-blur-md text-white text-xs px-3.5 py-2 rounded-xl shadow-xl border border-white/15 space-y-1 transition-all transform -translate-x-1/2 -translate-y-full mb-2"
@@ -345,8 +578,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
               >
                 <div className="flex items-center space-x-1.5 font-bold border-b border-white/15 pb-1">
                   <MapPin
-                    className="w-3 h-3"
-                    style={{ color: currentCompany.primaryColor || '#606C38' }}
+                    className="w-3 h-3 text-amber-400"
                   />
                   <span>{hoveredCountry.name}</span>
                 </div>
@@ -364,30 +596,6 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
         )}
       </div>
 
-      {/* Summary Footer Pills */}
-      <div className="pt-2.5 border-t border-[var(--color-border)] flex flex-wrap items-center gap-2">
-        {activeCountriesList.length === 0 ? (
-          <span className="text-xs text-stone-500">No ongoing deployments</span>
-        ) : (
-          activeCountriesList.map(([code, item]) => {
-            const pct = effectiveTotal > 0 ? ((item.count / effectiveTotal) * 100).toFixed(1) : '0';
-            return (
-              <div
-                key={code}
-                className="flex items-center space-x-1.5 px-2.5 py-1 bg-white/80 border border-[var(--color-border)] rounded-xl text-xs font-semibold text-stone-800 shadow-2xs transition-transform hover:scale-105"
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: currentCompany.primaryColor || '#606C38' }}
-                />
-                <span>{item.name}:</span>
-                <span className="font-bold text-stone-950">{item.count}</span>
-                <span className="text-[10px] text-stone-500 font-mono">({pct}%)</span>
-              </div>
-            );
-          })
-        )}
-      </div>
     </div>
   );
 };

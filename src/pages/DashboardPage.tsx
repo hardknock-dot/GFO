@@ -74,13 +74,14 @@ export const DashboardPage: React.FC = () => {
       return index === 0 ? '#C1121F' : index === 1 ? '#669BBC' : index === 2 ? '#8DA7BE' : '#2B3D41';
     }
 
-    // Axcelis Technologies Theme
-    if (companyId.includes('f81bd16c') || currentCompany.code === 'AXCELIS') {
+    // Axcelis Technologies(ION) Theme
+    const isAxcelisCompany = companyId.includes('f81bd16c') || currentCompany.code === 'AXCELIS' || companyId.toLowerCase().includes('axcelis') || companyId.toLowerCase().includes('ion') || (currentCompany.name && currentCompany.name.toLowerCase().includes('axcelis'));
+    if (isAxcelisCompany) {
       if (s.includes('deploy')) return '#A2D2FF';
       if (s.includes('free') || s.includes('avail')) return '#BDE0FE';
       if (s.includes('support')) return '#FFAFCC';
       if (s.includes('pto') || s.includes('leave')) return '#CDB4DB';
-      return index === 0 ? '#A2D2FF' : index === 1 ? '#BDE0FE' : index === 2 ? '#FFAFCC' : '#CDB4DB';
+      return index === 0 ? '#BDE0FE' : index === 1 ? '#A2D2FF' : index === 2 ? '#FFAFCC' : index === 3 ? '#CDB4DB' : '#FFC8DD';
     }
 
     // Vishay Semiconductor Theme

@@ -96,13 +96,13 @@ export const LAM_THEME: CompanyTheme = {
 
 export const AXCELIS_THEME: CompanyTheme = {
   id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
-  name: 'Axcelis Technologies',
+  name: 'Axcelis Technologies(ION)',
   primaryColor: '#A2D2FF',
   primaryHover: '#88C0FA',
   secondaryColor: '#CDB4DB',
   accentColor: '#FFAFCC',
   accentSoft: '#FFC8DD',
-  darkAccent: '#2563EB',
+  darkAccent: '#BDE0FE',
   darkNeutral: '#1E293B',
   backgroundColor: '#F4F7FC',
   cardColor: '#FFFFFF',
@@ -116,13 +116,13 @@ export const AXCELIS_THEME: CompanyTheme = {
   textMutedColor: '#64748B',
   textSecondaryAccent: '#2563EB',
   borderColor: '#E2E8F0',
-  statCard1Bg: '#A2D2FF',
+  statCard1Bg: '#BDE0FE',
   statCard1Text: '#1E293B',
-  statCard2Bg: '#FFAFCC',
+  statCard2Bg: '#A2D2FF',
   statCard2Text: '#1E293B',
-  statCard3Bg: '#CDB4DB',
+  statCard3Bg: '#FFAFCC',
   statCard3Text: '#1E293B',
-  statCard4Bg: '#FFC8DD',
+  statCard4Bg: '#CDB4DB',
   statCard4Text: '#1E293B',
 };
 
@@ -182,7 +182,14 @@ export function getCompanyTheme(identifier?: string | null): CompanyTheme {
   if (trimmed === 'lam research' || trimmed === 'lam' || trimmed.includes('lam')) {
     return LAM_THEME;
   }
-  if (trimmed === 'axcelis technologies' || trimmed === 'axcelis' || trimmed.includes('axcelis')) {
+  if (
+    trimmed === 'axcelis technologies' ||
+    trimmed === 'axcelis technologies(ion)' ||
+    trimmed === 'axcelis' ||
+    trimmed === 'ion' ||
+    trimmed.includes('axcelis') ||
+    trimmed.includes('ion')
+  ) {
     return AXCELIS_THEME;
   }
   if (trimmed === 'vishay semiconductor' || trimmed === 'vishay' || trimmed.includes('vishay')) {
