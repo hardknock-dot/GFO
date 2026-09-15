@@ -15,7 +15,7 @@ import {
   useUpdateEngineerMeVisaComments,
   useCreateEngineerMeLeave,
 } from '../hooks/useEngineerSelfService';
-import { useCompany } from '../context/CompanyContext';
+import { useCompany, applyEngineerTheme } from '../context/CompanyContext';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
 import { ErrorState } from '../components/common/ErrorState';
 import { Modal } from '../components/forms/Modal';
@@ -47,27 +47,7 @@ export const EngineerDashboardPage: React.FC = () => {
 
   // Enforce Compulsory Field Engineer Dashboard Theme (#6B9080, #A4C3B2, #CCE3DE, #EAF4F4, #F6FFF8)
   React.useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', '#6B9080');
-    root.style.setProperty('--color-primary-hover', '#527364');
-    root.style.setProperty('--color-secondary', '#A4C3B2');
-    root.style.setProperty('--color-accent', '#6B9080');
-    root.style.setProperty('--color-accent-soft', '#EAF4F4');
-    root.style.setProperty('--color-dark-accent', '#6B9080');
-    root.style.setProperty('--color-dark-neutral', '#253830');
-    root.style.setProperty('--color-bg', '#F6FFF8');
-    root.style.setProperty('--color-card', '#EAF4F4');
-    root.style.setProperty('--color-sidebar', '#6B9080');
-    root.style.setProperty('--color-sidebar-active', 'rgba(255, 255, 255, 0.2)');
-    root.style.setProperty('--color-sidebar-text', '#FFFFFF');
-    root.style.setProperty('--color-sidebar-text-muted', 'rgba(255, 255, 255, 0.8)');
-    root.style.setProperty('--color-sidebar-border', '#CCE3DE');
-    root.style.setProperty('--color-sidebar-hover', 'rgba(255, 255, 255, 0.12)');
-    root.style.setProperty('--color-text', '#253830');
-    root.style.setProperty('--color-text-primary', '#253830');
-    root.style.setProperty('--color-text-secondary', '#527364');
-    root.style.setProperty('--color-text-accent', '#6B9080');
-    root.style.setProperty('--color-border', '#CCE3DE');
+    applyEngineerTheme();
   }, []);
 
   const { data: engineer, isLoading: isEngineerLoading, isError: isEngineerError, refetch: refetchEngineer } = useEngineerMe();

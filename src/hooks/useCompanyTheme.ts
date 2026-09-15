@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import {
   getCompanyThemeSettings,
   updateCompanyThemeSettings,
-  CompanyThemeUpdatePayload
 } from '../services/companyTheme';
+import type { CompanyThemeUpdatePayload } from '../services/companyTheme';
 
 export const useCompanyTheme = (companyId?: string) => {
   const { user } = useAuth();

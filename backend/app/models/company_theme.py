@@ -23,6 +23,11 @@ class CompanyThemeSettings(Base):
     color_4: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     color_5: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
 
+    primary_hover: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    accent_soft: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    dark_neutral: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    border_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

@@ -8,6 +8,7 @@ import {
   AXCELIS_THEME,
   VISHAY_THEME,
 } from '../config/companyThemes';
+import { getCompanyThemeSettings } from '../services/companyTheme';
 
 export const PRESET_COMPANIES: Company[] = [
   {
@@ -120,20 +121,17 @@ interface CompanyContextType {
   setCompany: (companyId: string) => void;
 }
 
-const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
-
-export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companies, setCompanies] = useState<Company[]>(PRESET_COMPANIES);
-  const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
-  const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
-
 export const applyCustomThemeVars = (colors: {
   primary_color?: string | null;
+  primary_hover?: string | null;
   secondary_color?: string | null;
   accent_color?: string | null;
+  accent_soft?: string | null;
   background_color?: string | null;
   surface_color?: string | null;
+  dark_neutral?: string | null;
   text_color?: string | null;
+  border_color?: string | null;
   color_1?: string | null;
   color_2?: string | null;
   color_3?: string | null;
@@ -142,24 +140,91 @@ export const applyCustomThemeVars = (colors: {
 }) => {
   const root = document.documentElement;
   const primary = colors.primary_color || colors.color_1;
+  const primaryHover = colors.primary_hover;
   const secondary = colors.secondary_color || colors.color_2;
   const accent = colors.accent_color || colors.color_3;
+  const accentSoft = colors.accent_soft;
   const bg = colors.background_color || colors.color_4;
   const surface = colors.surface_color || colors.color_4;
+  const darkNeutral = colors.dark_neutral;
   const text = colors.text_color || colors.color_5;
+  const border = colors.border_color;
 
   if (primary) root.style.setProperty('--color-primary', primary);
+  if (primaryHover) root.style.setProperty('--color-primary-hover', primaryHover);
   if (secondary) root.style.setProperty('--color-secondary', secondary);
   if (accent) root.style.setProperty('--color-accent', accent);
+  if (accentSoft) root.style.setProperty('--color-accent-soft', accentSoft);
   if (bg) root.style.setProperty('--color-bg', bg);
   if (surface) root.style.setProperty('--color-card', surface);
+  if (darkNeutral) {
+    root.style.setProperty('--color-dark-neutral', darkNeutral);
+    root.style.setProperty('--color-sidebar', darkNeutral);
+  }
   if (text) {
     root.style.setProperty('--color-text', text);
     root.style.setProperty('--color-text-primary', text);
   }
+  if (border) root.style.setProperty('--color-border', border);
 };
 
+export const applyEngineerTheme = () => {
+  const root = document.documentElement;
+  root.style.setProperty('--color-primary', '#6B9080');
+  root.style.setProperty('--color-primary-hover', '#527364');
+  root.style.setProperty('--color-secondary', '#A4C3B2');
+  root.style.setProperty('--color-accent', '#6B9080');
+  root.style.setProperty('--color-accent-soft', '#EAF4F4');
+  root.style.setProperty('--color-dark-accent', '#6B9080');
+  root.style.setProperty('--color-dark-neutral', '#253830');
+  root.style.setProperty('--color-bg', '#F6FFF8');
+  root.style.setProperty('--color-card', '#EAF4F4');
+  root.style.setProperty('--color-sidebar', '#6B9080');
+  root.style.setProperty('--color-sidebar-active', 'rgba(255, 255, 255, 0.2)');
+  root.style.setProperty('--color-sidebar-text', '#FFFFFF');
+  root.style.setProperty('--color-sidebar-text-muted', 'rgba(255, 255, 255, 0.8)');
+  root.style.setProperty('--color-sidebar-border', '#CCE3DE');
+  root.style.setProperty('--color-sidebar-hover', 'rgba(255, 255, 255, 0.12)');
+  root.style.setProperty('--color-text', '#253830');
+  root.style.setProperty('--color-text-primary', '#253830');
+  root.style.setProperty('--color-text-secondary', '#527364');
+  root.style.setProperty('--color-text-accent', '#6B9080');
+  root.style.setProperty('--color-border', '#CCE3DE');
+  root.style.setProperty('--color-stat-1-bg', '#CCE3DE');
+  root.style.setProperty('--color-stat-1-text', '#253830');
+  root.style.setProperty('--color-stat-2-bg', '#6B9080');
+  root.style.setProperty('--color-stat-2-text', '#FFFFFF');
+  root.style.setProperty('--color-stat-3-bg', '#A4C3B2');
+  root.style.setProperty('--color-stat-3-text', '#253830');
+  root.style.setProperty('--color-stat-4-bg', '#527364');
+  root.style.setProperty('--color-stat-4-text', '#FFFFFF');
+};
+
+const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
+
+export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [companies, setCompanies] = useState<Company[]>(PRESET_COMPANIES);
+  const [currentCompany, setCurrentCompany] = useState<Company>(PRESET_COMPANIES[0]);
+  const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
+
   const applyCompanyTheme = (company?: Company | null) => {
+    // Check if current user is Field Engineer / Engineer
+    let isEngineer = false;
+    try {
+      const savedUser = localStorage.getItem('ormp_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.role === 'Field Engineer' || parsed.role === 'Engineer') {
+          isEngineer = true;
+        }
+      }
+    } catch (_e) {}
+
+    if (isEngineer) {
+      applyEngineerTheme();
+      return;
+    }
+
     const theme = getCompanyTheme(company?.company_id || company?.id || company?.name);
     const root = document.documentElement;
     root.style.setProperty('--color-primary', theme.primaryColor);
