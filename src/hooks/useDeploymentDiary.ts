@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import {
   getDeploymentDiary,
   createDeploymentDiary,
@@ -22,7 +23,8 @@ export const useDeploymentDiaries = (params?: {
   page_size?: number;
 }) => {
   const { user } = useAuth();
-  const companyId = user?.company_id || user?.companyId;
+  const { currentCompany } = useCompany();
+  const companyId = user?.currentCompanyId || currentCompany?.company_id || currentCompany?.id;
 
   return useQuery({
     queryKey: ['deployment-diaries', companyId, params],

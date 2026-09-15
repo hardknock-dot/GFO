@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import {
   getCompanyThemeSettings,
   updateCompanyThemeSettings,
@@ -8,7 +9,8 @@ import type { CompanyThemeUpdatePayload } from '../services/companyTheme';
 
 export const useCompanyTheme = (companyId?: string) => {
   const { user } = useAuth();
-  const effectiveCid = companyId || user?.company_id || user?.companyId;
+  const { currentCompany } = useCompany();
+  const effectiveCid = companyId || user?.currentCompanyId || currentCompany?.company_id || currentCompany?.id;
 
   return useQuery({
     queryKey: ['company-theme', effectiveCid],

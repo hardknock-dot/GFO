@@ -38,7 +38,6 @@ interface DeploymentDiarySectionProps {
  * 5. Page Tint / Subcard:     #F6FFF8
  */
 const C_PRIMARY = '#6B9080';
-const C_PRIMARY_HOVER = '#527364';
 const C_MEDIUM_SAGE = '#A4C3B2';
 const C_BORDER = '#CCE3DE';
 const C_CARD_BG = '#EAF4F4';
@@ -704,7 +703,7 @@ export const DeploymentDiarySection: React.FC<DeploymentDiarySectionProps> = ({
               <Button
                 variant="danger"
                 onClick={handleConfirmDelete}
-                isLoading={deleteMutation.isPending}
+                loading={deleteMutation.isPending}
               >
                 Delete Entry
               </Button>
