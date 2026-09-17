@@ -383,9 +383,12 @@ export function applyEngineerTheme() {
 export interface CompanyTheme {
   id: string;
   name: string;
+  primary: string;
   primaryColor: string;
   primaryHover: string;
+  secondary: string;
   secondaryColor: string;
+  accent: string;
   accentColor: string;
   accentSoft: string;
   darkAccent: string;
@@ -416,9 +419,12 @@ function presetToCompanyTheme(preset: ThemePreset, id: string): CompanyTheme {
   return {
     id,
     name: preset.name,
+    primary: preset.primary,
     primaryColor: preset.primary,
     primaryHover: preset.primaryHover,
+    secondary: preset.secondary,
     secondaryColor: preset.secondary,
+    accent: preset.accent,
     accentColor: preset.accent,
     accentSoft: preset.accentSoft,
     darkAccent: preset.primaryHover,
@@ -435,14 +441,14 @@ function presetToCompanyTheme(preset: ThemePreset, id: string): CompanyTheme {
     textMutedColor: preset.text,
     textSecondaryAccent: preset.secondary,
     borderColor: preset.border,
-    statCard1Bg: preset.surface,
-    statCard1Text: preset.text,
-    statCard2Bg: preset.primary,
-    statCard2Text: '#FFFFFF',
-    statCard3Bg: preset.accent,
-    statCard3Text: preset.text,
-    statCard4Bg: preset.secondary,
-    statCard4Text: '#FFFFFF',
+    statCard1Bg: preset.statCard1Bg,
+    statCard1Text: preset.statCard1Text,
+    statCard2Bg: preset.statCard2Bg,
+    statCard2Text: preset.statCard2Text,
+    statCard3Bg: preset.statCard3Bg,
+    statCard3Text: preset.statCard3Text,
+    statCard4Bg: preset.statCard4Bg,
+    statCard4Text: preset.statCard4Text,
   };
 }
 
