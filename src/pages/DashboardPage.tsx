@@ -67,18 +67,18 @@ export const DashboardPage: React.FC = () => {
   const getStatusColor = (item: { name: string; color?: string }, index: number) => {
     const s = item.name.toLowerCase();
 
-    if (s.includes('deploy')) return activeTheme.statCard2Bg || activeTheme.primaryColor;
-    if (s.includes('free') || s.includes('avail')) return activeTheme.statCard1Bg || activeTheme.secondaryColor;
-    if (s.includes('support')) return activeTheme.statCard3Bg || activeTheme.accentColor;
-    if (s.includes('pto') || s.includes('leave')) return activeTheme.statCard4Bg || activeTheme.darkNeutral;
+    if (s.includes('deploy')) return activeTheme.primary;
+    if (s.includes('free') || s.includes('avail')) return activeTheme.secondary;
+    if (s.includes('support')) return activeTheme.accent;
+    if (s.includes('pto') || s.includes('leave')) return activeTheme.darkNeutral;
 
     if (item.color) return item.color;
 
     const fallbackPalette = [
-      activeTheme.statCard2Bg || activeTheme.primaryColor,
-      activeTheme.statCard1Bg || activeTheme.secondaryColor,
-      activeTheme.statCard3Bg || activeTheme.accentColor,
-      activeTheme.statCard4Bg || activeTheme.darkNeutral,
+      activeTheme.primary,
+      activeTheme.secondary,
+      activeTheme.accent,
+      activeTheme.darkNeutral,
     ];
     return fallbackPalette[index % fallbackPalette.length];
   };
