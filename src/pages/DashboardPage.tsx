@@ -37,6 +37,8 @@ import {
   Area,
 } from 'recharts';
 
+import { getCompanyTheme } from '../config/companyThemes';
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
@@ -46,6 +48,8 @@ export const DashboardPage: React.FC = () => {
   const remarksAlertsEnabled = companySettings?.operational_remark_alerts_enabled ?? true;
   const { data, isLoading, isError, refetch } = useDashboard();
   const { data: opAlerts } = useCompanyOperationalAlerts();
+
+  const activeTheme = getCompanyTheme(currentCompany.theme_key || currentCompany.company_id || currentCompany.id || currentCompany.code);
 
   const kpi = data?.kpi || {
     total_engineers: 0,
@@ -60,53 +64,21 @@ export const DashboardPage: React.FC = () => {
   const statusDistribution = data?.status_distribution || [];
   const countryDistribution = data?.country_distribution || [];
 
-
   const getStatusColor = (item: { name: string; color?: string }, index: number) => {
     const s = item.name.toLowerCase();
-    const companyId = currentCompany.company_id || currentCompany.id || currentCompany.code || '';
 
-    // LAM Research Theme
-    if (companyId.includes('11b9d863') || currentCompany.code === 'LAM') {
-      if (s.includes('deploy')) return '#C1121F';
-      if (s.includes('free') || s.includes('avail')) return '#669BBC';
-      if (s.includes('support')) return '#8DA7BE';
-      if (s.includes('pto') || s.includes('leave')) return '#2B3D41';
-      return index === 0 ? '#C1121F' : index === 1 ? '#669BBC' : index === 2 ? '#8DA7BE' : '#2B3D41';
-    }
-
-    // Axcelis Technologies(ION) Theme
-    const isAxcelisCompany = companyId.includes('f81bd16c') || currentCompany.code === 'AXCELIS' || companyId.toLowerCase().includes('axcelis') || companyId.toLowerCase().includes('ion') || (currentCompany.name && currentCompany.name.toLowerCase().includes('axcelis'));
-    if (isAxcelisCompany) {
-      if (s.includes('deploy')) return '#A2D2FF';
-      if (s.includes('free') || s.includes('avail')) return '#BDE0FE';
-      if (s.includes('support')) return '#FFAFCC';
-      if (s.includes('pto') || s.includes('leave')) return '#CDB4DB';
-      return index === 0 ? '#BDE0FE' : index === 1 ? '#A2D2FF' : index === 2 ? '#FFAFCC' : index === 3 ? '#CDB4DB' : '#FFC8DD';
-    }
-
-    // Vishay Semiconductor Theme
-    if (companyId.includes('34d51cd0') || currentCompany.code === 'VISHAY') {
-      if (s.includes('deploy')) return '#495867';
-      if (s.includes('free') || s.includes('avail')) return '#A5A58D';
-      if (s.includes('support')) return '#899D78';
-      if (s.includes('pto') || s.includes('leave')) return '#741B21';
-      return index === 0 ? '#495867' : index === 1 ? '#A5A58D' : index === 2 ? '#899D78' : '#741B21';
-    }
-
-    // Default / Master All Data Theme
-    if (s.includes('deploy')) return '#606C38';
-    if (s.includes('free') || s.includes('avail')) return '#2A9D8F';
-    if (s.includes('support')) return '#DDA15E';
-    if (s.includes('pto') || s.includes('leave')) return '#BC6C25';
+    if (s.includes('deploy')) return activeTheme.statCard2Bg || activeTheme.primaryColor;
+    if (s.includes('free') || s.includes('avail')) return activeTheme.statCard1Bg || activeTheme.secondaryColor;
+    if (s.includes('support')) return activeTheme.statCard3Bg || activeTheme.accentColor;
+    if (s.includes('pto') || s.includes('leave')) return activeTheme.statCard4Bg || activeTheme.darkNeutral;
 
     if (item.color) return item.color;
 
-    // Fallback company theme colors
     const fallbackPalette = [
-      currentCompany.primaryColor || '#606C38',
-      currentCompany.secondaryColor || '#DDA15E',
-      currentCompany.accentColor || '#BC6C25',
-      currentCompany.textColor || '#283618',
+      activeTheme.statCard2Bg || activeTheme.primaryColor,
+      activeTheme.statCard1Bg || activeTheme.secondaryColor,
+      activeTheme.statCard3Bg || activeTheme.accentColor,
+      activeTheme.statCard4Bg || activeTheme.darkNeutral,
     ];
     return fallbackPalette[index % fallbackPalette.length];
   };
@@ -232,7 +204,7 @@ export const DashboardPage: React.FC = () => {
               <span className="flex items-center space-x-1">
                 <span
                   className="w-2.5 h-2.5 rounded-full inline-block"
-                  style={{ backgroundColor: currentCompany.primaryColor || '#78B654' }}
+                  style={{ backgroundColor: activeTheme.primaryColor }}
                 />
                 <span>Deployed</span>
               </span>
@@ -251,12 +223,12 @@ export const DashboardPage: React.FC = () => {
                     <linearGradient id="colorDeployed" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="5%"
-                        stopColor={currentCompany.primaryColor || '#78B654'}
+                        stopColor={activeTheme.primaryColor}
                         stopOpacity={0.4}
                       />
                       <stop
                         offset="95%"
-                        stopColor={currentCompany.secondaryColor || '#A8BC8B'}
+                        stopColor={activeTheme.secondaryColor}
                         stopOpacity={0.0}
                       />
                     </linearGradient>
@@ -278,7 +250,7 @@ export const DashboardPage: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="Deployed"
-                    stroke={currentCompany.primaryColor || '#78B654'}
+                    stroke={activeTheme.primaryColor}
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorDeployed)"

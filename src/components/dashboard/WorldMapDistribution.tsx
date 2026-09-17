@@ -88,7 +88,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
   className = '',
 }) => {
   const { currentCompany } = useCompany();
-  const theme = getCompanyTheme(currentCompany.company_id || currentCompany.id || currentCompany.code);
+  const theme = getCompanyTheme(currentCompany.theme_key || currentCompany.company_id || currentCompany.id || currentCompany.code);
 
   // Interactive Zoom & Pan State
   const [zoom, setZoom] = useState<number>(1);
@@ -325,10 +325,10 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     }
   };
 
-  const activeColor = currentCompany.primaryColor || theme.primaryColor;
-  const activeHoverColor = currentCompany.primaryHover || theme.primaryHover;
-  const inactiveColor = currentCompany.secondaryColor || theme.accentSoft || theme.secondaryColor || '#CCB7AE';
-  const inactiveHoverColor = currentCompany.accentColor || theme.darkAccent || activeColor;
+  const activeColor = theme.primary;
+  const activeHoverColor = theme.primaryHover;
+  const inactiveColor = theme.accentSoft || theme.surface || '#E2E8F0';
+  const inactiveHoverColor = theme.accent || theme.secondary;
 
   return (
     <div
