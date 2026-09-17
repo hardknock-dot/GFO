@@ -327,8 +327,9 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
 
   const activeColor = theme.primary;
   const activeHoverColor = theme.primaryHover;
-  const activeSecondaryColor = theme.secondary || theme.accent;
-  const inactiveColor = theme.accentSoft || 'rgba(226, 232, 240, 0.7)';
+  const activeSecondaryColor = theme.secondary;
+  const inactiveColor = '#E2E8F0';
+  const inactiveBorder = '#CBD5E1';
 
   const maxCount = Math.max(...Object.values(countryCounts).map((c) => c.count), 1);
 
@@ -379,9 +380,9 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
           <span className="flex items-center space-x-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs border"
-              style={{ backgroundColor: inactiveColor, borderColor: theme.border }}
+              style={{ backgroundColor: inactiveColor, borderColor: inactiveBorder }}
             />
-            <span style={{ color: currentCompany.textMutedColor || 'var(--color-text-secondary)' }} className="opacity-90">Inactive</span>
+            <span style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}>Inactive</span>
           </span>
         </div>
       </div>
@@ -519,9 +520,9 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                   const isFocused = dataMatch && selectedLocationCode && dataMatch.code === selectedLocationCode;
 
                   let fillColor = inactiveColor;
-                  let strokeColor = theme.border || 'rgba(0, 0, 0, 0.2)';
+                  let strokeColor = inactiveBorder;
                   let strokeWidth = 0.7;
-                  let opacity = 0.85;
+                  let opacity = 0.95;
 
                   if (isFocused) {
                     fillColor = activeHoverColor;
@@ -537,14 +538,14 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                     if (isHovered) {
                       fillColor = activeHoverColor;
                     }
-                    strokeColor = theme.darkNeutral || activeHoverColor;
+                    strokeColor = activeHoverColor;
                     strokeWidth = 1.4;
-                    opacity = 0.98;
+                    opacity = 1.0;
                   } else if (isHovered) {
-                    fillColor = theme.accentSoft || 'rgba(148, 163, 184, 0.5)';
+                    fillColor = '#CBD5E1';
                     strokeColor = activeColor;
                     strokeWidth = 1.0;
-                    opacity = 0.95;
+                    opacity = 1.0;
                   }
 
                   return (
