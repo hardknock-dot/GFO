@@ -327,8 +327,10 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
 
   const activeColor = theme.primary;
   const activeHoverColor = theme.primaryHover;
-  const inactiveColor = theme.accentSoft || theme.surface || '#E2E8F0';
-  const inactiveHoverColor = theme.accent || theme.secondary;
+  const activeSecondaryColor = theme.secondary || theme.accent;
+  const inactiveColor = theme.accentSoft || 'rgba(226, 232, 240, 0.7)';
+
+  const maxCount = Math.max(...Object.values(countryCounts).map((c) => c.count), 1);
 
   return (
     <div
@@ -365,12 +367,19 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
               className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"
               style={{ backgroundColor: activeColor }}
             />
-            <span>Active</span>
+            <span>High</span>
           </span>
           <span className="flex items-center space-x-1.5">
             <span
-              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs border border-stone-300"
-              style={{ backgroundColor: inactiveColor }}
+              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"
+              style={{ backgroundColor: activeSecondaryColor }}
+            />
+            <span>Moderate</span>
+          </span>
+          <span className="flex items-center space-x-1.5">
+            <span
+              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs border"
+              style={{ backgroundColor: inactiveColor, borderColor: theme.border }}
             />
             <span style={{ color: currentCompany.textMutedColor || 'var(--color-text-secondary)' }} className="opacity-90">Inactive</span>
           </span>
@@ -509,19 +518,34 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                   const isHovered = hoveredCountry?.name === displayName;
                   const isFocused = dataMatch && selectedLocationCode && dataMatch.code === selectedLocationCode;
 
-                  const fillColor = isFocused
-                    ? activeHoverColor
-                    : isActive
-                      ? activeColor
-                      : isHovered
-                        ? inactiveHoverColor
-                        : inactiveColor;
+                  let fillColor = inactiveColor;
+                  let strokeColor = theme.border || 'rgba(0, 0, 0, 0.2)';
+                  let strokeWidth = 0.7;
+                  let opacity = 0.85;
 
-                  const strokeColor = isFocused
-                    ? (currentCompany.accentColor || '#F59E0B')
-                    : isActive
-                      ? activeHoverColor
-                      : (currentCompany.borderColor || 'rgba(255,255,255,0.6)');
+                  if (isFocused) {
+                    fillColor = activeHoverColor;
+                    strokeColor = theme.accent || '#F59E0B';
+                    strokeWidth = 3.0;
+                    opacity = 1.0;
+                  } else if (isActive) {
+                    if (count >= maxCount * 0.4) {
+                      fillColor = activeColor;
+                    } else {
+                      fillColor = activeSecondaryColor;
+                    }
+                    if (isHovered) {
+                      fillColor = activeHoverColor;
+                    }
+                    strokeColor = theme.darkNeutral || activeHoverColor;
+                    strokeWidth = 1.4;
+                    opacity = 0.98;
+                  } else if (isHovered) {
+                    fillColor = theme.accentSoft || 'rgba(148, 163, 184, 0.5)';
+                    strokeColor = activeColor;
+                    strokeWidth = 1.0;
+                    opacity = 0.95;
+                  }
 
                   return (
                     <path
@@ -529,12 +553,10 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                       d={pathItem.d}
                       fill={fillColor}
                       stroke={strokeColor}
-                      strokeWidth={isFocused ? 2.8 : isActive ? 1.4 : 0.6}
+                      strokeWidth={strokeWidth}
                       strokeLinejoin="round"
                       className="transition-colors duration-150 cursor-pointer"
-                      style={{
-                        opacity: isFocused ? 1 : isActive ? 0.95 : isHovered ? 0.9 : 0.8,
-                      }}
+                      style={{ opacity }}
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         setHoveredCountry({
