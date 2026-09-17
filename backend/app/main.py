@@ -62,6 +62,14 @@ try:
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_travel_arrangements_schedule_id ON travel_arrangements(schedule_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_performances_schedule_id ON performances(schedule_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_missed_schedules_schedule_id ON missed_schedules(schedule_id);"))
+
+        # Safe update for company_theme_settings check constraint
+        try:
+            conn.execute(text("ALTER TABLE company_theme_settings DROP CONSTRAINT IF EXISTS company_theme_settings_theme_key_check;"))
+            conn.execute(text("ALTER TABLE company_theme_settings ADD CONSTRAINT company_theme_settings_theme_key_check CHECK (theme_key IN ('lam', 'axcelis', 'vishay', 'default', 'cobalt', 'emerald', 'copper', 'amethyst'));"))
+        except Exception as e:
+            logger.warning("Theme constraint migration notice: %s", e)
+
         conn.commit()
 except Exception as err:
     logger.warning("Startup DB table initialization notice: %s", err)
