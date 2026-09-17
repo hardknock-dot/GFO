@@ -325,13 +325,10 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     }
   };
 
-  const activeColor = theme.primary;
-  const activeHoverColor = theme.primaryHover;
-  const activeSecondaryColor = theme.secondary;
+  const activeColor = theme.primary && theme.primary.length === 7 ? theme.primary : '#1E293B';
+  const activeHoverColor = theme.primaryHover || activeColor;
   const inactiveColor = '#E2E8F0';
   const inactiveBorder = '#CBD5E1';
-
-  const maxCount = Math.max(...Object.values(countryCounts).map((c) => c.count), 1);
 
   return (
     <div
@@ -358,7 +355,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
           </p>
         </div>
 
-        {/* Intensity Legend */}
+        {/* Active & Inactive Legend */}
         <div
           style={{ color: currentCompany.textColor || 'var(--color-text-primary)' }}
           className="flex items-center space-x-3 text-[11px] font-semibold"
@@ -368,14 +365,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
               className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"
               style={{ backgroundColor: activeColor }}
             />
-            <span>High</span>
-          </span>
-          <span className="flex items-center space-x-1.5">
-            <span
-              className="w-2.5 h-2.5 rounded-full inline-block shadow-2xs"
-              style={{ backgroundColor: activeSecondaryColor }}
-            />
-            <span>Moderate</span>
+            <span>Active</span>
           </span>
           <span className="flex items-center space-x-1.5">
             <span
@@ -437,7 +427,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
         </button>
       </div>
 
-      {/* World Map SVG Container (Transparent Background with Interactive Zoom & Pan) */}
+      {/* World Map SVG Container */}
       <div
         ref={mapContainerRef}
         onWheel={handleWheel}
@@ -530,14 +520,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
                     strokeWidth = 3.0;
                     opacity = 1.0;
                   } else if (isActive) {
-                    if (count >= maxCount * 0.4) {
-                      fillColor = activeColor;
-                    } else {
-                      fillColor = activeSecondaryColor;
-                    }
-                    if (isHovered) {
-                      fillColor = activeHoverColor;
-                    }
+                    fillColor = activeColor;
                     strokeColor = activeHoverColor;
                     strokeWidth = 1.4;
                     opacity = 1.0;
