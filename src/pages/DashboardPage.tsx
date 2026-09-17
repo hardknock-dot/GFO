@@ -67,10 +67,9 @@ export const DashboardPage: React.FC = () => {
   const getStatusColor = (item: { name: string; color?: string }, index: number) => {
     const s = item.name.toLowerCase();
 
+    // Map donut chart slices directly to stat card background colors from the active theme
     const deployedColor = activeTheme.statCard2Bg || activeTheme.primary;
-    const freeColor = activeTheme.statCard1Bg && activeTheme.statCard1Bg !== activeTheme.surface
-      ? activeTheme.statCard1Bg
-      : (activeTheme.secondary !== activeTheme.primary ? activeTheme.secondary : '#2A9D8F');
+    const freeColor = activeTheme.statCard1Bg || activeTheme.secondary;
     const supportColor = activeTheme.statCard3Bg || activeTheme.accent;
     const ptoColor = activeTheme.statCard4Bg || activeTheme.darkNeutral;
 
