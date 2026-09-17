@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Check, RotateCcw, Save, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useCompanyTheme, useUpdateCompanyTheme } from '../../hooks/useCompanyTheme';
-import { PREDEFINED_THEMES, applyThemePreset, type ThemePreset } from '../../config/companyThemes';
+import { PREDEFINED_THEMES, type ThemePreset } from '../../config/companyThemes';
 
+
+import { useCompany } from '../../context/CompanyContext';
 import { Button } from '../forms/Button';
 
 interface CompanyThemeSectionProps {
@@ -11,10 +13,12 @@ interface CompanyThemeSectionProps {
 }
 
 export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ companyId, canModify }) => {
-  const { data: themeData, isLoading } = useCompanyTheme(companyId);
+  const { currentCompany, updateCompanyThemeState } = useCompany();
+  const targetCid = companyId || currentCompany.company_id || currentCompany.id;
+  const { data: themeData, isLoading } = useCompanyTheme(targetCid);
   const updateMutation = useUpdateCompanyTheme();
 
-  const savedKey = themeData?.theme_key || 'default';
+  const savedKey = themeData?.theme_key || currentCompany.theme_key || 'default';
   const [selectedKey, setSelectedKey] = useState<string>(savedKey);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -41,16 +45,17 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
   const handleSave = () => {
     if (!canModify) return;
     updateMutation.mutate(
-      { data: { theme_key: selectedKey }, companyId },
+      { data: { theme_key: selectedKey }, companyId: targetCid },
       {
         onSuccess: () => {
-          applyThemePreset(selectedKey);
+          updateCompanyThemeState(targetCid, selectedKey);
           setSuccessMsg('Company theme saved successfully!');
           setTimeout(() => setSuccessMsg(null), 4000);
         },
       }
     );
   };
+
 
   if (isLoading) {
     return (

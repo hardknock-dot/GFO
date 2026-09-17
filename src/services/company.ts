@@ -21,6 +21,7 @@ const mapApiCompanyToFrontend = (apiComp: any): Company => {
     short_name: apiComp.short_name,
     logo: apiComp.logo ? (apiComp.logo.startsWith('http') ? apiComp.logo : preset.logo) : preset.logo,
     is_active: apiComp.is_active !== undefined ? apiComp.is_active : true,
+    theme_key: apiComp.theme_key || preset.theme_key || 'default',
   };
 };
 
@@ -56,6 +57,7 @@ export const createCompany = async (data: Partial<Company>): Promise<Company> =>
     short_name: data.short_name || data.code || 'TENANT',
     logo: data.logo || null,
     is_active: data.is_active !== undefined ? data.is_active : true,
+    theme_key: data.theme_key || 'default',
   };
   const res = await api.post('/companies', payload);
   return mapApiCompanyToFrontend(res.data);
@@ -67,10 +69,12 @@ export const updateCompany = async (id: string, data: Partial<Company>): Promise
   if (data.short_name || data.code) payload.short_name = data.short_name || data.code;
   if (data.logo !== undefined) payload.logo = data.logo;
   if (data.is_active !== undefined) payload.is_active = data.is_active;
+  if (data.theme_key !== undefined) payload.theme_key = data.theme_key;
 
   const res = await api.put(`/companies/${id}`, payload);
   return mapApiCompanyToFrontend(res.data);
 };
+
 
 export const deleteCompany = async (id: string): Promise<{ success: boolean }> => {
   await api.delete(`/companies/${id}`);

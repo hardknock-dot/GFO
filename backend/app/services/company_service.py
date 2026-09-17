@@ -37,6 +37,8 @@ def get_company_by_id(db: Session, company_id: UUID) -> Optional[Company]:
         setattr(comp, "theme_key", theme.theme_key if theme else "default")
     return comp
 
+from app.schemas.company_theme import ALLOWED_THEME_KEYS
+
 def create_company(db: Session, data: CompanyCreate) -> Company:
     comp = Company(
         company_id=uuid.uuid4(),
@@ -53,7 +55,7 @@ def create_company(db: Session, data: CompanyCreate) -> Company:
 
     # Create associated company_theme_settings row
     tk = str(data.theme_key).strip().lower() if data.theme_key else "default"
-    if tk not in {"lam", "axcelis", "vishay", "default"}:
+    if tk not in ALLOWED_THEME_KEYS:
         tk = "default"
 
     theme = CompanyThemeSettings(
@@ -85,7 +87,7 @@ def update_company(db: Session, company_id: UUID, data: CompanyUpdate) -> Compan
 
     if data.theme_key is not None:
         tk = str(data.theme_key).strip().lower()
-        if tk in {"lam", "axcelis", "vishay", "default"}:
+        if tk in ALLOWED_THEME_KEYS:
             theme = get_or_create_company_theme(db, company_id)
             theme.theme_key = tk
             theme.updated_at = datetime.utcnow()
@@ -93,6 +95,7 @@ def update_company(db: Session, company_id: UUID, data: CompanyUpdate) -> Compan
 
     db.commit()
     db.refresh(comp)
+
 
     theme = get_or_create_company_theme(db, company_id)
     setattr(comp, "theme_key", theme.theme_key if theme else "default")

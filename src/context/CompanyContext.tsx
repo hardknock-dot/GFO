@@ -123,6 +123,7 @@ interface CompanyContextType {
   selectedCompanyIds: string[];
   setSelectedCompanyIds: (ids: string[]) => void;
   setCompany: (companyId: string) => void;
+  updateCompanyThemeState: (companyId: string, themeKey: string) => void;
 }
 
 export const applyCustomThemeVars = (themeKey?: string | null) => {
@@ -152,11 +153,25 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     applyThemePreset(key);
   };
 
-
   useEffect(() => {
     applyCompanyTheme(currentCompany);
   }, [currentCompany]);
 
+  const updateCompanyThemeState = (companyId: string, themeKey: string) => {
+    setCompanies((prev) =>
+      prev.map((c) =>
+        c.company_id === companyId || c.id === companyId ? { ...c, theme_key: themeKey } : c
+      )
+    );
+    setCurrentCompany((prev) => {
+      if (prev.company_id === companyId || prev.id === companyId) {
+        const updated = { ...prev, theme_key: themeKey };
+        applyCompanyTheme(updated);
+        return updated;
+      }
+      return prev;
+    });
+  };
 
   useEffect(() => {
     const loadCompanies = async () => {
@@ -231,12 +246,14 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         selectedCompanyIds,
         setSelectedCompanyIds,
         setCompany,
+        updateCompanyThemeState,
       }}
     >
       {children}
     </CompanyContext.Provider>
   );
 };
+
 
 export const useCompany = () => {
   const context = useContext(CompanyContext);
