@@ -4,29 +4,38 @@ from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
 from app.models.company import Company
+from app.models.company_theme import CompanyThemeSettings
 
 import uuid
 from datetime import datetime
 from app.schemas.company import CompanyCreate, CompanyUpdate
+from app.services.company_theme_service import get_or_create_company_theme
 
 logger = logging.getLogger(__name__)
 
 def get_companies(db: Session, include_inactive: bool = False) -> List[Company]:
     """
-    Retrieve companies from PostgreSQL.
+    Retrieve companies from PostgreSQL and populate theme_key.
     """
     if include_inactive:
         stmt = select(Company)
     else:
         stmt = select(Company).where(Company.is_active == True)
-    result = db.scalars(stmt).all()
-    return list(result)
+    companies = list(db.scalars(stmt).all())
+    for comp in companies:
+        theme = get_or_create_company_theme(db, comp.company_id)
+        setattr(comp, "theme_key", theme.theme_key if theme else "default")
+    return companies
 
 def get_company_by_id(db: Session, company_id: UUID) -> Optional[Company]:
     """
-    Retrieve a single company by UUID from PostgreSQL.
+    Retrieve a single company by UUID from PostgreSQL and populate theme_key.
     """
-    return db.get(Company, company_id)
+    comp = db.get(Company, company_id)
+    if comp:
+        theme = get_or_create_company_theme(db, comp.company_id)
+        setattr(comp, "theme_key", theme.theme_key if theme else "default")
+    return comp
 
 def create_company(db: Session, data: CompanyCreate) -> Company:
     comp = Company(
@@ -41,6 +50,23 @@ def create_company(db: Session, data: CompanyCreate) -> Company:
     db.add(comp)
     db.commit()
     db.refresh(comp)
+
+    # Create associated company_theme_settings row
+    tk = str(data.theme_key).strip().lower() if data.theme_key else "default"
+    if tk not in {"lam", "axcelis", "vishay", "default"}:
+        tk = "default"
+
+    theme = CompanyThemeSettings(
+        company_theme_id=uuid.uuid4(),
+        company_id=comp.company_id,
+        theme_key=tk,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db.add(theme)
+    db.commit()
+
+    setattr(comp, "theme_key", tk)
     return comp
 
 def update_company(db: Session, company_id: UUID, data: CompanyUpdate) -> Company:
@@ -56,9 +82,22 @@ def update_company(db: Session, company_id: UUID, data: CompanyUpdate) -> Compan
     if data.is_active is not None:
         comp.is_active = data.is_active
     comp.updated_at = datetime.utcnow()
+
+    if data.theme_key is not None:
+        tk = str(data.theme_key).strip().lower()
+        if tk in {"lam", "axcelis", "vishay", "default"}:
+            theme = get_or_create_company_theme(db, company_id)
+            theme.theme_key = tk
+            theme.updated_at = datetime.utcnow()
+            db.add(theme)
+
     db.commit()
     db.refresh(comp)
+
+    theme = get_or_create_company_theme(db, company_id)
+    setattr(comp, "theme_key", theme.theme_key if theme else "default")
     return comp
+
 
 from sqlalchemy import text
 

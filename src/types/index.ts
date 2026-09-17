@@ -84,6 +84,7 @@ export interface Company {
   short_name: string;
   logo: string;
   is_active?: boolean;
+  theme_key?: string;
   tagline: string;
   primaryColor: string;
   primaryHover: string;
@@ -101,6 +102,7 @@ export interface Company {
   textMainReverse?: string;
   borderColor: string;
 }
+
 
 export interface CompanySummary {
   company_id: string;

@@ -10,10 +10,12 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  FileText
+  FileText,
+  Check
 } from 'lucide-react';
 import api from '../services/axios';
 import { createCompany, updateCompany, deleteCompany } from '../services/company';
+import { PREDEFINED_THEMES } from '../config/companyThemes';
 import type { AuditLog } from '../types';
 
 interface OverviewStats {
@@ -28,12 +30,18 @@ interface OverviewStats {
     company_name: string;
     region: string;
     country: string;
-    status: string;
+    status?: string;
     engineers_count: number;
-    users_count: number;
+    managers_count: number;
+    ops_executives_count: number;
+    users_count?: number;
+    is_active: boolean;
+    created_at: string;
+    theme_key?: string;
   }>;
-  recent_activity: AuditLog[];
+  recent_activity?: AuditLog[];
 }
+
 
 interface UserItem {
   user_id: string;
@@ -43,7 +51,6 @@ interface UserItem {
   company_id: string | null;
   company_name: string;
   is_active: boolean;
-  last_login: string | null;
 }
 
 export const MainAdminPage: React.FC = () => {
@@ -79,6 +86,7 @@ export const MainAdminPage: React.FC = () => {
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [companyNameInput, setCompanyNameInput] = useState('');
   const [companyCodeInput, setCompanyCodeInput] = useState('');
+  const [companyThemeInput, setCompanyThemeInput] = useState('default');
   const [companyModalError, setCompanyModalError] = useState<string | null>(null);
 
   // Create User Modal
@@ -95,6 +103,7 @@ export const MainAdminPage: React.FC = () => {
     setEditingCompany(null);
     setCompanyNameInput('');
     setCompanyCodeInput('');
+    setCompanyThemeInput('default');
     setCompanyModalError(null);
     setShowCreateCompany(true);
   };
@@ -103,6 +112,7 @@ export const MainAdminPage: React.FC = () => {
     setEditingCompany(c);
     setCompanyNameInput(c.company_name || '');
     setCompanyCodeInput(c.short_name || c.code || '');
+    setCompanyThemeInput(c.theme_key || 'default');
     setCompanyModalError(null);
     setShowCreateCompany(true);
   };
@@ -124,11 +134,13 @@ export const MainAdminPage: React.FC = () => {
         await updateCompany(editingCompany.company_id, {
           company_name: companyNameInput,
           short_name: companyCodeInput,
+          theme_key: companyThemeInput,
         });
       } else {
         await createCompany({
           company_name: companyNameInput,
           short_name: companyCodeInput,
+          theme_key: companyThemeInput,
         });
       }
       setShowCreateCompany(false);
@@ -1010,7 +1022,49 @@ export const MainAdminPage: React.FC = () => {
                   required
                 />
               </div>
+
+              {/* Theme Selection */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5">Company Theme</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {Object.values(PREDEFINED_THEMES).map((preset) => {
+                    const isSel = companyThemeInput === preset.key;
+                    return (
+                      <div
+                        key={preset.key}
+                        onClick={() => setCompanyThemeInput(preset.key)}
+                        className={`p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                          isSel
+                            ? 'border-indigo-600 bg-indigo-50/40 shadow-2xs'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-bold text-slate-900">{preset.name}</span>
+                          {isSel && <Check className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />}
+                        </div>
+                        {/* Swatches & Mini Preview */}
+                        <div className="flex items-center space-x-1 mb-1.5">
+                          <div className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: preset.primary }} />
+                          <div className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: preset.secondary }} />
+                          <div className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: preset.accent }} />
+                          <div className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: preset.darkNeutral }} />
+                        </div>
+                        <div
+                          className="p-1 rounded border text-[9px] flex items-center justify-between font-mono"
+                          style={{ backgroundColor: preset.surface, borderColor: preset.border, color: preset.text }}
+                        >
+                          <span>Preview</span>
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.primary }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-3 pt-2">
+
                 <button
                   type="button"
                   onClick={() => setShowCreateCompany(false)}

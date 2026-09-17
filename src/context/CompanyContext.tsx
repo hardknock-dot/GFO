@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Company } from '../types';
 import { getCompanies } from '../services/company';
 import {
-  getCompanyTheme,
+  applyThemePreset,
+  applyEngineerTheme,
   DEFAULT_THEME,
   LAM_THEME,
   AXCELIS_THEME,
@@ -34,6 +35,7 @@ export const PRESET_COMPANIES: Company[] = [
     textOnPrimary: '#FFFFFF',
     textMainReverse: '#FFFFFF',
     borderColor: LAM_THEME.borderColor,
+    theme_key: 'lam',
   },
   {
     id: 'f81bd16c-2f63-4818-a653-7486fe3f45ec',
@@ -59,6 +61,7 @@ export const PRESET_COMPANIES: Company[] = [
     textOnPrimary: '#1E293B',
     textMainReverse: '#1E293B',
     borderColor: AXCELIS_THEME.borderColor,
+    theme_key: 'axcelis',
   },
   {
     id: '34d51cd0-fb63-4684-96a3-662477298678',
@@ -84,6 +87,7 @@ export const PRESET_COMPANIES: Company[] = [
     textOnPrimary: '#FFFFFF',
     textMainReverse: '#FFFFFF',
     borderColor: VISHAY_THEME.borderColor,
+    theme_key: 'vishay',
   },
   {
     id: 'all-data',
@@ -109,6 +113,7 @@ export const PRESET_COMPANIES: Company[] = [
     textOnPrimary: '#FFFFFF',
     textMainReverse: '#FFFFFF',
     borderColor: DEFAULT_THEME.borderColor,
+    theme_key: 'default',
   },
 ];
 
@@ -120,84 +125,11 @@ interface CompanyContextType {
   setCompany: (companyId: string) => void;
 }
 
-export const applyCustomThemeVars = (colors: {
-  primary_color?: string | null;
-  primary_hover?: string | null;
-  secondary_color?: string | null;
-  accent_color?: string | null;
-  accent_soft?: string | null;
-  background_color?: string | null;
-  surface_color?: string | null;
-  dark_neutral?: string | null;
-  text_color?: string | null;
-  border_color?: string | null;
-  color_1?: string | null;
-  color_2?: string | null;
-  color_3?: string | null;
-  color_4?: string | null;
-  color_5?: string | null;
-}) => {
-  const root = document.documentElement;
-  const primary = colors.primary_color || colors.color_1;
-  const primaryHover = colors.primary_hover;
-  const secondary = colors.secondary_color || colors.color_2;
-  const accent = colors.accent_color || colors.color_3;
-  const accentSoft = colors.accent_soft;
-  const bg = colors.background_color || colors.color_4;
-  const surface = colors.surface_color || colors.color_4;
-  const darkNeutral = colors.dark_neutral;
-  const text = colors.text_color || colors.color_5;
-  const border = colors.border_color;
-
-  if (primary) root.style.setProperty('--color-primary', primary);
-  if (primaryHover) root.style.setProperty('--color-primary-hover', primaryHover);
-  if (secondary) root.style.setProperty('--color-secondary', secondary);
-  if (accent) root.style.setProperty('--color-accent', accent);
-  if (accentSoft) root.style.setProperty('--color-accent-soft', accentSoft);
-  if (bg) root.style.setProperty('--color-bg', bg);
-  if (surface) root.style.setProperty('--color-card', surface);
-  if (darkNeutral) {
-    root.style.setProperty('--color-dark-neutral', darkNeutral);
-    root.style.setProperty('--color-sidebar', darkNeutral);
-  }
-  if (text) {
-    root.style.setProperty('--color-text', text);
-    root.style.setProperty('--color-text-primary', text);
-  }
-  if (border) root.style.setProperty('--color-border', border);
+export const applyCustomThemeVars = (themeKey?: string | null) => {
+  applyThemePreset(themeKey || 'default');
 };
 
-export const applyEngineerTheme = () => {
-  const root = document.documentElement;
-  root.style.setProperty('--color-primary', '#6B9080');
-  root.style.setProperty('--color-primary-hover', '#527364');
-  root.style.setProperty('--color-secondary', '#A4C3B2');
-  root.style.setProperty('--color-accent', '#6B9080');
-  root.style.setProperty('--color-accent-soft', '#EAF4F4');
-  root.style.setProperty('--color-dark-accent', '#6B9080');
-  root.style.setProperty('--color-dark-neutral', '#253830');
-  root.style.setProperty('--color-bg', '#F6FFF8');
-  root.style.setProperty('--color-card', '#EAF4F4');
-  root.style.setProperty('--color-sidebar', '#6B9080');
-  root.style.setProperty('--color-sidebar-active', 'rgba(255, 255, 255, 0.2)');
-  root.style.setProperty('--color-sidebar-text', '#FFFFFF');
-  root.style.setProperty('--color-sidebar-text-muted', 'rgba(255, 255, 255, 0.8)');
-  root.style.setProperty('--color-sidebar-border', '#CCE3DE');
-  root.style.setProperty('--color-sidebar-hover', 'rgba(255, 255, 255, 0.12)');
-  root.style.setProperty('--color-text', '#253830');
-  root.style.setProperty('--color-text-primary', '#253830');
-  root.style.setProperty('--color-text-secondary', '#527364');
-  root.style.setProperty('--color-text-accent', '#6B9080');
-  root.style.setProperty('--color-border', '#CCE3DE');
-  root.style.setProperty('--color-stat-1-bg', '#CCE3DE');
-  root.style.setProperty('--color-stat-1-text', '#253830');
-  root.style.setProperty('--color-stat-2-bg', '#6B9080');
-  root.style.setProperty('--color-stat-2-text', '#FFFFFF');
-  root.style.setProperty('--color-stat-3-bg', '#A4C3B2');
-  root.style.setProperty('--color-stat-3-text', '#253830');
-  root.style.setProperty('--color-stat-4-bg', '#527364');
-  root.style.setProperty('--color-stat-4-text', '#FFFFFF');
-};
+export { applyEngineerTheme };
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
@@ -207,58 +139,24 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [selectedCompanyIds, setSelectedCompanyIdsState] = useState<string[]>([]);
 
   const applyCompanyTheme = (company?: Company | null) => {
-    // Check if current user is Field Engineer / Engineer
-    let isEngineer = false;
-    try {
-      const savedUser = localStorage.getItem('ormp_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.role === 'Field Engineer' || parsed.role === 'Engineer') {
-          isEngineer = true;
-        }
-      }
-    } catch (_e) { }
+    let key = company?.theme_key;
 
-    if (isEngineer) {
-      applyEngineerTheme();
-      return;
+    if (!key) {
+      const cid = company?.company_id || company?.id;
+      if (cid === '11b9d863-b83c-4af3-8db5-b6e773f78235') key = 'lam';
+      else if (cid === 'f81bd16c-2f63-4818-a653-7486fe3f45ec') key = 'axcelis';
+      else if (cid === '34d51cd0-fb63-4684-96a3-662477298678') key = 'vishay';
+      else key = 'default';
     }
 
-    const theme = getCompanyTheme(company?.company_id || company?.id || company?.name);
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', theme.primaryColor);
-    root.style.setProperty('--color-primary-hover', theme.primaryHover);
-    root.style.setProperty('--color-secondary', theme.secondaryColor);
-    root.style.setProperty('--color-accent', theme.accentColor);
-    root.style.setProperty('--color-accent-soft', theme.accentSoft);
-    root.style.setProperty('--color-dark-accent', theme.darkAccent);
-    root.style.setProperty('--color-dark-neutral', theme.darkNeutral);
-    root.style.setProperty('--color-bg', theme.backgroundColor);
-    root.style.setProperty('--color-card', theme.cardColor);
-    root.style.setProperty('--color-sidebar', theme.sidebarColor);
-    root.style.setProperty('--color-sidebar-active', theme.sidebarActiveColor);
-    root.style.setProperty('--color-sidebar-text', theme.sidebarTextColor);
-    root.style.setProperty('--color-sidebar-text-muted', theme.sidebarTextMuted);
-    root.style.setProperty('--color-sidebar-border', theme.sidebarBorderColor);
-    root.style.setProperty('--color-sidebar-hover', theme.sidebarHoverColor);
-    root.style.setProperty('--color-text', theme.textColor);
-    root.style.setProperty('--color-text-primary', theme.textColor);
-    root.style.setProperty('--color-text-secondary', theme.textMutedColor);
-    root.style.setProperty('--color-text-accent', theme.textSecondaryAccent);
-    root.style.setProperty('--color-border', theme.borderColor);
-    root.style.setProperty('--color-stat-1-bg', theme.statCard1Bg);
-    root.style.setProperty('--color-stat-1-text', theme.statCard1Text);
-    root.style.setProperty('--color-stat-2-bg', theme.statCard2Bg);
-    root.style.setProperty('--color-stat-2-text', theme.statCard2Text);
-    root.style.setProperty('--color-stat-3-bg', theme.statCard3Bg);
-    root.style.setProperty('--color-stat-3-text', theme.statCard3Text);
-    root.style.setProperty('--color-stat-4-bg', theme.statCard4Bg);
-    root.style.setProperty('--color-stat-4-text', theme.statCard4Text);
+    applyThemePreset(key);
   };
+
 
   useEffect(() => {
     applyCompanyTheme(currentCompany);
   }, [currentCompany]);
+
 
   useEffect(() => {
     const loadCompanies = async () => {

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCompanySettings, useUpdateCompanySettings } from '../hooks/useSettings';
 import { Button } from '../components/forms/Button';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
+import { CompanyThemeSection } from '../components/settings/CompanyThemeSection';
 import {
   Bell,
   Sliders,
@@ -24,6 +25,7 @@ import {
   Info,
   Calendar,
 } from 'lucide-react';
+
 
 interface AlertToggleItem {
   key:
@@ -304,9 +306,15 @@ export const SettingsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT COLUMN: Alert & Notification Settings + Company Theme */}
+        {/* LEFT COLUMN: Company Theme + Alert & Notification Settings */}
         <div className="space-y-6">
+          <CompanyThemeSection
+            companyId={companyId}
+            canModify={user?.role === 'Main Admin' || user?.role === 'Global Admin'}
+          />
+
           {/* SECTION 1: ALERT & NOTIFICATION SETTINGS */}
+
           <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
               <div className="flex items-center space-x-2.5">

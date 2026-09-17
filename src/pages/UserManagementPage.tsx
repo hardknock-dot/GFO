@@ -19,6 +19,7 @@ import {
 } from '../services/auth';
 import { getCompanies, createCompany, updateCompany, deleteCompany } from '../services/company';
 import { getEngineers } from '../services/engineers';
+import { PREDEFINED_THEMES } from '../config/companyThemes';
 import type { Company, Engineer, AuditLog } from '../types';
 import {
   Plus,
@@ -35,6 +36,7 @@ import {
   FileText,
   Eye,
   ChevronLeft,
+
   ChevronRight,
   RefreshCw
 } from 'lucide-react';
@@ -194,19 +196,29 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
   const [search, setSearch] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
 
+interface CompanyFormState {
+  name: string;
+  code: string;
+  logo: string;
+  is_active: boolean;
+  theme_key: string;
+}
+
   // Company management states
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [isCompanyDeleteModalOpen, setIsCompanyDeleteModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companySearch, setCompanySearch] = useState('');
-  const [companyForm, setCompanyForm] = useState({
+  const [companyForm, setCompanyForm] = useState<CompanyFormState>({
     name: '',
     code: '',
     logo: '',
     is_active: true,
+    theme_key: 'default',
   });
   const [companyError, setCompanyError] = useState<string | null>(null);
   const [companySuccess, setCompanySuccess] = useState<string | null>(null);
+
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -336,6 +348,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       code: '',
       logo: '',
       is_active: true,
+      theme_key: 'default',
     });
     setCompanyError(null);
     setCompanySuccess(null);
@@ -349,6 +362,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
       code: c.short_name || c.code || '',
       logo: c.logo || '',
       is_active: c.is_active !== false,
+      theme_key: c.theme_key || 'default',
     });
     setCompanyError(null);
     setCompanySuccess(null);
@@ -381,6 +395,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           short_name: companyForm.code,
           logo: companyForm.logo || undefined,
           is_active: companyForm.is_active,
+          theme_key: companyForm.theme_key,
         });
         setCompanySuccess('Company updated successfully.');
         setTimeout(() => {
@@ -394,6 +409,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
           short_name: companyForm.code,
           logo: companyForm.logo || undefined,
           is_active: companyForm.is_active,
+          theme_key: companyForm.theme_key,
         });
         setCompanySuccess('Company registered successfully.');
         setTimeout(() => {
@@ -1647,7 +1663,48 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({ defaultT
             placeholder="https://example.com/logo.png"
           />
 
+          {/* Theme Selection */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">Theme</label>
+            <div className="grid grid-cols-2 gap-2.5">
+              {Object.values(PREDEFINED_THEMES).map((preset) => {
+                const isSel = companyForm.theme_key === preset.key;
+                return (
+                  <div
+                    key={preset.key}
+                    onClick={() => setCompanyForm({ ...companyForm, theme_key: preset.key })}
+                    className={`p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      isSel
+                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/40 shadow-2xs'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">{preset.name}</span>
+                      {isSel && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />}
+                    </div>
+                    {/* Swatches & Mini Preview */}
+                    <div className="flex items-center space-x-1 mb-1.5">
+                      <div className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs" style={{ backgroundColor: preset.primary }} />
+                      <div className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs" style={{ backgroundColor: preset.secondary }} />
+                      <div className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs" style={{ backgroundColor: preset.accent }} />
+                      <div className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs" style={{ backgroundColor: preset.darkNeutral }} />
+                    </div>
+                    <div
+                      className="p-1 rounded border text-[9px] flex items-center justify-between font-mono"
+                      style={{ backgroundColor: preset.surface, borderColor: preset.border, color: preset.text }}
+                    >
+                      <span>Preview</span>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.primary }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+
             <input
               type="checkbox"
               id="companyIsActive"

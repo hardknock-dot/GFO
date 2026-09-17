@@ -7,12 +7,14 @@ class CompanyCreate(BaseModel):
     short_name: str
     logo: str | None = None
     is_active: bool = True
+    theme_key: str | None = "default"
 
 class CompanyUpdate(BaseModel):
     company_name: str | None = None
     short_name: str | None = None
     logo: str | None = None
     is_active: bool | None = None
+    theme_key: str | None = None
 
 class CompanyResponse(BaseModel):
     company_id: UUID
@@ -20,8 +22,10 @@ class CompanyResponse(BaseModel):
     short_name: str
     logo: str | None = None
     is_active: bool
+    theme_key: str | None = "default"
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
 

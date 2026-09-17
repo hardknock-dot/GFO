@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Any
+from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -10,11 +10,10 @@ from app.schemas.company_theme import CompanyThemeResponse, CompanyThemeUpdate
 from app.services.auth_service import (
     get_current_user,
     is_main_admin,
-    enforce_company_isolation,
     get_user_authorized_company_ids
 )
 from app.services import company_theme_service
-from app.routers.settings import resolve_effective_company_id, check_settings_admin
+from app.routers.settings import resolve_effective_company_id
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ def get_company_theme(
     try:
         eff_cid = resolve_effective_company_id(db, current_user, company_id)
         
-        # Enforce company tenant isolation for non-main admins
+        # Enforce tenant isolation for non-main admins
         if not is_main_admin(current_user):
             auth_cids = get_user_authorized_company_ids(db, current_user)
             if eff_cid not in auth_cids and current_user.company_id != eff_cid:
@@ -60,22 +59,17 @@ def update_company_theme(
     db: Session = Depends(get_db)
 ):
     """
-    Update saved Company Theme settings. Main Admin / Company Admin only.
+    Update saved Company Theme settings. Main Admin only.
     """
     try:
-        # Authorization check: Main Admin / Company Admin / Manager only
-        check_settings_admin(current_user)
+        # Requirement 8: Only Main Admin can modify company theme.
+        if not is_main_admin(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Only Main Admin can modify company theme settings."
+            )
 
         eff_cid = resolve_effective_company_id(db, current_user, company_id)
-
-        # Tenant isolation check
-        if not is_main_admin(current_user):
-            auth_cids = get_user_authorized_company_ids(db, current_user)
-            if eff_cid not in auth_cids and current_user.company_id != eff_cid:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Forbidden: You cannot modify theme settings for another company."
-                )
 
         updated_theme = company_theme_service.update_company_theme(
             db=db,
@@ -93,3 +87,4 @@ def update_company_theme(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update company theme in database"
         )
+
