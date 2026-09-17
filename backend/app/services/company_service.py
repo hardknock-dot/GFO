@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
@@ -7,6 +8,8 @@ from app.models.company import Company
 import uuid
 from datetime import datetime
 from app.schemas.company import CompanyCreate, CompanyUpdate
+
+logger = logging.getLogger(__name__)
 
 def get_companies(db: Session, include_inactive: bool = False) -> List[Company]:
     """
@@ -75,21 +78,24 @@ def delete_company(db: Session, company_id: UUID) -> None:
 
     # Safe cascade deletion queries in dependency order:
     cascade_queries = [
-        # 1. Performance evaluations & missed schedules
-        ("DELETE FROM performance_evaluations WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid) OR engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
-        ("DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE company_id = :cid)", cid_param),
+        # 1. Performance evaluations & missed schedules (via schedule_id)
+        ("DELETE FROM performances WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid))", cid_param),
+        ("DELETE FROM missed_schedules WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid))", cid_param),
         
         # 2. Engineer skills
-        ("DELETE FROM engineer_skills WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
+        ("DELETE FROM skills WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
         
-        # 3. Operational entities by company_id
-        ("DELETE FROM schedules WHERE company_id = :cid", cid_param),
-        ("DELETE FROM visa_details WHERE company_id = :cid", cid_param),
-        ("DELETE FROM travel_details WHERE company_id = :cid", cid_param),
-        ("DELETE FROM leaves WHERE company_id = :cid", cid_param),
+        # 3. Operational entities by engineer_id or company_id
+        ("DELETE FROM travel_arrangements WHERE schedule_id IN (SELECT schedule_id FROM schedules WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid))", cid_param),
+        ("DELETE FROM schedules WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
+        ("DELETE FROM visa_details WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
+        ("DELETE FROM leaves WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
         ("DELETE FROM bulk_uploads WHERE company_id = :cid", cid_param),
-        ("DELETE FROM general_delete_requests WHERE company_id = :cid", cid_param),
-        ("DELETE FROM user_company_access WHERE company_id = :cid", cid_param),
+        ("DELETE FROM delete_requests WHERE company_id = :cid", cid_param),
+        ("DELETE FROM engineer_deletion_requests WHERE company_id = :cid", cid_param),
+        ("DELETE FROM user_companies WHERE company_id = :cid", cid_param),
+        ("DELETE FROM company_theme_settings WHERE company_id = :cid", cid_param),
+        ("DELETE FROM company_settings WHERE company_id = :cid", cid_param),
         
         # 4. Engineers
         ("UPDATE users SET engineer_id = NULL WHERE engineer_id IN (SELECT engineer_id FROM engineers WHERE company_id = :cid)", cid_param),
@@ -104,7 +110,8 @@ def delete_company(db: Session, company_id: UUID) -> None:
         try:
             db.execute(text(stmt), params)
             db.commit()
-        except Exception:
+        except Exception as err:
+            logger.warning("Cascade delete query failed (%s): %s", stmt, str(err))
             db.rollback()
 
     # 6. Hard delete the company record itself
@@ -112,4 +119,5 @@ def delete_company(db: Session, company_id: UUID) -> None:
     if comp:
         db.delete(comp)
         db.commit()
+
 

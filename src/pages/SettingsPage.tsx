@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useCompanySettings, useUpdateCompanySettings } from '../hooks/useSettings';
 import { Button } from '../components/forms/Button';
 import { CardSkeleton } from '../components/common/LoadingSkeleton';
-import { CompanyThemeSection } from '../components/settings/CompanyThemeSection';
 import {
   Bell,
   Sliders,
@@ -359,9 +358,6 @@ export const SettingsPage: React.FC = () => {
               })}
             </div>
           </div>
-
-          {/* SECTION: COMPANY THEME CONFIGURATION */}
-          <CompanyThemeSection companyId={companyId} canModify={canModify} />
         </div>
 
         {/* RIGHT COLUMN: Operational Thresholds + Dashboard Settings + System Info */}

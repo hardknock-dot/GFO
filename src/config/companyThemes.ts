@@ -198,3 +198,5 @@ export function getCompanyTheme(identifier?: string | null): CompanyTheme {
 
   return DEFAULT_THEME;
 }
+
+

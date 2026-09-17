@@ -8,7 +8,6 @@ import {
   AXCELIS_THEME,
   VISHAY_THEME,
 } from '../config/companyThemes';
-import { getCompanyThemeSettings } from '../services/companyTheme';
 
 export const PRESET_COMPANIES: Company[] = [
   {
@@ -255,20 +254,6 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     root.style.setProperty('--color-stat-3-text', theme.statCard3Text);
     root.style.setProperty('--color-stat-4-bg', theme.statCard4Bg);
     root.style.setProperty('--color-stat-4-text', theme.statCard4Text);
-
-    const cId = company?.company_id || company?.id;
-    if (cId && cId !== 'all-data') {
-      getCompanyThemeSettings(cId)
-        .then((dbTheme) => {
-          if (dbTheme) {
-            applyCustomThemeVars(dbTheme);
-          }
-        })
-        .catch((err) => {
-          // Fall back gracefully to default theme
-          console.debug('No custom DB company theme or failed to fetch, using default.', err);
-        });
-    }
   };
 
   useEffect(() => {
