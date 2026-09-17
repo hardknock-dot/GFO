@@ -28,8 +28,10 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
+import { FindEngineerMatchDrawer } from '../components/engineers/FindEngineerMatchDrawer';
 import {
   UserPlus,
+  UserCheck,
   User,
   MapPin,
   Wrench,
@@ -93,6 +95,7 @@ export const EngineersPage: React.FC = () => {
   // Modals state
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isMatchDrawerOpen, setIsMatchDrawerOpen] = useState(false);
   const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
 
@@ -648,11 +651,21 @@ export const EngineersPage: React.FC = () => {
         title="Field Engineer Operations Directory"
         subtitle="Manage semiconductor equipment field engineers, competency certifications, site deployments, and profiles."
         actions={
-          canEdit ? (
-            <Button icon={<UserPlus className="w-4 h-4" />} onClick={handleOpenAddModal}>
-              Add New Engineer
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              icon={<UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              onClick={() => setIsMatchDrawerOpen(true)}
+              className="bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100"
+            >
+              Find Engineer for Deployment
             </Button>
-          ) : undefined
+            {canEdit && (
+              <Button icon={<UserPlus className="w-4 h-4" />} onClick={handleOpenAddModal}>
+                Add New Engineer
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -1333,6 +1346,12 @@ export const EngineersPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Find Engineer for Deployment Drawer */}
+      <FindEngineerMatchDrawer
+        isOpen={isMatchDrawerOpen}
+        onClose={() => setIsMatchDrawerOpen(false)}
+      />
     </div>
   );
 };

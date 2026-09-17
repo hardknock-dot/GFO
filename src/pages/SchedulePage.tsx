@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSchedule, useCreateSchedule, useUpdateSchedule, useDeleteSchedule } from '../hooks/useSchedule';
 import {
   useMissedSchedules,
@@ -23,19 +23,20 @@ import { DatePicker } from '../components/forms/DatePicker';
 import { Modal } from '../components/forms/Modal';
 import { SearchableDropdown } from '../components/forms/SearchableDropdown';
 import type { Schedule, MissedSchedule } from '../types';
-import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info, Star } from 'lucide-react';
+import { Plus, MapPin, Building2, Edit, Trash2, CalendarX, MessageSquare, Info, Star, UserCheck } from 'lucide-react';
 import { notifyScheduleCommentAdded } from '../utils/notifications';
 import { AddPerformanceModal } from '../components/common/AddPerformanceModal';
 import { ScheduleCommentsCard } from '../components/schedule/ScheduleCommentsCard';
+import { FindEngineerMatchDrawer } from '../components/engineers/FindEngineerMatchDrawer';
 
 
 export const SchedulePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentCompany } = useCompany();
   const { user, canEdit } = useAuth();
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
   const companyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
-
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -123,6 +124,35 @@ export const SchedulePage: React.FC = () => {
   // Performance Modal State
   const [isAddPerfModalOpen, setIsAddPerfModalOpen] = useState(false);
   const [selectedScheduleForPerf, setSelectedScheduleForPerf] = useState<Schedule | null>(null);
+
+  // Find Engineer Match Drawer state
+  const [isMatchDrawerOpen, setIsMatchDrawerOpen] = useState(false);
+
+  // Check navigation location.state to automatically open Create Schedule modal for a pre-selected engineer
+  useEffect(() => {
+    if (location.state?.createSchedule) {
+      const { engineerId, country: targetCountry, startDate: reqStartDate, endDate: reqEndDate, customer: reqCustomer } = location.state;
+      setSelectedSchedule(null);
+      setFormData({
+        engineerId: engineerId || (engineersList[0]?.id || ''),
+        seniorEngineerId: '',
+        supportType: 'Customer Support',
+        country: targetCountry || 'Taiwan',
+        fabCity: '',
+        fabSite: reqCustomer || '',
+        startDate: reqStartDate || '',
+        endDate: reqEndDate || '',
+        scheduleStatus: 'Upcoming',
+        remarks: '',
+      });
+      setFormErrors({});
+      setApiError(null);
+      setSuccessMessage(null);
+      setIsModalOpen(true);
+      // Clean up location state to avoid re-opening modal on state updates
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleOpenAddPerfModal = (sch: Schedule) => {
     setSelectedScheduleForPerf(sch);
@@ -588,12 +618,21 @@ export const SchedulePage: React.FC = () => {
         subtitle="Track semiconductor fab installations, emergency callouts, and shift rosters worldwide."
         actions={
           canEdit ? (
-            <Button
-              icon={<Plus className="w-4 h-4" />}
-              onClick={handleOpenAddModal}
-            >
-              Create Schedule Assignment
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                icon={<UserCheck className="w-4 h-4 text-indigo-500" />}
+                onClick={() => setIsMatchDrawerOpen(true)}
+              >
+                Find Engineer for Deployment
+              </Button>
+              <Button
+                icon={<Plus className="w-4 h-4" />}
+                onClick={handleOpenAddModal}
+              >
+                Create Schedule Assignment
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -1071,6 +1110,12 @@ export const SchedulePage: React.FC = () => {
         schedule={selectedScheduleForPerf}
         onSuccess={() => refetch()}
         onEditExisting={() => navigate('/performance')}
+      />
+
+      {/* Find Engineer for Deployment Drawer */}
+      <FindEngineerMatchDrawer
+        isOpen={isMatchDrawerOpen}
+        onClose={() => setIsMatchDrawerOpen(false)}
       />
     </div>
   );

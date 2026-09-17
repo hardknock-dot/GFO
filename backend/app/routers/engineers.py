@@ -36,12 +36,43 @@ from app.services.auth_service import (
 from app.models.user import User
 from datetime import date
 from typing import Optional
+from app.schemas.engineer_matching import EngineerMatchRequest, EngineerMatchResponse
+from app.services.engineer_matching import match_engineers
+from app.services.auth_service import get_user_authorized_company_ids
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/engineers", tags=["engineers"], dependencies=[Depends(get_current_user)])
 
 from app.schemas.pagination import PaginatedResponse
+
+@router.post("/match", response_model=EngineerMatchResponse)
+def match_engineers_endpoint(
+    req: EngineerMatchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Deterministic Engineer Allocation & Matching Engine Endpoint.
+    Evaluates candidate engineers for a deployment requirement while strictly enforcing multi-tenant company isolation.
+    """
+    try:
+        # Enforce tenant security: user authorized company IDs ONLY
+        authorized_cids = get_user_authorized_company_ids(db, current_user)
+        if not authorized_cids:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN,
+                detail="User has no authorized companies for engineer matching"
+            )
+        return match_engineers(db=db, authorized_company_ids=authorized_cids, req=req)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error executing engineer matching: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute engineer matching: {str(e)}"
+        )
 
 @router.get("/options")
 def read_engineer_filter_options(

@@ -288,3 +288,48 @@ export const getEngineerReportSummary = async (engineerId: string): Promise<Engi
   return response.data;
 };
 
+export interface EngineerMatchRequestPayload {
+  country: string;
+  start_date: string;
+  end_date: string;
+  process?: string;
+  product_family?: string;
+  specific_product?: string;
+  customer?: string;
+  site?: string;
+  fab?: string;
+  industry?: string;
+  role?: string;
+  company_id?: string;
+}
+
+export interface EngineerMatchResultItem {
+  engineer_id: string;
+  engineer_name: string;
+  goes_by?: string;
+  orbit_id: string;
+  company_id: string;
+  company_name: string;
+  level?: string;
+  match_level: 'EXACT_VARIANT_MATCH' | 'EXACT_PRODUCT_MATCH' | 'FAMILY_MATCH' | 'PROCESS_MATCH' | 'AMBIGUOUS_MATCH' | 'NO_MATCH';
+  score: number;
+  reasons: string[];
+  warnings: string[];
+  visa_status: 'VALID' | 'EXPIRED' | 'DATES_UNKNOWN' | 'NO_RECORD';
+  primary_tool?: string;
+  tool_experience_summary: string[];
+  location_experience_summary: string[];
+}
+
+export interface EngineerMatchResponseData {
+  total_candidates_evaluated: number;
+  eligible_candidates_count: number;
+  matches: EngineerMatchResultItem[];
+  requirement_summary: Record<string, any>;
+}
+
+export const matchEngineersApi = async (payload: EngineerMatchRequestPayload): Promise<EngineerMatchResponseData> => {
+  const response = await api.post('/engineers/match', payload);
+  return response.data;
+};
+
