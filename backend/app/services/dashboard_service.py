@@ -190,7 +190,7 @@ def get_dashboard_metrics(
 
     status_distribution = [
         StatusDistributionItem(name="Deployed", value=deployed_status, color="#10B981"),
-        StatusDistributionItem(name="Free", value=free_status, color="#3B82F6"),
+        StatusDistributionItem(name="Idle", value=free_status, color="#3B82F6"),
         StatusDistributionItem(name="Support", value=support_status, color="#64748B"),
         StatusDistributionItem(name="PTO", value=pto_status, color="#F59E0B")
     ]

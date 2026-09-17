@@ -61,7 +61,10 @@ export const DashboardPage: React.FC = () => {
   };
 
   const deploymentData = data?.deployment_trend || [];
-  const statusDistribution = data?.status_distribution || [];
+  const statusDistribution = (data?.status_distribution || []).map((item) => ({
+    ...item,
+    name: item.name === 'Free' ? 'Idle' : item.name
+  }));
   const countryDistribution = data?.country_distribution || [];
 
   const getStatusColor = (item: { name: string; color?: string }, index: number) => {
@@ -74,7 +77,7 @@ export const DashboardPage: React.FC = () => {
     const ptoColor = activeTheme.statCard4Bg || activeTheme.darkNeutral;
 
     if (s.includes('deploy')) return deployedColor;
-    if (s.includes('free') || s.includes('avail')) return freeColor;
+    if (s.includes('free') || s.includes('avail') || s.includes('idle')) return freeColor;
     if (s.includes('support')) return supportColor;
     if (s.includes('pto') || s.includes('leave')) return ptoColor;
 
@@ -268,7 +271,7 @@ export const DashboardPage: React.FC = () => {
             <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
               Workforce Status Distribution
             </h3>
-            <p className="text-xs text-[var(--color-text-secondary)] opacity-80">Current allocation: Deployed, Free (Available), Support, & PTO</p>
+            <p className="text-xs text-[var(--color-text-secondary)] opacity-80">Current allocation: Deployed, Idle (Available), Support, & PTO</p>
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">

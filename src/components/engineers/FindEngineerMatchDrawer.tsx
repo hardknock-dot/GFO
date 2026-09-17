@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
@@ -164,7 +165,7 @@ export const FindEngineerMatchDrawer: React.FC<FindEngineerMatchDrawerProps> = (
 
   const handleSelectCandidateForDeployment = (item: EngineerMatchResultItem) => {
     onClose();
-    navigate('/schedules', {
+    navigate('/schedule', {
       state: {
         createSchedule: true,
         engineerId: item.engineer_id,
@@ -244,14 +245,14 @@ export const FindEngineerMatchDrawer: React.FC<FindEngineerMatchDrawerProps> = (
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-xs flex justify-end transition-opacity">
+  return createPortal(
+    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-screen h-screen z-[9999] overflow-hidden bg-slate-900/60 backdrop-blur-xs flex justify-end transition-opacity">
       <div
         style={{
           backgroundColor: cardColor,
           borderColor: borderColor,
         }}
-        className="w-full max-w-2xl h-full shadow-2xl flex flex-col border-l overflow-hidden transition-all duration-200"
+        className="w-full max-w-2xl h-screen shadow-2xl flex flex-col border-l overflow-hidden transition-all duration-200"
       >
         {/* Drawer Header */}
         <div
@@ -660,6 +661,7 @@ export const FindEngineerMatchDrawer: React.FC<FindEngineerMatchDrawerProps> = (
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
