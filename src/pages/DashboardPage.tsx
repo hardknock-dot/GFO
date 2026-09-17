@@ -67,19 +67,21 @@ export const DashboardPage: React.FC = () => {
   const getStatusColor = (item: { name: string; color?: string }, index: number) => {
     const s = item.name.toLowerCase();
 
-    if (s.includes('deploy')) return activeTheme.primary;
-    if (s.includes('free') || s.includes('avail')) return activeTheme.secondary;
-    if (s.includes('support')) return activeTheme.accent;
-    if (s.includes('pto') || s.includes('leave')) return activeTheme.darkNeutral;
+    const deployedColor = activeTheme.statCard2Bg || activeTheme.primary;
+    const freeColor = activeTheme.statCard1Bg && activeTheme.statCard1Bg !== activeTheme.surface
+      ? activeTheme.statCard1Bg
+      : (activeTheme.secondary !== activeTheme.primary ? activeTheme.secondary : '#2A9D8F');
+    const supportColor = activeTheme.statCard3Bg || activeTheme.accent;
+    const ptoColor = activeTheme.statCard4Bg || activeTheme.darkNeutral;
+
+    if (s.includes('deploy')) return deployedColor;
+    if (s.includes('free') || s.includes('avail')) return freeColor;
+    if (s.includes('support')) return supportColor;
+    if (s.includes('pto') || s.includes('leave')) return ptoColor;
 
     if (item.color) return item.color;
 
-    const fallbackPalette = [
-      activeTheme.primary,
-      activeTheme.secondary,
-      activeTheme.accent,
-      activeTheme.darkNeutral,
-    ];
+    const fallbackPalette = [deployedColor, freeColor, supportColor, ptoColor];
     return fallbackPalette[index % fallbackPalette.length];
   };
 
@@ -313,7 +315,7 @@ export const DashboardPage: React.FC = () => {
               return (
                 <div key={item.name} className="flex items-center justify-between text-[var(--color-text-primary)]">
                   <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: sliceColor }} />
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-black/20 shadow-2xs" style={{ backgroundColor: sliceColor }} />
                     <span className="truncate max-w-[160px]">{item.name}</span>
                   </div>
                   <span className="font-semibold">{item.value} ({percentage}%)</span>
