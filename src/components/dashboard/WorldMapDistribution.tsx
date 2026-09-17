@@ -110,7 +110,7 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
     y: number;
   } | null>(null);
 
-  // Block page scroll when wheeling over map
+  // Block page scroll when wheeling over map & handle zoom via non-passive native listener
   React.useEffect(() => {
     const el = mapContainerRef.current;
     if (!el) return;
@@ -128,11 +128,6 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
       el.removeEventListener('wheel', preventScroll);
     };
   }, []);
-
-  // Wheel Zoom Handler
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-  };
 
   // Drag & Pan Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -430,7 +425,6 @@ export const WorldMapDistribution: React.FC<WorldMapDistributionProps> = ({
       {/* World Map SVG Container */}
       <div
         ref={mapContainerRef}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
