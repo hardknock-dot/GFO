@@ -445,6 +445,46 @@ def delete_experience(
     )
 
 
+def delete_assessment(
+    db: Session,
+    assessment_id: UUID,
+    current_user: User
+):
+    """
+    Delete a single tool assessment row.
+    """
+    ass = db.scalar(
+        select(IonSkillAssessment).where(
+            IonSkillAssessment.assessment_id == assessment_id,
+            IonSkillAssessment.company_id == ION_COMPANY_ID
+        )
+    )
+    if not ass:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ION Skill Assessment '{assessment_id}' not found."
+        )
+
+    old_dict = object_to_dict(ass)
+    tool_name = ass.tool.tool_name if ass.tool else str(ass.tool_id)
+    eng_name = ass.engineer.engineer_name if ass.engineer else str(ass.engineer_id)
+
+    db.delete(ass)
+    db.commit()
+
+    log_audit(
+        db=db,
+        user_id=current_user.user_id,
+        company_id=ION_COMPANY_ID,
+        action="DELETE",
+        entity_type="IonSkillAssessment",
+        entity_id=assessment_id,
+        description=f"Deleted Level {ass.skill_level} assessment on {tool_name} for engineer {eng_name}",
+        old_values=old_dict,
+        new_values=None
+    )
+
+
 def get_engineer_current_summary(
     db: Session,
     engineer_id: UUID

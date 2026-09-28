@@ -152,6 +152,8 @@ export interface Engineer {
   activeProjectsCount: number;
   avatarUrl?: string;
   joinDate: string;
+  company_id?: string;
+  companyId?: string;
 }
 
 export interface Skill {

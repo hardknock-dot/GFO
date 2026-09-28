@@ -90,6 +90,8 @@ const mapApiEngineerToFrontend = (apiEng: any): Engineer => {
     activeProjectsCount: apiEng.active_projects_count || 0,
     avatarUrl: apiEng.avatar_url || '',
     joinDate: apiEng.date_of_joining || '',
+    company_id: apiEng.company_id || apiEng.companyId || '',
+    companyId: apiEng.company_id || apiEng.companyId || '',
   };
 };
 

@@ -64,6 +64,11 @@ export const deleteIonExperience = async (id: string): Promise<{ success: boolea
   return { success: true };
 };
 
+export const deleteIonAssessment = async (assessmentId: string): Promise<{ success: boolean }> => {
+  await api.delete(`/ion-skills/assessments/${assessmentId}`);
+  return { success: true };
+};
+
 export const getEngineerIonCurrentSummary = async (
   engineerId: string
 ): Promise<IonEngineerSkillSummary> => {

@@ -38,7 +38,7 @@ export const IonExperienceCard: React.FC<IonExperienceCardProps> = ({
         : 'Historical Period';
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 shadow-xs hover:shadow-md transition-all duration-150 flex flex-col justify-between group">
       {/* Header: Engineer & Location */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -47,15 +47,15 @@ export const IonExperienceCard: React.FC<IonExperienceCardProps> = ({
               <img
                 src={experience.avatar_url}
                 alt={experience.engineer_name || 'Engineer'}
-                className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
+                className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700 flex-shrink-0">
-                <User className="w-5 h-5 opacity-70" />
+              <div className="w-10 h-10 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 flex-shrink-0">
+                <User className="w-5 h-5 text-sky-600 dark:text-sky-400" />
               </div>
             )}
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                 {experience.engineer_name || 'ION Engineer'}
               </h3>
               <p className="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">

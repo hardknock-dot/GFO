@@ -175,6 +175,29 @@ def delete_ion_experience(
     return None
 
 
+@router.delete("/assessments/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_ion_assessment(
+    assessment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a specific ION skill assessment row.
+    """
+    enforce_company_isolation(db, current_user, ION_COMPANY_ID)
+    if not is_engineer_user(current_user):
+        enforce_write_permission(current_user)
+        enforce_delete_permission(current_user)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Engineers cannot delete historical assessment records directly."
+        )
+
+    ion_skill_service.delete_assessment(db, assessment_id, current_user)
+    return None
+
+
 @router.get("/engineers/{engineer_id}/current-summary", response_model=IonEngineerSkillSummaryResponse)
 def get_engineer_current_skills(
     engineer_id: UUID,

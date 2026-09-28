@@ -6,6 +6,7 @@ import {
   createIonExperience,
   updateIonExperience,
   deleteIonExperience,
+  deleteIonAssessment,
   getEngineerIonCurrentSummary,
   getEngineerIonHistory,
   getIonCompanySummary,
@@ -71,6 +72,19 @@ export const useDeleteIonExperience = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteIonExperience(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ion-experiences'] });
+      queryClient.invalidateQueries({ queryKey: ['ion-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['ion-engineer-current'] });
+      queryClient.invalidateQueries({ queryKey: ['ion-engineer-history'] });
+    },
+  });
+};
+
+export const useDeleteIonAssessment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assessmentId: string) => deleteIonAssessment(assessmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ion-experiences'] });
       queryClient.invalidateQueries({ queryKey: ['ion-summary'] });

@@ -63,9 +63,10 @@ import {
   BarChart3,
   MessageSquare,
   Camera,
+  Award,
 } from 'lucide-react';
-
-
+import { ION_COMPANY_ID } from '../config/ionSkillLevels';
+import { EngineerIonSkillMatrixTab } from '../components/ionSkills/EngineerIonSkillMatrixTab';
 
 export const EngineerProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,13 +75,6 @@ export const EngineerProfilePage: React.FC = () => {
   const { user, canEdit } = useAuth();
 
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
-  const tabParam = searchParams.get('tab') as any;
-  const initialTab = tabParam && ['profile', 'skills', 'schedule', 'travel', 'visa', 'performance', 'leaves', 'reports'].includes(tabParam)
-    ? tabParam
-    : 'profile';
-
-  const [activeTab, setActiveTab] = useState<'profile' | 'skills' | 'schedule' | 'travel' | 'visa' | 'performance' | 'leaves' | 'reports'>(initialTab);
-
   const { data: meEngineer } = useEngineerMe();
 
   const engineerId = isEngineerUser && meEngineer ? meEngineer.id : (id || 'eng-101');
@@ -88,6 +82,15 @@ export const EngineerProfilePage: React.FC = () => {
 
   const engineer = isEngineerUser && meEngineer ? meEngineer : engineerData;
   const targetReportEngineerId = engineer?.id || engineerId;
+
+  const isIonEngineer = (engineer?.company_id || (engineer as any)?.companyId) === ION_COMPANY_ID;
+
+  const tabParam = searchParams.get('tab') as any;
+  const initialTab = tabParam && ['profile', 'ion-skills', 'skills', 'schedule', 'travel', 'visa', 'performance', 'leaves', 'reports'].includes(tabParam)
+    ? tabParam
+    : 'profile';
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'ion-skills' | 'skills' | 'schedule' | 'travel' | 'visa' | 'performance' | 'leaves' | 'reports'>(initialTab);
 
 
 
@@ -1758,7 +1761,10 @@ export const EngineerProfilePage: React.FC = () => {
       <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-0.5">
         {[
           { id: 'profile', label: 'Overview Profile', icon: User },
-          { id: 'skills', label: 'Skill Matrix', icon: Wrench },
+          ...(isIonEngineer
+            ? [{ id: 'ion-skills', label: 'ION Skill Matrix', icon: Award }]
+            : [{ id: 'skills', label: 'Skill Matrix', icon: Wrench }]
+          ),
           { id: 'schedule', label: 'Schedule Roster', icon: Calendar },
           { id: 'travel', label: 'Travel Itineraries', icon: Plane },
           { id: 'visa', label: 'Visas & Permits', icon: FileCheck },
@@ -1786,6 +1792,10 @@ export const EngineerProfilePage: React.FC = () => {
 
 
       {/* Tab Content Display */}
+      {activeTab === 'ion-skills' && isIonEngineer && (
+        <EngineerIonSkillMatrixTab engineer={engineer} />
+      )}
+
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
