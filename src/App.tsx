@@ -19,6 +19,7 @@ import { SchedulePage } from './pages/SchedulePage';
 import { ScheduleCommentsPage } from './pages/ScheduleCommentsPage';
 
 import { SkillsPage } from './pages/SkillsPage';
+import { IonSkillsPage } from './pages/IonSkillsPage';
 import { TravelPage } from './pages/TravelPage';
 import { VisaPage } from './pages/VisaPage';
 import { PerformancePage } from './pages/PerformancePage';
@@ -87,6 +88,7 @@ export const App: React.FC = () => {
                         <Route element={<EngineerRoute />}>
                           <Route path="/engineer/dashboard" element={<EngineerDashboardPage />} />
                           <Route path="/engineer/profile" element={<EngineerProfilePage />} />
+                          <Route path="/ion-skills" element={<IonSkillsPage />} />
                         </Route>
 
                         {/* Non-Engineer / Company-Wide Administrative Routes */}
@@ -101,6 +103,7 @@ export const App: React.FC = () => {
                             <Route path="/schedule" element={<SchedulePage />} />
                             <Route path="/schedule-comments" element={<ScheduleCommentsPage />} />
                             <Route path="/skills" element={<SkillsPage />} />
+                            <Route path="/ion-skills" element={<IonSkillsPage />} />
 
                             <Route path="/travel" element={<TravelPage />} />
                             <Route path="/visa" element={<VisaPage />} />

@@ -132,3 +132,130 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #D5C9AE;
 }
+
+/* ==========================================================================
+   Comprehensive Global Responsive Engine
+   Enforces full responsiveness across all pages, grids, tables, modals & viewports
+   without modifying component code or HTML templates.
+   ========================================================================== */
+
+*, ::before, ::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+body, #root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Responsive Grid Adapters for Mobile & Tablet Screen Sizes */
+@media (max-width: 640px) {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5,
+  .grid-cols-6,
+  .grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .sm\:grid-cols-2,
+  .sm\:grid-cols-3,
+  .sm\:grid-cols-4,
+  .sm\:grid-cols-5 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .grid-cols-4,
+  .grid-cols-5,
+  .grid-cols-6,
+  .lg\:grid-cols-4,
+  .lg\:grid-cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Responsive Table Wrappers & Touch Scrolling */
+table {
+  width: 100%;
+}
+
+.overflow-x-auto,
+[class*="overflow-x-"] {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  table th,
+  table td {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+    font-size: 0.8125rem !important;
+  }
+}
+
+/* Responsive Modals, Dialogs & Popups */
+@media (max-width: 768px) {
+  [role="dialog"],
+  div[class*="fixed"] > div[class*="bg-"],
+  div[class*="max-w-"],
+  div[class*="w-["],
+  div[class*="w-1/"],
+  div[class*="w-2/"],
+  div[class*="w-3/"] {
+    max-width: calc(100vw - 1.25rem) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Flex Container Wrapping for Page Headers, Search & Filters on Mobile */
+@media (max-width: 768px) {
+  .flex:not(.flex-col):not(.items-center) {
+    flex-wrap: wrap;
+  }
+  
+  /* Form filter action wrappers */
+  .space-x-2 > :not([hidden]) ~ :not([hidden]),
+  .space-x-3 > :not([hidden]) ~ :not([hidden]),
+  .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-left: 0 !important;
+  }
+
+  .space-x-2, .space-x-3, .space-x-4 {
+    gap: 0.5rem;
+  }
+}
+
+/* Mobile Touch Optimization for Inputs & Buttons */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on mobile webkit */
+  }
+}
+
+/* Fluid Media & Visualization Containers */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.recharts-responsive-container {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+

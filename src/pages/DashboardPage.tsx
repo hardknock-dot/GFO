@@ -284,8 +284,8 @@ export const DashboardPage: React.FC = () => {
                     data={statusDistribution}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
+                    innerRadius="48%"
+                    outerRadius="75%"
                     paddingAngle={4}
                     dataKey="value"
                   >

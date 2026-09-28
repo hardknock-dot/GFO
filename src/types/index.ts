@@ -514,3 +514,5 @@ export interface DeploymentDiaryUpdatePayload {
   entry?: string;
   schedule_id?: string | null;
 }
+
+export * from './ionSkill';

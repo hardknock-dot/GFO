@@ -8,7 +8,8 @@ from app.routers import (
     health, companies, engineers, skills, schedules, visa, travel,
     performance, leave, missed_schedule, dashboard, operational,
     reports, auth, users, upload, engineer_me, engineer_deletion_requests,
-    admin, delete_requests, settings as settings_router, deployment_diary, company_theme
+    admin, delete_requests, settings as settings_router, deployment_diary, company_theme,
+    ion_skills
 )
 
 # Setup logging
@@ -114,6 +115,7 @@ app.include_router(upload.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
 app.include_router(deployment_diary.router, prefix="/api")
 app.include_router(company_theme.router, prefix="/api")
+app.include_router(ion_skills.router, prefix="/api")
 
 
 from fastapi.responses import JSONResponse

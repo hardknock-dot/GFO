@@ -651,7 +651,7 @@ export const EngineersPage: React.FC = () => {
         title="Field Engineer Operations Directory"
         subtitle="Manage semiconductor equipment field engineers, competency certifications, site deployments, and profiles."
         actions={
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               icon={<UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
@@ -701,8 +701,8 @@ export const EngineersPage: React.FC = () => {
           </div>
 
           {/* Controls: Status Dropdown & Toggle Filters Button */}
-          <div className="flex items-center space-x-2.5 w-full md:w-auto justify-end">
-            <div className="w-36">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start sm:justify-end">
+            <div className="w-36 flex-1 sm:flex-none">
               <Dropdown
                 value={statusFilter}
                 onChange={(e) => {

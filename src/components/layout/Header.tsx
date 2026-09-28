@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   ArrowUpRight,
   ShieldAlert,
+  Search,
+  X,
 } from 'lucide-react';
 import type { OperationalAlert } from '../../services/operational';
 
@@ -36,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -85,12 +88,28 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
 
   return (
     <header className={`fixed top-0 right-0 h-16 bg-white border-b border-[var(--color-border)] z-40 px-3 sm:px-6 flex items-center justify-between shadow-xs transition-all duration-300 ${collapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'}`}>
+      {/* Mobile Search Expanded Bar */}
+      {mobileSearchOpen && (
+        <div className="absolute inset-0 bg-white z-50 px-3 flex items-center justify-between gap-2 sm:hidden border-b border-[var(--color-border)]">
+          <div className="flex-1">
+            <GlobalSearch />
+          </div>
+          <button
+            onClick={() => setMobileSearchOpen(false)}
+            className="p-2 rounded-xl text-stone-600 hover:bg-black/5"
+            aria-label="Close search"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {/* Left: Mobile Menu Toggle & Tenant Switcher */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0">
         {onToggleMobileSidebar && (
           <button
             onClick={onToggleMobileSidebar}
-            className="md:hidden p-2 rounded-xl text-stone-700 hover:bg-[var(--color-card)] transition-colors"
+            className="md:hidden p-2 rounded-xl text-stone-700 hover:bg-[var(--color-card)] transition-colors shrink-0"
             aria-label="Toggle mobile menu"
           >
             <Menu className="w-5 h-5" />
@@ -101,16 +120,16 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
         <div className="relative" ref={companyMenuRef}>
           <button
             onClick={() => setCompanyMenuOpen(!companyMenuOpen)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-card)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-black/5 transition-colors shadow-2xs"
+            className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-card)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-black/5 transition-colors shadow-2xs max-w-[150px] sm:max-w-none"
           >
-            <Building2 className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-            <span className="font-semibold hidden sm:inline">{currentCompany.name}</span>
-            <span className="font-semibold sm:hidden">{currentCompany.code}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-stone-400 ml-0.5" />
+            <Building2 className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+            <span className="font-semibold hidden sm:inline truncate">{currentCompany.name}</span>
+            <span className="font-semibold sm:hidden truncate">{currentCompany.code}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-stone-400 ml-0.5 shrink-0" />
           </button>
 
           {companyMenuOpen && (
-            <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-[var(--color-border)] rounded-xl shadow-xl z-50 py-1">
+            <div className="absolute top-full left-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white border border-[var(--color-border)] rounded-xl shadow-xl z-50 py-1">
               <div className="px-3 py-2 border-b border-[var(--color-border)] text-[10px] font-semibold text-stone-400 uppercase tracking-wider flex items-center space-x-1">
                 <Layers className="w-3 h-3" />
                 <span>Select Company Workspace</span>
@@ -140,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                   >
                     <div className="flex items-center space-x-2 truncate">
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: comp.primaryColor || '#78B654' }}
                       />
                       <span className="truncate">{comp.name || comp.company_name}</span>
@@ -161,7 +180,16 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
       </div>
 
       {/* Right User & Actions Area */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-1 sm:space-x-3 shrink-0">
+        {/* Mobile Search Toggle Button */}
+        <button
+          onClick={() => setMobileSearchOpen(true)}
+          className="sm:hidden p-2 rounded-xl text-stone-600 hover:bg-black/5 transition-colors"
+          aria-label="Search"
+        >
+          <Search className="w-5 h-5 text-stone-600" />
+        </button>
+
         {/* Company-Aware Operational Notification Bell */}
         {user?.role !== 'Viewer' && (
           <div className="relative" ref={notifRef}>
@@ -180,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
 
             {/* Notification Popover Dropdown */}
             {notifMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 overflow-hidden text-xs">
+              <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 bg-white border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 overflow-hidden text-xs">
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-stone-50">
                   <div className="flex items-center space-x-2">

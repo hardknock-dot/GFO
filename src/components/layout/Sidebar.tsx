@@ -20,7 +20,9 @@ import {
   CheckSquare,
   Settings as SettingsIcon,
   LogOut,
+  Award,
 } from 'lucide-react';
+import { ION_COMPANY_ID } from '../../config/ionSkillLevels';
 
 import lamLogoImg from '../../assets/OIP.webp';
 import axcelisLogoImg from '../../assets/Axcelis_Technologies-Logo.wine.png';
@@ -75,15 +77,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isManager = user?.role === 'Manager' || user?.role === 'Company Admin';
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
 
+  const companyId = currentCompany.company_id || currentCompany.id;
+  const isIonCompany = companyId === ION_COMPANY_ID;
+
   const navItems = isEngineerUser
     ? [
       { label: 'Dashboard', path: '/engineer/dashboard', icon: LayoutDashboard },
+      ...(isIonCompany ? [{ label: 'Skill & Experience', path: '/ion-skills', icon: Award }] : []),
       { label: 'My Profile', path: '/engineer/profile', icon: User },
     ]
     : [
       { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
       ...((isMainAdmin || isManager) ? [{ label: 'Delete Requests', path: '/delete-requests', icon: CheckSquare }] : []),
       { label: 'Engineers', path: '/engineers', icon: Users },
+      ...(isIonCompany ? [{ label: 'Skill & Experience', path: '/ion-skills', icon: Award }] : []),
       {
         label: 'Schedule',
         path: '/schedule',

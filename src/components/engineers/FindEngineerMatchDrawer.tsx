@@ -569,9 +569,9 @@ export const FindEngineerMatchDrawer: React.FC<FindEngineerMatchDrawerProps> = (
                       className="p-4 border rounded-xl shadow-xs space-y-3 transition-all hover:shadow-lg hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer group relative"
                     >
                       {/* Card Top Header */}
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                         <div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <h4 style={{ color: textColor }} className="text-sm font-bold group-hover:underline">
                               {item.engineer_name}
                             </h4>
@@ -595,7 +595,7 @@ export const FindEngineerMatchDrawer: React.FC<FindEngineerMatchDrawerProps> = (
                         </div>
 
                         {/* Match Badge & Score */}
-                        <div className="flex flex-col items-end space-y-1">
+                        <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-1.5 sm:space-y-1">
                           {renderMatchBadge(item.match_level)}
                           <span style={{ color: textColor }} className="text-xs font-mono font-bold">
                             Match Score: {item.score}/100

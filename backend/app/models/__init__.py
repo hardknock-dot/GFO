@@ -16,6 +16,8 @@ from app.models.user_company import UserCompany
 from app.models.company_settings import CompanySettings
 from app.models.deployment_diary import DeploymentDiary
 from app.models.company_theme import CompanyThemeSettings
+from app.models.engineer_status_change_request import EngineerStatusChangeRequest
+from app.models.ion_skill import IonSkillTool, IonSkillExperience, IonSkillAssessment
 
 
 
