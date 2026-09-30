@@ -35,6 +35,9 @@ class TravelResponse(BaseModel):
     engineer_id: UUID | None = None
     engineer_name: str | None = None
     orbit_id: str | None = None
+    origin_country: str | None = None
+    destination_country: str | None = None
+    fab_site: str | None = None
     owner_id: UUID | None = None
     booking_date: date | None = None
     travel_date: date | None = None

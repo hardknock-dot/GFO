@@ -5,6 +5,8 @@ import type { IonSkillExperience } from '../../types';
 import { getIonSkillLevelConfig } from '../../config/ionSkillLevels';
 import { IonSkillLevelBadge } from './IonSkillLevelBadge';
 import { Button } from '../forms/Button';
+import { useCompany } from '../../context/CompanyContext';
+import { getCompanyTheme } from '../../config/companyThemes';
 
 interface IonExperienceDetailDrawerProps {
   experience: IonSkillExperience | null;
@@ -34,10 +36,21 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
   onDelete,
   canEdit,
 }) => {
+  const { currentCompany } = useCompany();
+  const themeKey = currentCompany.theme_key || currentCompany.company_id || currentCompany.id || currentCompany.code;
+  const theme = getCompanyTheme(themeKey);
+
+  const primaryColor = currentCompany.primaryColor || theme.primary || 'var(--color-primary)';
+  const cardColor = currentCompany.cardColor || 'var(--color-card)';
+  const borderColor = currentCompany.borderColor || 'var(--color-border)';
+  const textColor = currentCompany.textColor || 'var(--color-text-primary)';
+  const textMutedColor = currentCompany.textMutedColor || 'var(--color-text-secondary)';
+  const accentSoft = theme.accentSoft || 'var(--color-accent-soft)';
+
   if (!isOpen || !experience) return null;
 
   return createPortal(
-    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-screen h-screen z-[9999] overflow-hidden bg-slate-900/60 backdrop-blur-xs flex justify-end transition-opacity">
+    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-screen h-screen z-[9999] overflow-hidden bg-black/40 backdrop-blur-xs flex justify-end transition-opacity">
       {/* Backdrop */}
       <div
         className="fixed inset-0"
@@ -45,31 +58,58 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-2xl h-screen bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col z-10 animate-in slide-in-from-right duration-200">
+      <div 
+        style={{
+          backgroundColor: cardColor,
+          borderColor: borderColor,
+        }}
+        className="relative w-full max-w-2xl h-screen shadow-2xl border-l flex flex-col z-10 animate-in slide-in-from-right duration-200"
+      >
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/30">
+        <div 
+          style={{
+            borderColor: borderColor,
+            backgroundColor: cardColor,
+          }}
+          className="p-6 border-b flex items-start justify-between gap-4"
+        >
           <div className="flex items-center space-x-3.5">
             {experience.avatar_url ? (
               <img
                 src={experience.avatar_url}
                 alt={experience.engineer_name || 'Engineer'}
-                className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+                style={{ borderColor: borderColor }}
+                className="w-12 h-12 rounded-xl object-cover border shadow-xs"
               />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold border border-sky-200 dark:border-sky-800/60 shadow-xs">
-                <User className="w-6 h-6 text-sky-600 dark:text-sky-400" />
+              <div 
+                style={{
+                  backgroundColor: `${primaryColor}15`,
+                  borderColor: `${primaryColor}30`,
+                  color: primaryColor,
+                }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center font-bold border shadow-xs"
+              >
+                <User className="w-6 h-6" style={{ color: primaryColor }} />
               </div>
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                <h2 style={{ color: textColor }} className="text-lg font-bold">
                   {experience.engineer_name || 'ION Engineer'}
                 </h2>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono uppercase">
+                <span 
+                  style={{
+                    backgroundColor: accentSoft,
+                    borderColor: borderColor,
+                    color: textColor,
+                  }}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-bold border font-mono uppercase"
+                >
                   {experience.orbit_id || 'ION-EMP'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p style={{ color: textMutedColor }} className="text-xs mt-0.5">
                 Axcelis Technologies (ION) Historical Experience Record
               </p>
             </div>
@@ -78,42 +118,54 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            style={{ color: textMutedColor }}
+            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Area */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div 
+          style={{
+            backgroundColor: 'var(--color-bg, #F4F7FC)',
+          }}
+          className="p-6 overflow-y-auto flex-1 space-y-6"
+        >
           {/* Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
+          <div 
+            style={{
+              backgroundColor: cardColor,
+              borderColor: borderColor,
+            }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl border shadow-xs"
+          >
             <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span style={{ color: textMutedColor }} className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-rose-500" />
                 Where / Location
               </span>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
+              <p style={{ color: textColor }} className="text-sm font-bold">
                 {experience.where_location}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+              <span style={{ color: textMutedColor }} className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" style={{ color: primaryColor }} />
                 Start Date
               </span>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <p style={{ color: textColor }} className="text-sm font-semibold">
                 {formatDate(experience.start_date)}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span style={{ color: textMutedColor }} className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                 End Date
               </span>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <p style={{ color: textColor }} className="text-sm font-semibold">
                 {formatDate(experience.end_date)}
               </p>
             </div>
@@ -121,12 +173,24 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
 
           {/* Experience Notes */}
           {experience.notes && (
-            <div className="space-y-2 p-4 bg-blue-50/40 dark:bg-blue-950/20 rounded-xl border border-blue-200/60 dark:border-blue-900/50">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+            <div 
+              style={{
+                backgroundColor: accentSoft,
+                borderColor: `${primaryColor}30`,
+              }}
+              className="space-y-2 p-4 rounded-xl border shadow-xs"
+            >
+              <h4 
+                style={{ color: primaryColor }}
+                className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+              >
                 <FileText className="w-3.5 h-3.5" />
                 Experience Overview & Notes
               </h4>
-              <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
+              <p 
+                style={{ color: textColor }}
+                className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-medium"
+              >
                 {experience.notes}
               </p>
             </div>
@@ -136,19 +200,32 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                <div 
+                  style={{
+                    backgroundColor: `${primaryColor}15`,
+                    color: primaryColor,
+                  }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold"
+                >
                   <Wrench className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 style={{ color: textColor }} className="text-sm font-bold">
                     Tool Assessments
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p style={{ color: textMutedColor }} className="text-xs">
                     Specific tools operated and evaluated during this experience period
                   </p>
                 </div>
               </div>
-              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-bold text-slate-700 dark:text-slate-300">
+              <span 
+                style={{
+                  backgroundColor: accentSoft,
+                  borderColor: borderColor,
+                  color: textColor,
+                }}
+                className="px-2.5 py-1 rounded-full text-xs font-bold border"
+              >
                 {experience.assessments?.length || 0} Tools
               </span>
             </div>
@@ -161,13 +238,25 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
                   return (
                     <div
                       key={ass.assessment_id || `${ass.tool_id}-${index}`}
-                      className="p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-xs space-y-3"
+                      style={{
+                        backgroundColor: cardColor,
+                        borderColor: borderColor,
+                      }}
+                      className="p-4 rounded-xl border shadow-xs space-y-3"
                     >
                       {/* Tool Name & Level Badge */}
-                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
+                      <div 
+                        style={{ borderColor: borderColor }}
+                        className="flex items-center justify-between gap-2 border-b pb-2.5"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-slate-400">#{index + 1}</span>
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                          <span 
+                            style={{ color: textMutedColor }}
+                            className="text-xs font-mono font-bold"
+                          >
+                            #{index + 1}
+                          </span>
+                          <h4 style={{ color: textColor }} className="text-sm sm:text-base font-bold">
                             {ass.tool_name || 'ION Tool'}
                           </h4>
                         </div>
@@ -175,28 +264,55 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
                       </div>
 
                       {/* Standard Level Meaning */}
-                      <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <div 
+                        style={{
+                          backgroundColor: 'var(--color-bg, rgba(0,0,0,0.03))',
+                          borderColor: borderColor,
+                        }}
+                        className="p-3 rounded-lg border space-y-1"
+                      >
+                        <span 
+                          style={{ color: textMutedColor }}
+                          className="text-[10px] font-bold uppercase tracking-wider"
+                        >
                           Level Definition
                         </span>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                        <p 
+                          style={{ color: textColor }}
+                          className="text-xs italic leading-relaxed"
+                        >
                           "{levelDef.description}"
                         </p>
                       </div>
 
                       {/* Engineer Assessment Comment */}
                       {ass.assessment_comment ? (
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                        <div 
+                          style={{
+                            backgroundColor: `${primaryColor}08`,
+                            borderColor: `${primaryColor}25`,
+                          }}
+                          className="p-3 rounded-lg border space-y-1"
+                        >
+                          <span 
+                            style={{ color: textColor }}
+                            className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
+                          >
                             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                             Engineer Assessment Comment
                           </span>
-                          <p className="text-xs text-slate-900 dark:text-slate-100 leading-relaxed font-medium whitespace-pre-wrap pt-0.5">
+                          <p 
+                            style={{ color: textColor }}
+                            className="text-xs leading-relaxed font-medium whitespace-pre-wrap pt-0.5"
+                          >
                             "{ass.assessment_comment}"
                           </p>
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-400 italic p-1">
+                        <p 
+                          style={{ color: textMutedColor }}
+                          className="text-xs italic p-1"
+                        >
                           No specific assessment comment provided.
                         </p>
                       )}
@@ -205,12 +321,18 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6">
-                <Wrench className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <div 
+                style={{
+                  backgroundColor: 'var(--color-bg, rgba(0,0,0,0.02))',
+                  borderColor: borderColor,
+                }}
+                className="text-center py-8 rounded-xl border border-dashed p-6"
+              >
+                <Wrench style={{ color: textMutedColor }} className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p style={{ color: textColor }} className="text-xs font-semibold">
                   No Tool Assessments Recorded
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p style={{ color: textMutedColor }} className="text-[11px] mt-1">
                   This historical experience does not have any specific tool assessments logged.
                 </p>
               </div>
@@ -219,40 +341,44 @@ export const IonExperienceDetailDrawer: React.FC<IonExperienceDetailDrawerProps>
         </div>
 
         {/* Footer Actions */}
-        {canEdit && (
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between gap-3">
-            {onDelete && (
+        <div 
+          style={{
+            borderColor: borderColor,
+            backgroundColor: cardColor,
+          }}
+          className="p-4 border-t flex items-center justify-between gap-3 mt-auto shrink-0"
+        >
+          {canEdit && onDelete ? (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(experience)}
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+            >
+              Delete Experience
+            </Button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+            {canEdit && onEdit && (
               <Button
-                variant="danger"
+                variant="primary"
                 size="sm"
-                onClick={() => onDelete(experience)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
+                onClick={() => onEdit(experience)}
+                icon={<Edit3 className="w-3.5 h-3.5" />}
               >
-                Delete Experience
+                Edit Experience
               </Button>
             )}
-
-            <div className="flex items-center gap-2 ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-              >
-                Close
-              </Button>
-              {onEdit && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onEdit(experience)}
-                  icon={<Edit3 className="w-3.5 h-3.5" />}
-                >
-                  Edit Experience
-                </Button>
-              )}
-            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>,
     document.body

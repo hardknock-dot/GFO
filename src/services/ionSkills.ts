@@ -33,10 +33,38 @@ export const getIonExperiences = async (
   if (params?.start_date) queryParams.start_date = params.start_date;
   if (params?.end_date) queryParams.end_date = params.end_date;
 
-  const res = await api.get<PaginatedResponse<IonSkillExperience>>('/ion-skills/experiences', {
+  const res = await api.get<any>('/ion-skills/experiences', {
     params: queryParams,
   });
-  return res.data;
+  const raw = res.data;
+  if (raw && Array.isArray(raw.items)) {
+    return {
+      data: raw.items,
+      total: raw.total,
+      page: raw.page,
+      pageSize: raw.page_size,
+      totalPages: raw.total_pages,
+    };
+  }
+  if (raw && Array.isArray(raw.data)) {
+    return raw;
+  }
+  if (Array.isArray(raw)) {
+    return {
+      data: raw,
+      total: raw.length,
+      page: 1,
+      pageSize: raw.length || 20,
+      totalPages: 1,
+    };
+  }
+  return {
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 20,
+    totalPages: 1,
+  };
 };
 
 export const getIonExperienceById = async (id: string): Promise<IonSkillExperience> => {

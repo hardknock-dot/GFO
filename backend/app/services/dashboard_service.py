@@ -67,26 +67,20 @@ def get_dashboard_metrics(
 
     from app.services.company_settings_service import get_or_create_company_settings
     visa_days = 30
-    visa_enabled = True
-    travel_enabled = True
     if company_id:
         cs = get_or_create_company_settings(db, company_id)
         visa_days = cs.visa_expiration_days
-        visa_enabled = cs.visa_alerts_enabled
-        travel_enabled = cs.travel_alerts_enabled
     elif target_cids and len(target_cids) == 1:
         cs = get_or_create_company_settings(db, target_cids[0])
         visa_days = cs.visa_expiration_days
-        visa_enabled = cs.visa_alerts_enabled
-        travel_enabled = cs.travel_alerts_enabled
 
-    upcoming_travel_count = sum(1 for t in travels if t.travel_date is None or t.travel_date >= today) if travel_enabled else 0
+    upcoming_travel_count = sum(1 for t in travels if t.travel_date is None or t.travel_date >= today)
     
     visa_threshold_date = today + timedelta(days=visa_days)
     expiring_visas_count = sum(
         1 for v in visas 
         if v.visa_end_date is not None and (today <= v.visa_end_date <= visa_threshold_date or v.visa_end_date < today)
-    ) if visa_enabled else 0
+    )
 
     def is_pto_schedule(s) -> bool:
         stype = (s.support_type or '').strip().lower()

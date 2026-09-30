@@ -116,7 +116,7 @@ export const EngineerIonSkillMatrixTab: React.FC<EngineerIonSkillMatrixTabProps>
     return counts;
   }, [currentSkills]);
 
-  const experiences = experiencesRes?.data || [];
+  const experiences = experiencesRes?.data || (experiencesRes as any)?.items || [];
 
   const handleOpenToolHistory = (toolId?: string) => {
     setSelectedToolForHistory(toolId);

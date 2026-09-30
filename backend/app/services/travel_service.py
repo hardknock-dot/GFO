@@ -21,7 +21,15 @@ def get_travel_paginated(
     page_size: int = 20
 ) -> Dict[str, Any]:
     stmt = (
-        select(Travel, Engineer.engineer_id, Engineer.engineer_name, Engineer.orbit_id)
+        select(
+            Travel,
+            Engineer.engineer_id,
+            Engineer.engineer_name,
+            Engineer.orbit_id,
+            Engineer.country.label("eng_country"),
+            Schedule.country.label("dest_country"),
+            Schedule.fab_site.label("fab_site")
+        )
         .join(Schedule, Travel.schedule_id == Schedule.schedule_id)
         .join(Engineer, Schedule.engineer_id == Engineer.engineer_id)
     )
@@ -62,10 +70,13 @@ def get_travel_paginated(
 
     rows = db.execute(stmt).all()
     items = []
-    for trv, eng_id, eng_name, orb_id in rows:
+    for trv, eng_id, eng_name, orb_id, eng_country, dest_country, fab_site in rows:
         trv.engineer_id = eng_id
         trv.engineer_name = eng_name
         trv.orbit_id = orb_id
+        trv.origin_country = eng_country or "India"
+        trv.destination_country = dest_country or "Site"
+        trv.fab_site = fab_site
         items.append(trv)
 
     return {

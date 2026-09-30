@@ -168,9 +168,9 @@ export const IonSkillsPage: React.FC = () => {
     }
   };
 
-  const experiences = experiencesRes?.data || [];
-  const totalPages = experiencesRes?.totalPages || 1;
-  const totalRecords = experiencesRes?.total || 0;
+  const experiences = experiencesRes?.data || (experiencesRes as any)?.items || [];
+  const totalPages = experiencesRes?.totalPages || (experiencesRes as any)?.total_pages || 1;
+  const totalRecords = experiencesRes?.total ?? ((experiencesRes as any)?.items?.length || 0);
 
   return (
     <div className="space-y-6 pb-12">
