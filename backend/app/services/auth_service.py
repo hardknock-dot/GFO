@@ -17,6 +17,7 @@ ROLE_MANAGER = "Manager"
 ROLE_OPS_EXECUTIVE = "Ops Executive"
 ROLE_ENGINEER = "Engineer"
 ROLE_VIEWER = "Viewer"
+ROLE_CLIENT = "Client"
 
 def is_main_admin(user: User) -> bool:
     return user.role in (ROLE_MAIN_ADMIN, "Global Admin")
@@ -32,6 +33,9 @@ def is_engineer_user(user: User) -> bool:
 
 def is_viewer(user: User) -> bool:
     return user.role == ROLE_VIEWER
+
+def is_client(user: User) -> bool:
+    return user.role in (ROLE_CLIENT, "CLIENT", "Client")
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
@@ -183,13 +187,13 @@ def enforce_company_isolation(
 
 def enforce_write_permission(current_user: User):
     """
-    Ensure Viewers cannot perform write/mutation operations.
+    Ensure Viewers and Clients cannot perform write/mutation operations.
     Engineers can perform limited self-service write operations.
     """
-    if is_viewer(current_user):
+    if is_viewer(current_user) or is_client(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Your role (Viewer) is read-only and does not have permission to modify data."
+            detail=f"Forbidden: Your role ({current_user.role}) is read-only and does not have permission to modify data."
         )
 
 def enforce_delete_permission(current_user: User):

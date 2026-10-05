@@ -9,7 +9,7 @@ from app.routers import (
     performance, leave, missed_schedule, dashboard, operational,
     reports, auth, users, upload, engineer_me, engineer_deletion_requests,
     admin, delete_requests, settings as settings_router, deployment_diary, company_theme,
-    ion_skills
+    ion_skills, client
 )
 
 # Setup logging
@@ -116,6 +116,7 @@ app.include_router(settings_router.router, prefix="/api")
 app.include_router(deployment_diary.router, prefix="/api")
 app.include_router(company_theme.router, prefix="/api")
 app.include_router(ion_skills.router, prefix="/api")
+app.include_router(client.router, prefix="/api")
 
 
 from fastapi.responses import JSONResponse

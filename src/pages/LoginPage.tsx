@@ -19,9 +19,13 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await login(userId, password);
+      const loggedInUser = await login(userId, password);
       setLoading(false);
-      navigate('/company-selection');
+      if (loggedInUser?.role === 'Client' || loggedInUser?.role === 'CLIENT') {
+        navigate('/client');
+      } else {
+        navigate('/company-selection');
+      }
     } catch (err: any) {
       setLoading(false);
       setError(err.message || 'Authentication failed. Please check your credentials.');

@@ -12,7 +12,11 @@ export type UserRole =
   | 'Global Admin'
   | 'Company Admin'
   | 'Resource Manager'
-  | 'Field Engineer';
+  | 'Field Engineer'
+  | 'Client'
+  | 'CLIENT';
+
+export * from './client';
 
 export interface AuditLog {
   audit_id: string;

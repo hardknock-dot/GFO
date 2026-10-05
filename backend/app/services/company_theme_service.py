@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 INITIAL_COMPANY_THEME_MAP = {
     UUID("11b9d863-b83c-4af3-8db5-b6e773f78235"): "lam",
     UUID("f81bd16c-2f63-4818-a653-7486fe3f45ec"): "axcelis",
+    UUID("725584e5-1708-40b3-a1d6-3ffbdca21316"): "axcelis",
     UUID("34d51cd0-fb63-4684-96a3-662477298678"): "vishay",
 }
 

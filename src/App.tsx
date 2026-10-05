@@ -39,6 +39,7 @@ import { OfflinePage } from './pages/OfflinePage';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 import { EngineerDashboardPage } from './pages/EngineerDashboardPage';
+import { ClientPortalPage } from './pages/ClientPortalPage';
 
 import {
   GuestRoute,
@@ -47,6 +48,7 @@ import {
   ViewerRoute,
   EngineerRoute,
   NonEngineerRoute,
+  ClientRoute,
   RoleGuard,
 } from './components/common/RouteGuards';
 
@@ -80,6 +82,13 @@ export const App: React.FC = () => {
                     {/* Main App Layout Persistent Routes */}
                     <Route element={<ProtectedRoute />}>
                       <Route path="/company-selection" element={<CompanySelectionPage />} />
+
+                      {/* Dedicated Client Read-Only Executive Presentation Portal */}
+                      <Route element={<ClientRoute />}>
+                        <Route path="/client" element={<ClientPortalPage />} />
+                        <Route path="/client/companies/:companyId" element={<ClientPortalPage />} />
+                      </Route>
+
                       <Route element={<AppLayout />}>
                         {/* Main Admin Legacy Redirect */}
                         <Route path="/admin" element={<Navigate to="/users" replace />} />

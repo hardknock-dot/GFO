@@ -455,11 +455,13 @@ function presetToCompanyTheme(preset: ThemePreset, id: string): CompanyTheme {
 export const DEFAULT_THEME = presetToCompanyTheme(PREDEFINED_THEMES.default, 'default');
 export const LAM_THEME = presetToCompanyTheme(PREDEFINED_THEMES.lam, '11b9d863-b83c-4af3-8db5-b6e773f78235');
 export const AXCELIS_THEME = presetToCompanyTheme(PREDEFINED_THEMES.axcelis, 'f81bd16c-2f63-4818-a653-7486fe3f45ec');
+export const AXCELIS_CCS_THEME = presetToCompanyTheme(PREDEFINED_THEMES.axcelis, '725584e5-1708-40b3-a1d6-3ffbdca21316');
 export const VISHAY_THEME = presetToCompanyTheme(PREDEFINED_THEMES.vishay, '34d51cd0-fb63-4684-96a3-662477298678');
 
 export const COMPANY_THEMES: Record<string, CompanyTheme> = {
   '11b9d863-b83c-4af3-8db5-b6e773f78235': LAM_THEME,
   'f81bd16c-2f63-4818-a653-7486fe3f45ec': AXCELIS_THEME,
+  '725584e5-1708-40b3-a1d6-3ffbdca21316': AXCELIS_CCS_THEME,
   '34d51cd0-fb63-4684-96a3-662477298678': VISHAY_THEME,
 };
 
@@ -467,7 +469,7 @@ export function getCompanyTheme(identifier?: string | null): CompanyTheme {
   if (!identifier) return DEFAULT_THEME;
   const trimmed = identifier.trim().toLowerCase();
   if (trimmed === 'lam' || identifier === '11b9d863-b83c-4af3-8db5-b6e773f78235') return LAM_THEME;
-  if (trimmed === 'axcelis' || identifier === 'f81bd16c-2f63-4818-a653-7486fe3f45ec') return AXCELIS_THEME;
+  if (trimmed === 'axcelis' || identifier === 'f81bd16c-2f63-4818-a653-7486fe3f45ec' || identifier === '725584e5-1708-40b3-a1d6-3ffbdca21316') return AXCELIS_THEME;
   if (trimmed === 'vishay' || identifier === '34d51cd0-fb63-4684-96a3-662477298678') return VISHAY_THEME;
   if (PREDEFINED_THEMES[trimmed]) return presetToCompanyTheme(PREDEFINED_THEMES[trimmed], trimmed);
   if (COMPANY_THEMES[identifier]) return COMPANY_THEMES[identifier];

@@ -137,6 +137,12 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
               {companies
                 .filter((comp) => {
                   if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
+                  if (user?.accessibleCompanies && user.accessibleCompanies.length > 0) {
+                    return (
+                      user.accessibleCompanies.includes(comp.id) ||
+                      user.accessibleCompanies.includes(comp.company_id)
+                    );
+                  }
                   return (
                     comp.id !== 'all-data' &&
                     comp.company_id !== 'all-data' &&

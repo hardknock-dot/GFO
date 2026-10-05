@@ -11,6 +11,9 @@ export const GuestRoute: React.FC<GuardProps> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
+    if (user?.role === 'Client' || user?.role === 'CLIENT') {
+      return <Navigate to="/client" replace />;
+    }
     const activeCompany = localStorage.getItem('ormp_active_company');
     if (activeCompany === 'all-data') {
       return <Navigate to="/all-data" replace />;
@@ -49,6 +52,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles, children }) 
   const isAllowed = user?.role === 'Main Admin' || user?.role === 'Global Admin' || (user && allowedRoles.includes(user.role));
 
   if (!isAllowed) {
+    if (user?.role === 'Client' || user?.role === 'CLIENT') {
+      return <Navigate to="/client" replace />;
+    }
     return <Navigate to="/403" replace />;
   }
 
@@ -93,9 +99,25 @@ export const NonEngineerRoute: React.FC<GuardProps> = ({ children }) => {
     return <Navigate to="/" replace />;
   }
 
+  if (user?.role === 'Client' || user?.role === 'CLIENT') {
+    return <Navigate to="/client" replace />;
+  }
+
   if (user?.role === 'Field Engineer' || user?.role === 'Engineer') {
     return <Navigate to="/engineer/dashboard" replace />;
   }
 
+  return children ? children : <Outlet />;
+};
+
+// Client Executive Portal Guard
+export const ClientRoute: React.FC<GuardProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // All authenticated users can view the client presentation portal if desired, especially Client and Admins
   return children ? children : <Outlet />;
 };

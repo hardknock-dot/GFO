@@ -64,6 +64,32 @@ export const PRESET_COMPANIES: Company[] = [
     theme_key: 'axcelis',
   },
   {
+    id: '725584e5-1708-40b3-a1d6-3ffbdca21316',
+    name: 'Axcelis(CCS)',
+    code: 'AXC(CCS)',
+    company_id: '725584e5-1708-40b3-a1d6-3ffbdca21316',
+    company_name: 'Axcelis(CCS)',
+    short_name: 'AXC(CCS)',
+    logo: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=120&auto=format&fit=crop&q=80',
+    tagline: 'Axcelis Contamination Control Solutions & Ion Services',
+    primaryColor: AXCELIS_THEME.primaryColor,
+    primaryHover: AXCELIS_THEME.primaryHover,
+    secondaryColor: AXCELIS_THEME.secondaryColor,
+    accentColor: AXCELIS_THEME.accentColor,
+    accentTransparent: 'rgba(162, 210, 255, 0.2)',
+    backgroundColor: AXCELIS_THEME.backgroundColor,
+    cardColor: AXCELIS_THEME.cardColor,
+    sidebarColor: AXCELIS_THEME.sidebarColor,
+    sidebarActiveColor: AXCELIS_THEME.sidebarActiveColor,
+    textColor: AXCELIS_THEME.textColor,
+    textMutedColor: AXCELIS_THEME.textMutedColor,
+    textSecondaryAccent: AXCELIS_THEME.textSecondaryAccent,
+    textOnPrimary: '#1E293B',
+    textMainReverse: '#1E293B',
+    borderColor: AXCELIS_THEME.borderColor,
+    theme_key: 'axcelis',
+  },
+  {
     id: '34d51cd0-fb63-4684-96a3-662477298678',
     name: 'Vishay Semiconductor',
     code: 'VISHAY',
@@ -146,6 +172,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const cid = company?.company_id || company?.id;
       if (cid === '11b9d863-b83c-4af3-8db5-b6e773f78235') key = 'lam';
       else if (cid === 'f81bd16c-2f63-4818-a653-7486fe3f45ec') key = 'axcelis';
+      else if (cid === '725584e5-1708-40b3-a1d6-3ffbdca21316') key = 'axcelis';
       else if (cid === '34d51cd0-fb63-4684-96a3-662477298678') key = 'vishay';
       else key = 'default';
     }

@@ -967,6 +967,7 @@ interface CompanyFormState {
                   'Ops Executive',
                   'Engineer',
                   'Viewer',
+                  'Client',
                 ]}
               />
             </div>
@@ -1315,6 +1316,7 @@ interface CompanyFormState {
                 'Ops Executive',
                 'Engineer',
                 'Viewer',
+                'Client',
               ]}
             />
           </div>
@@ -1477,6 +1479,7 @@ interface CompanyFormState {
                 'Ops Executive',
                 'Engineer',
                 'Viewer',
+                'Client',
               ]}
             />
           </div>

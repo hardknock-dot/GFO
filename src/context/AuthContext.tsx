@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   canEdit: boolean;
-  login: (email?: string, password?: string) => Promise<void>;
+  login: (email?: string, password?: string) => Promise<User>;
   logout: () => void;
   selectCompany: (companyId: string) => void;
 }
@@ -62,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setCompany(activeCompany);
     localStorage.setItem('ormp_active_company', activeCompany);
+    return result.user;
   };
 
   const logout = async () => {

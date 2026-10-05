@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCompany } from '../context/CompanyContext';
 import { useEngineers } from '../hooks/useEngineers';
 import { useSchedule } from '../hooks/useSchedule';
 import { useTravel } from '../hooks/useTravel';
@@ -28,6 +29,7 @@ import {
 
 export const AllDataPage: React.FC = () => {
   const navigate = useNavigate();
+  const { companies } = useCompany();
   const [activeModule, setActiveModule] = useState<'engineers' | 'schedules' | 'travel' | 'visas' | 'skills' | 'performance'>('engineers');
   const [search, setSearch] = useState('');
   const [companyFilter, setCompanyFilter] = useState('All');
@@ -229,7 +231,7 @@ export const AllDataPage: React.FC = () => {
           <Dropdown
             value={companyFilter}
             onChange={(e) => setCompanyFilter(e.target.value)}
-            options={['All', 'LAM Research', 'Axcelis']}
+            options={['All', ...companies.filter((c) => c.id !== 'all-data' && c.company_id !== 'all-data').map((c) => c.name || c.company_name)]}
           />
         </div>
       </div>
