@@ -282,7 +282,7 @@ def run_tests():
         assert geo["countries_count"] == 3
         c_names = [c["name"] for c in geo["countries"]]
         assert "Taiwan" in c_names
-        assert "USA" in c_names
+        assert "United States" in c_names
         assert "Japan" in c_names
         print("  [PASS] Geography country aggregation verified.")
 

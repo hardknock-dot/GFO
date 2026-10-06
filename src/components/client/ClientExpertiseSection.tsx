@@ -14,7 +14,7 @@ interface ClientExpertiseSectionProps {
 
 export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
   expertise,
-  presentationMode = false,
+  presentationMode: _presentationMode = false,
 }) => {
   const { processes = [], ion_tools = [] } = expertise;
   const [selectedProcess, setSelectedProcess] = useState<string>(processes[0]?.process_name || 'Etch');
@@ -22,35 +22,24 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
   const activeProcessData = processes.find((p) => p.process_name === selectedProcess) || processes[0];
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h2 className={`font-black tracking-tight text-[#283618] dark:text-[#FEFAE0] ${presentationMode ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'}`}>
-            Technology & Tool Expertise
-          </h2>
-          <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-medium">
-            Standardized semiconductor equipment taxonomy and tool certification matrix
-          </p>
-        </div>
-      </div>
-
-      {/* LAM Process & Product Taxonomy Showcase */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#E6E2C8] dark:border-slate-800 p-6 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E6E2C8] dark:border-slate-800 pb-4">
-          <div className="flex items-center space-x-2">
-            <Layers className="w-5 h-5 text-[#606C38]" />
+    <div className="space-y-6">
+      {/* Process & Product Taxonomy Showcase */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8F0] pb-4">
+          <div className="flex items-center space-x-2.5">
+            <Layers className="w-5 h-5 text-[#3B82C4]" />
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#283618] dark:text-white">
-                Process Taxonomy (Lam Research & Advanced Etch/Dep)
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#172B4D]">
+                Process Taxonomy & Equipment Families
               </h3>
-              <p className="text-[11px] text-stone-400">
+              <p className="text-[11px] text-[#64748B]">
                 Process Domain &rarr; Product Family &rarr; Specific Tool Models
               </p>
             </div>
           </div>
 
           {/* Process Category Tabs */}
-          <div className="flex items-center space-x-1.5 p-1 bg-[#FEFAE0] dark:bg-slate-800 rounded-xl border border-[#E6E2C8] dark:border-slate-700 overflow-x-auto">
+          <div className="flex items-center space-x-1.5 p-1 bg-[#F6F8FB] rounded-xl border border-[#E2E8F0] overflow-x-auto">
             {processes.map((proc) => {
               const isSelected = selectedProcess === proc.process_name;
               return (
@@ -59,13 +48,13 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
                   onClick={() => setSelectedProcess(proc.process_name)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isSelected
-                      ? 'bg-[#606C38] text-[#FEFAE0] shadow-sm'
-                      : 'text-stone-600 dark:text-stone-300 hover:text-[#283618] hover:bg-white/80 dark:hover:bg-slate-700'
+                      ? 'bg-[#172B4D] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#172B4D] hover:bg-white'
                   }`}
                 >
                   <span>{proc.process_name}</span>
                   <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? 'bg-[#283618] text-[#FEFAE0]' : 'bg-[#E6E2C8] text-[#283618]'
+                    isSelected ? 'bg-[#3B82C4] text-white' : 'bg-[#E2E8F0] text-[#172B4D]'
                   }`}>
                     {proc.total_engineers}
                   </span>
@@ -81,14 +70,14 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
             {activeProcessData.families.map((family) => (
               <div
                 key={family.family_name}
-                className="p-4 rounded-xl bg-[#FEFAE0]/40 dark:bg-slate-800/40 border border-[#E6E2C8] dark:border-slate-800 space-y-3"
+                className="p-4 rounded-xl bg-[#F6F8FB] border border-[#E2E8F0] space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[#283618] dark:text-[#FEFAE0] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#DDA15E]" />
+                  <span className="text-xs font-bold uppercase text-[#172B4D] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#3B82C4]" />
                     <span>{family.family_name}</span>
                   </span>
-                  <span className="text-[11px] font-mono font-bold text-[#606C38] dark:text-[#DDA15E] bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-[#E6E2C8] dark:border-slate-700">
+                  <span className="text-[11px] font-mono font-bold text-[#3B82C4] bg-white px-2 py-0.5 rounded-md border border-[#E2E8F0]">
                     {family.total_engineers} certified
                   </span>
                 </div>
@@ -97,12 +86,12 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
                   {family.products.map((prod, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-[#E6E2C8]/70 dark:border-slate-800 text-xs"
+                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#E2E8F0] text-xs shadow-2xs"
                     >
-                      <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      <span className="font-semibold text-[#172033]">
                         {prod.product_name}
                       </span>
-                      <span className="font-mono text-[11px] font-bold text-[#606C38] dark:text-[#DDA15E]">
+                      <span className="font-mono text-[11px] font-bold text-[#2E7D62]">
                         {prod.engineer_count} eng
                       </span>
                     </div>
@@ -116,21 +105,21 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
 
       {/* Axcelis Ion Skill & Experience Platform Matrix */}
       {ion_tools.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#E6E2C8] dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E6E2C8] dark:border-slate-800 pb-4">
-            <div className="flex items-center space-x-2">
-              <Cpu className="w-5 h-5 text-[#BC6C25]" />
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E8F0] pb-4">
+            <div className="flex items-center space-x-2.5">
+              <Cpu className="w-5 h-5 text-[#3B82C4]" />
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-[#283618] dark:text-white">
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#172B4D]">
                   Axcelis Technologies & Purion Ion Implantation Matrix
                 </h3>
-                <p className="text-[11px] text-stone-400">
+                <p className="text-[11px] text-[#64748B]">
                   Certified Ion Implant tool series (Purion XE, H2/H3/H5, M-Series, Optima)
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#BC6C25] bg-[#FEFAE0] dark:bg-slate-800 px-3 py-1 rounded-xl border border-[#E6E2C8] dark:border-slate-700">
-              <Award className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#172B4D] bg-[#F1F5F9] px-3 py-1 rounded-xl border border-[#E2E8F0]">
+              <Award className="w-3.5 h-3.5 text-[#3B82C4]" />
               <span>ION Certified Tool Matrix</span>
             </div>
           </div>
@@ -139,19 +128,19 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
             {ion_tools.map((tool, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-[#FEFAE0]/30 dark:bg-slate-800/40 border border-[#E6E2C8] dark:border-slate-800 hover:border-[#606C38] dark:hover:border-[#DDA15E] transition-all flex flex-col justify-between space-y-2 group"
+                className="p-3.5 rounded-xl bg-[#F6F8FB] border border-[#E2E8F0] hover:border-[#3B82C4] hover:bg-white transition-all flex flex-col justify-between space-y-2 group shadow-2xs"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#283618] dark:text-white group-hover:text-[#606C38] dark:group-hover:text-[#DDA15E] transition-colors">
+                    <span className="text-xs font-bold text-[#172B4D] group-hover:text-[#3B82C4] transition-colors">
                       {tool.tool_name}
                     </span>
-                    <span className="text-xs font-black font-mono text-[#606C38] dark:text-[#DDA15E] bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-[#E6E2C8] dark:border-slate-700">
+                    <span className="text-xs font-black font-mono text-[#3B82C4] bg-white px-2 py-0.5 rounded-md border border-[#E2E8F0]">
                       {tool.engineer_count} eng
                     </span>
                   </div>
                   {tool.series && (
-                    <span className="text-[10px] text-stone-400 font-medium block mt-0.5">
+                    <span className="text-[10px] text-[#64748B] font-medium block mt-0.5">
                       Series: {tool.series}
                     </span>
                   )}
@@ -162,7 +151,7 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
                   {Object.entries(tool.level_counts).map(([lvl, cnt]) => (
                     <span
                       key={lvl}
-                      className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-white dark:bg-slate-900 text-stone-600 dark:text-stone-300 border border-[#E6E2C8] dark:border-slate-700"
+                      className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-white text-[#64748B] border border-[#E2E8F0]"
                     >
                       {lvl}: {cnt}
                     </span>
@@ -173,6 +162,6 @@ export const ClientExpertiseSection: React.FC<ClientExpertiseSectionProps> = ({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 };
