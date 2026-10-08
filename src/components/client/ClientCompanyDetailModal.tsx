@@ -71,13 +71,19 @@ export const ClientCompanyDetailModal: React.FC<ClientCompanyDetailModalProps> =
                 />
               </div>
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl sm:text-2xl font-black text-[#172B4D]">
                     {company.company_name}
                   </h2>
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#EAF5F0] text-[#2E7D62] font-bold border border-[#2E7D62]/20 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-[#2E7D62]" />
-                    Active Partner
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1 ${
+                    (company.program_status || '').includes('OEM')
+                      ? 'bg-[#EAF5F0] text-[#2E7D62] border-[#2E7D62]/20'
+                      : (company.program_status || '').includes('Active')
+                      ? 'bg-[#EBF3FB] text-[#3B82C4] border-[#3B82C4]/20'
+                      : 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]'
+                  }`}>
+                    <CheckCircle2 className="w-3 h-3" />
+                    {company.program_status || 'Active Partner'}
                   </span>
                 </div>
                 <p className="text-xs font-medium text-[#64748B]">

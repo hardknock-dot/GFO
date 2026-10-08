@@ -157,6 +157,15 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                       setCompany(targetId);
                       selectCompany(targetId);
                       setCompanyMenuOpen(false);
+                      if (targetId === 'all-data') {
+                        navigate('/all-data');
+                      } else if (user?.role === 'Field Engineer' || user?.role === 'Engineer') {
+                        navigate('/engineer/dashboard');
+                      } else if (user?.role === 'Client') {
+                        navigate('/client');
+                      } else {
+                        navigate('/dashboard');
+                      }
                     }}
                     className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${currentCompany.id === comp.id || currentCompany.company_id === comp.company_id
                         ? 'bg-[var(--color-card)] font-bold text-[var(--color-primary)]'

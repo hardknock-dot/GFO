@@ -27,6 +27,7 @@ export interface ClientCompanyShowcaseItem {
   logo?: string;
   primary_color?: string;
   theme_key?: string;
+  program_status?: string;
   engineer_count: number;
   active_engineer_count: number;
   deployment_count: number;
@@ -130,6 +131,8 @@ export interface ClientDeploymentsResponse {
   average_duration_days: number;
   longest_deployment_days: number;
   engineers_with_multiple_deployments: number;
+  valid_duration_records_count?: number;
+  excluded_duration_records_count?: number;
   deployments_by_year: DeploymentYearMetric[];
   duration_buckets: DurationBucket[];
   deployments_by_type: DeploymentTypeMetric[];

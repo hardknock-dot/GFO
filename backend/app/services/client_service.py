@@ -346,7 +346,7 @@ def get_client_overview(
 
         # Fallback to Ion tool if Axcelis
         if cid == ION_COMPANY_ID:
-            comp_tools[cid].add("Purion Ion Implant")
+            comp_tools[cid].add("Axcelis Purion Series")
 
     for s in schedules:
         cid = eng_id_to_comp.get(s.engineer_id)
@@ -407,6 +407,19 @@ def get_client_overview(
         else:
             op_period = "New Partner Program"
 
+        if cid == UUID("11b9d863-b83c-4af3-8db5-b6e773f78235"):
+            prog_status = "Active OEM Partner"
+        elif cid in (ION_COMPANY_ID, UUID("725584e5-1708-40b3-a1d6-3ffbdca21316")):
+            prog_status = "Active Partner Program"
+        elif cid == UUID("34d51cd0-fb63-4684-96a3-662477298678"):
+            prog_status = "New Partner Program Onboarding"
+        elif c_dep_cnt > 0:
+            prog_status = "Active OEM Partner"
+        elif c_eng_cnt > 0:
+            prog_status = "Active Partner Program"
+        else:
+            prog_status = "New Partner Program Onboarding"
+
         top_tools = sorted(list(comp_tools.get(cid, set())))[:4]
 
         company_cards.append(ClientCompanyShowcaseItem(
@@ -417,6 +430,7 @@ def get_client_overview(
             logo=c.logo or meta.get("logo"),
             primary_color=meta.get("primary_color", "#172B4D"),
             theme_key=getattr(c, "theme_key", None) or meta.get("theme_key", "default"),
+            program_status=prog_status,
             engineer_count=c_eng_cnt,
             active_engineer_count=comp_active_eng_counts.get(cid, 0),
             deployment_count=c_dep_cnt,
@@ -478,17 +492,18 @@ def get_client_workforce(
     tool_eng_map: Dict[str, Set[UUID]] = defaultdict(set)
     for sk in skills:
         if sk.tool_type:
-            raw_t = sk.tool_type.strip()
-            tax = TAXONOMY_MAP.get(raw_t.lower())
+            raw_t = sk.tool_type.strip().replace("\n", " ")
+            cleaned_t = " ".join(raw_t.split()).lower()
+            tax = TAXONOMY_MAP.get(cleaned_t)
             if tax and tax.get("family"):
                 tool_eng_map[tax["family"]].add(sk.engineer_id)
-            elif raw_t.lower() not in ("dep", "etch", "clean", "dry etch", "line support"):
+            elif cleaned_t not in ("dep", "etch", "clean", "dry etch", "line support"):
                 tool_eng_map[raw_t.title()].add(sk.engineer_id)
 
     # For ION engineers, track Purion Ion Implant capability
     for eng in engineers:
-        if eng.company_id == ION_COMPANY_ID:
-            tool_eng_map["Purion Ion Implant"].add(eng.engineer_id)
+        if eng.company_id == ION_COMPANY_ID and eng.primary_tool_type and "purion" in eng.primary_tool_type.lower():
+            tool_eng_map["Axcelis Purion Ion Implantation"].add(eng.engineer_id)
 
     total = len(engineers)
     active_cnt = 0
@@ -578,20 +593,19 @@ def get_client_expertise(
     def process_tool_string(raw_str: str, eid: UUID):
         if not raw_str:
             return
-        cleaned = raw_str.strip().lower()
+        cleaned = " ".join(raw_str.strip().replace("\n", " ").split()).lower()
         tax = TAXONOMY_MAP.get(cleaned)
         if tax:
             proc = tax.get("process") or "Other"
             fam = tax.get("family") or "General"
             prod = tax.get("product") or raw_str.strip().title()
-            variant = tax.get("variant")
-            prod_key = f"{prod} ({variant})" if variant else prod
+            prod_key = prod
 
             taxonomy_hierarchy[proc][fam][prod_key].add(eid)
             process_engs[proc].add(eid)
             family_engs[fam].add(eid)
         else:
-            proc = "Etch" if "etch" in cleaned else ("Deposition" if any(k in cleaned for k in ("dep", "cvd", "ald", "vector", "altus", "sabre")) else ("Strip & Clean" if any(k in cleaned for k in ("clean", "eos", "dv")) else "Semiconductor Process"))
+            proc = "Etch" if "etch" in cleaned else ("Deposition" if any(k in cleaned for k in ("dep", "cvd", "ald", "vector", "altus", "sabre", "striker")) else ("Strip & Clean" if any(k in cleaned for k in ("clean", "eos", "dv")) else "Other Capability"))
             fam = raw_str.strip().title()
             prod_key = raw_str.strip().title()
             taxonomy_hierarchy[proc][fam][prod_key].add(eid)
@@ -639,27 +653,23 @@ def get_client_expertise(
             select(IonSkillTool).where(IonSkillTool.is_active.is_(True)).order_by(IonSkillTool.display_order.asc())
         ).all())
 
+        assessments = list(db.scalars(
+            select(IonSkillAssessment).where(IonSkillAssessment.engineer_id.in_(eng_ids))
+        ).all()) if eng_ids else []
+
         tool_eng_set: Dict[UUID, Set[UUID]] = defaultdict(set)
         tool_level_counts: Dict[UUID, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
-        experiences = list(db.scalars(
-            select(IonSkillExperience).where(IonSkillExperience.is_active.is_(True))
-        ).all())
-        for exp in experiences:
-            tool_eng_set[exp.tool_id].add(exp.engineer_id)
-            if exp.level:
-                tool_level_counts[exp.tool_id][exp.level] += 1
-
-        ion_engineers_count = sum(1 for e in engineers if e.company_id == ION_COMPANY_ID)
+        for a in assessments:
+            tool_eng_set[a.tool_id].add(a.engineer_id)
+            tool_level_counts[a.tool_id][f"Level {a.skill_level}"] += 1
 
         for it in ion_tools:
             e_count = len(tool_eng_set.get(it.tool_id, set()))
-            if e_count == 0:
-                e_count = ion_engineers_count
             ion_tools_list.append(IonToolExpertiseItem(
                 tool_id=it.tool_id,
                 tool_name=it.tool_name,
-                series=it.series,
+                series=getattr(it, "series", None),
                 display_order=it.display_order,
                 engineer_count=e_count,
                 level_counts=dict(tool_level_counts.get(it.tool_id, {})),
@@ -689,6 +699,8 @@ def get_client_deployments(
             average_duration_days=0.0,
             longest_deployment_days=0,
             engineers_with_multiple_deployments=0,
+            valid_duration_records_count=0,
+            excluded_duration_records_count=0,
             deployments_by_year=[],
             duration_buckets=[],
             deployments_by_type=[],
@@ -795,6 +807,8 @@ def get_client_deployments(
         average_duration_days=avg_duration,
         longest_deployment_days=longest_valid_days,
         engineers_with_multiple_deployments=multiple_deployments_engs,
+        valid_duration_records_count=valid_durations_count,
+        excluded_duration_records_count=max(total_deployments - valid_durations_count, 0),
         deployments_by_year=by_year,
         duration_buckets=duration_buckets,
         deployments_by_type=by_type,

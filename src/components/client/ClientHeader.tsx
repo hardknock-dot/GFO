@@ -35,10 +35,10 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E2E8F0] shadow-xs transition-all duration-200">
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-10 h-18 flex items-center justify-between gap-4">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-10 h-22 sm:h-24 flex items-center justify-between gap-4">
         {/* Left: Orbit & Skyline Brand */}
         <div className="flex items-center space-x-3.5 sm:space-x-4">
-          <div className="h-10 w-32 px-2 py-1 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-center shadow-xs overflow-hidden shrink-0">
+          <div className="h-12 sm:h-14 w-36 sm:w-44 px-2.5 py-1.5 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-center shadow-xs overflow-hidden shrink-0">
             <img
               src={skylineLogoImg}
               alt="Orbit & Skyline"
@@ -47,14 +47,14 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-[#172B4D] flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#172B4D] flex items-center gap-2.5">
                 <span>ORBIT & SKYLINE</span>
                 <span className="hidden sm:inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EBF3FB] text-[#3B82C4] border border-[#3B82C4]/30 uppercase tracking-wider">
                   Executive Portal
                 </span>
               </h1>
             </div>
-            <p className="text-xs text-[#64748B] font-medium hidden md:block">
+            <p className="text-xs text-[#64748B] font-medium hidden md:block mt-0.5">
               Semiconductor Engineering Capability & Operations Showcase
             </p>
           </div>

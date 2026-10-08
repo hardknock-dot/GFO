@@ -201,7 +201,7 @@ export const ClientPortalPage: React.FC = () => {
 
         {/* Presentation Mode Compact Header Bar */}
         {presentationMode && (
-          <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl border border-[#E2E8F0] flex items-center justify-between shadow-md">
+          <div className="sticky top-24 z-30 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl border border-[#E2E8F0] flex items-center justify-between shadow-md">
             <div className="flex items-center space-x-1.5 overflow-x-auto">
               {navTabs.map((tab) => (
                 <button
@@ -298,7 +298,7 @@ export const ClientPortalPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-lg sm:text-xl font-bold text-[#172B4D]">Deployment Experience</h2>
-                      <p className="text-xs text-[#64748B]">Mission duration and field assignment history</p>
+                      <p className="text-xs text-[#64748B]">Mission duration and deployment history</p>
                     </div>
                     <button
                       onClick={() => setActiveTab('deployments')}

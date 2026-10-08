@@ -31,6 +31,7 @@ class ClientCompanyShowcaseItem(BaseModel):
     logo: Optional[str] = None
     primary_color: Optional[str] = None
     theme_key: Optional[str] = "default"
+    program_status: str = "Active OEM Partner"
     engineer_count: int
     active_engineer_count: int
     deployment_count: int
@@ -120,6 +121,8 @@ class ClientDeploymentsResponse(BaseModel):
     average_duration_days: float
     longest_deployment_days: int
     engineers_with_multiple_deployments: int
+    valid_duration_records_count: int = 0
+    excluded_duration_records_count: int = 0
     deployments_by_year: List[DeploymentYearMetric]
     duration_buckets: List[DurationBucket]
     deployments_by_type: List[DeploymentTypeMetric]

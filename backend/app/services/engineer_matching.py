@@ -31,16 +31,17 @@ TAXONOMY_MAP: Dict[str, Dict[str, Optional[str]]] = {
     "kiyo fx": {"process": "Etch", "family": "Kiyo", "product": "Kiyo FX", "variant": None},
     "kiyo gp": {"process": "Etch", "family": "Kiyo", "product": "Kiyo GP", "variant": None},
     "kiyo fxt": {"process": "Etch", "family": "Kiyo", "product": "Kiyo FX", "variant": "Kiyo FXT"},
-    "kiyo series": {"process": "Etch", "family": "Kiyo", "product": None, "variant": None},
-    "kiyo": {"process": "Etch", "family": "Kiyo", "product": None, "variant": None},
-    "kiyo (line support)": {"process": "Etch", "family": "Kiyo", "product": None, "variant": None},
-    "2300 kio g series gx e6 conductor etch poly": {"process": "Etch", "family": "Kiyo", "product": "Kiyo GX", "variant": "2300 KIO G SERIES GX E6"},
-    "2300 kio g series gp e6 conductor etch poly": {"process": "Etch", "family": "Kiyo", "product": "Kiyo GP", "variant": "2300 KIO G SERIES GP E6"},
+    "kiyo series": {"process": "Etch", "family": "Kiyo", "product": "Kiyo Series", "variant": None},
+    "kiyo": {"process": "Etch", "family": "Kiyo", "product": "Kiyo Series", "variant": None},
+    "kiyo (line support)": {"process": "Etch", "family": "Kiyo", "product": "Kiyo Series", "variant": "Line Support"},
+    "2300 kio g series gx e6 conductor etch poly": {"process": "Etch", "family": "Kiyo", "product": "Kiyo GX", "variant": "GX E6"},
+    "2300 kio g series gp e6 conductor etch poly": {"process": "Etch", "family": "Kiyo", "product": "Kiyo GP", "variant": "GP E6"},
+    "dry etch-rk6 cip+": {"process": "Etch", "family": "Rainbow / TCP", "product": "Rainbow RK6", "variant": "CIP+"},
 
     # Flex Family
-    "flex": {"process": "Etch", "family": "Flex", "product": None, "variant": None},
-    "flex hx plus": {"process": "Etch", "family": "Flex", "product": "Flex HX", "variant": "FLEX HX PLUS"},
-    "flex tool - dry etch": {"process": "Etch", "family": "Flex", "product": None, "variant": None},
+    "flex": {"process": "Etch", "family": "Flex", "product": "Flex Series", "variant": None},
+    "flex hx plus": {"process": "Etch", "family": "Flex", "product": "Flex HX", "variant": "HX Plus"},
+    "flex tool - dry etch": {"process": "Etch", "family": "Flex", "product": "Flex Series", "variant": None},
 
     # Sense.i Family
     "sense i akara": {"process": "Etch", "family": "Sense.i", "product": "Sense.i Akara", "variant": None},
@@ -58,6 +59,9 @@ TAXONOMY_MAP: Dict[str, Dict[str, Optional[str]]] = {
     "sabre 3d": {"process": "Deposition", "family": "Sabre", "product": "Sabre 3D", "variant": None},
     "sabre 3d scmittar": {"process": "Deposition", "family": "Sabre", "product": "Sabre 3D", "variant": "Scmittar"},
 
+    # Striker Family
+    "striker halo fxm, lak": {"process": "Deposition", "family": "Striker", "product": "Striker Halo", "variant": "FXM"},
+
     # DEPOSITION PROCESS
     # Vector Family
     "vector excel": {"process": "Deposition", "family": "Vector", "product": "Vector Excel", "variant": None},
@@ -65,42 +69,46 @@ TAXONOMY_MAP: Dict[str, Dict[str, Optional[str]]] = {
     "vector strata gxe": {"process": "Deposition", "family": "Vector", "product": "Vector Strata GXE", "variant": None},
     "lam vector extreme": {"process": "Deposition", "family": "Vector", "product": "Vector Extreme", "variant": None},
     "vector extreme strata": {"process": "Deposition", "family": "Vector", "product": "Vector Extreme", "variant": "Strata"},
-    "vector extreme i core": {"process": "Deposition", "family": "Vector", "product": "Vector Extreme", "variant": "I core"},
+    "vector extreme i core": {"process": "Deposition", "family": "Vector", "product": "Vector Extreme", "variant": "I Core"},
     "vector dt ex": {"process": "Deposition", "family": "Vector", "product": "Vector DT EX", "variant": None},
     "vector versa g, cks": {"process": "Deposition", "family": "Vector", "product": "Vector Versa G", "variant": "CKS"},
+    "ahm hx": {"process": "Deposition", "family": "Vector", "product": "Vector AHM", "variant": "AHM HX"},
+    "vector ahm_hxe": {"process": "Deposition", "family": "Vector", "product": "Vector AHM", "variant": "AHM HXE"},
+    "vector extreme strata/ahm": {"process": "Deposition", "family": "Vector", "product": "Vector Extreme", "variant": "Strata / AHM"},
 
     # Altus Family
-    "altus": {"process": "Deposition", "family": "Altus", "product": None, "variant": None},
+    "altus": {"process": "Deposition", "family": "Altus", "product": "Altus Series", "variant": None},
     "altus lfw": {"process": "Deposition", "family": "Altus", "product": "Altus LFW", "variant": None},
     "c3 altus max": {"process": "Deposition", "family": "Altus", "product": "Altus MAX", "variant": None},
     "c3 altus halo hx": {"process": "Deposition", "family": "Altus", "product": "Altus Halo HX", "variant": None},
 
     # STRIP & CLEAN PROCESS
     # EOS Family
-    "eos": {"process": "Strip & Clean", "family": "EOS", "product": None, "variant": None},
+    "eos": {"process": "Strip & Clean", "family": "EOS", "product": "EOS Series", "variant": None},
     "clean eos ds-l": {"process": "Strip & Clean", "family": "EOS", "product": "Clean EOS DS-L", "variant": None},
     "clean eos-gs-l": {"process": "Strip & Clean", "family": "EOS", "product": "Clean EOS-GS-L", "variant": None},
     "eos-ds": {"process": "Strip & Clean", "family": "EOS", "product": "EOS-DS", "variant": None},
-    "clean tool-eos": {"process": "Strip & Clean", "family": "EOS", "product": None, "variant": None},
+    "clean tool-eos": {"process": "Strip & Clean", "family": "EOS", "product": "EOS Series", "variant": None},
 
     # DV-Prime Family
-    "dv": {"process": "Strip & Clean", "family": "DV-Prime", "product": None, "variant": None},
+    "dv": {"process": "Strip & Clean", "family": "DV-Prime", "product": "DV-Prime Series", "variant": None},
     "dv-38": {"process": "Strip & Clean", "family": "DV-Prime", "product": "DV-38", "variant": None},
-    "dvd tool": {"process": "Strip & Clean", "family": "DV-Prime", "product": None, "variant": None},
-    "clean tool dvp": {"process": "Strip & Clean", "family": "DV-Prime", "product": None, "variant": None},
-    "clean dv prime": {"process": "Strip & Clean", "family": "DV-Prime", "product": None, "variant": None},
+    "dvd tool": {"process": "Strip & Clean", "family": "DV-Prime", "product": "DVD Series", "variant": None},
+    "clean tool dvp": {"process": "Strip & Clean", "family": "DV-Prime", "product": "DV-Prime Series", "variant": None},
+    "clean dv prime": {"process": "Strip & Clean", "family": "DV-Prime", "product": "DV-Prime Series", "variant": None},
 
     # Generic Processes
-    "etch": {"process": "Etch", "family": None, "product": None, "variant": None},
-    "dry etch": {"process": "Etch", "family": None, "product": None, "variant": None},
-    "dep": {"process": "Deposition", "family": None, "product": None, "variant": None},
-    "deposition": {"process": "Deposition", "family": None, "product": None, "variant": None},
-    "clean": {"process": "Strip & Clean", "family": None, "product": None, "variant": None},
-    "strip & clean": {"process": "Strip & Clean", "family": None, "product": None, "variant": None},
+    "etch": {"process": "Etch", "family": "General Etch", "product": "Etch Systems", "variant": None},
+    "dry etch": {"process": "Etch", "family": "General Etch", "product": "Dry Etch Systems", "variant": None},
+    "dep": {"process": "Deposition", "family": "General Deposition", "product": "Deposition Systems", "variant": None},
+    "deposition": {"process": "Deposition", "family": "General Deposition", "product": "Deposition Systems", "variant": None},
+    "clean": {"process": "Strip & Clean", "family": "General Clean", "product": "Clean Systems", "variant": None},
+    "strip & clean": {"process": "Strip & Clean", "family": "General Clean", "product": "Strip & Clean Systems", "variant": None},
+    "line support": {"process": "Line Support", "family": "Fab Line Operations", "product": "Fab Line Support", "variant": None},
 
     # Ion Implantation
-    "ion implant - purion": {"process": "Ion Implantation", "family": "Purion", "product": None, "variant": None},
-    "purion": {"process": "Ion Implantation", "family": "Purion", "product": None, "variant": None},
+    "ion implant - purion": {"process": "Ion Implantation", "family": "Purion", "product": "Axcelis Purion Ion Implant", "variant": None},
+    "purion": {"process": "Ion Implantation", "family": "Purion", "product": "Axcelis Purion Ion Implant", "variant": None},
 }
 
 AMBIGUOUS_RAW_STRINGS = {
@@ -108,9 +116,7 @@ AMBIGUOUS_RAW_STRINGS = {
     "kiyo gx, kiyo fx",
     "kiyo gx/fx",
     "flex hx plus & flex gb",
-    "striker halo fxm, lak",
     "ahm hx, wdc",
-    "vector extreme strata/ahm",
     "sense.i e10, akara / vantex conductor etch poly di electric etch oxide"
 }
 

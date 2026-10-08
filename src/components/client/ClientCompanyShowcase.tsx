@@ -31,6 +31,39 @@ export const ClientCompanyShowcase: React.FC<ClientCompanyShowcaseProps> = ({
     return comp.logo || lamLogoImg;
   };
 
+  const getStatusBadge = (comp: ClientCompanyShowcaseItem) => {
+    const status = comp.program_status || (
+      comp.deployment_count > 0
+        ? 'Active OEM Partner'
+        : comp.engineer_count > 0
+        ? 'Active Partner Program'
+        : 'New Partner Program Onboarding'
+    );
+
+    if (status.includes('OEM')) {
+      return (
+        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#EAF5F0] text-[#2E7D62] text-[11px] font-bold border border-[#2E7D62]/20">
+          <CheckCircle2 className="w-3 h-3 text-[#2E7D62]" />
+          <span>{status}</span>
+        </div>
+      );
+    }
+    if (status.includes('Active')) {
+      return (
+        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#EBF3FB] text-[#3B82C4] text-[11px] font-bold border border-[#3B82C4]/20">
+          <CheckCircle2 className="w-3 h-3 text-[#3B82C4]" />
+          <span>{status}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#F1F5F9] text-[#64748B] text-[11px] font-bold border border-[#CBD5E1]">
+        <Info className="w-3 h-3 text-[#64748B]" />
+        <span>{status}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -55,10 +88,7 @@ export const ClientCompanyShowcase: React.FC<ClientCompanyShowcaseProps> = ({
                       className="max-h-full max-w-full object-contain"
                     />
                   </div>
-                  <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#EAF5F0] text-[#2E7D62] text-[11px] font-bold border border-[#2E7D62]/20">
-                    <CheckCircle2 className="w-3 h-3 text-[#2E7D62]" />
-                    <span>Active OEM</span>
-                  </div>
+                  {getStatusBadge(comp)}
                 </div>
 
                 {/* Company Name & Tagline */}

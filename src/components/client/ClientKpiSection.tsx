@@ -46,7 +46,7 @@ export const ClientKpiSection: React.FC<ClientKpiSectionProps> = ({ kpi, present
     {
       title: 'Global Countries',
       value: kpi.countries_covered,
-      explanation: 'Active fab territories covered',
+      explanation: 'Countries with Deployment Experience',
       icon: Globe2,
       iconColor: 'text-[#6B9080]',
       iconBg: 'bg-[#EFF5F3]',
@@ -55,7 +55,7 @@ export const ClientKpiSection: React.FC<ClientKpiSectionProps> = ({ kpi, present
     {
       title: 'Deployment Days',
       value: kpi.total_deployment_days > 0 ? kpi.total_deployment_days.toLocaleString() : '—',
-      explanation: 'Accumulated field support days',
+      explanation: 'Accumulated across validated deployment records',
       icon: Clock,
       iconColor: 'text-[#172B4D]',
       iconBg: 'bg-[#F1F5F9]',

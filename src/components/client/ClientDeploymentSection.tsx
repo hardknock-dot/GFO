@@ -23,13 +23,18 @@ export const ClientDeploymentSection: React.FC<ClientDeploymentSectionProps> = (
     completed_deployments = 0,
     ongoing_deployments = 0,
     future_deployments = 0,
+    total_deployment_days = 0,
     average_duration_days = 0,
     longest_deployment_days = 0,
     engineers_with_multiple_deployments = 0,
+    valid_duration_records_count,
+    excluded_duration_records_count,
     deployments_by_year = [],
     duration_buckets = [],
   } = deployments;
 
+  const validCount = valid_duration_records_count ?? duration_buckets.reduce((acc, b) => acc + b.count, 0);
+  const excludedCount = excluded_duration_records_count ?? Math.max(total_deployments - validCount, 0);
   const maxYearDeployments = Math.max(...deployments_by_year.map((y) => y.deployments), 1);
 
   return (
@@ -98,7 +103,9 @@ export const ClientDeploymentSection: React.FC<ClientDeploymentSectionProps> = (
             <div className="text-2xl sm:text-3xl font-black text-[#172B4D]">
               {average_duration_days} <span className="text-xs font-semibold text-[#64748B]">days</span>
             </div>
-            <p className="text-[11px] text-[#64748B]">Calculated from validated deployment telemetry</p>
+            <p className="text-[11px] text-[#64748B]">
+              Calculated across {validCount} valid deployment records ({total_deployment_days.toLocaleString()} total operational days)
+            </p>
           </div>
           <div className="p-3 rounded-2xl bg-[#EBF3FB] text-[#3B82C4]">
             <Timer className="w-6 h-6" />
@@ -177,12 +184,17 @@ export const ClientDeploymentSection: React.FC<ClientDeploymentSectionProps> = (
         </div>
 
         {/* Duration Buckets Breakdown */}
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-4">
+          <div className="space-y-1 border-b border-[#E2E8F0] pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#172B4D] flex items-center gap-2">
               <Clock className="w-4 h-4 text-[#3B82C4]" />
-              <span>Duration Distribution</span>
+              <span>Duration Distribution — {validCount} Valid Deployment Records</span>
             </h3>
+            {excludedCount > 0 && (
+              <p className="text-[10px] text-[#64748B] font-medium">
+                {excludedCount} deployments excluded due to incomplete/invalid duration data
+              </p>
+            )}
           </div>
 
           <div className="space-y-3 pt-1">
