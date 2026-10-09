@@ -166,7 +166,10 @@ def get_delete_requests_paginated(
     query = select(DeleteRequest)
     conditions = []
     if company_ids is not None:
-        conditions.append(DeleteRequest.company_id.in_(company_ids))
+        if isinstance(company_ids, (list, tuple, set)):
+            conditions.append(DeleteRequest.company_id.in_(company_ids))
+        else:
+            conditions.append(DeleteRequest.company_id == company_ids)
     if status_filter:
         conditions.append(DeleteRequest.status == status_filter.upper())
     

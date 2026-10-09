@@ -81,6 +81,8 @@ def list_delete_requests(
 
     target_cids = company_ids if company_ids is not None else ([company_id] if company_id else None)
     validated_cids = enforce_company_isolation(db, current_user, target_cids)
+    if isinstance(validated_cids, UUID):
+        validated_cids = [validated_cids]
     res = delete_request_service.get_delete_requests_paginated(
         db,
         company_ids=validated_cids,

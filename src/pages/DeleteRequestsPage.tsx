@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, CheckCircle2, XCircle, Clock, Search, AlertCircle } from 'lucide-react';
+import { CheckSquare, CheckCircle2, XCircle, Clock, Search, AlertCircle, Building2 } from 'lucide-react';
 import api from '../services/axios';
 import type { GeneralDeleteRequest } from '../types';
+import { useCompany } from '../context/CompanyContext';
 
 export const DeleteRequestsPage: React.FC = () => {
+  const { currentCompany } = useCompany();
+  const activeCompanyId = currentCompany?.company_id || currentCompany?.id;
+
   const [requests, setRequests] = useState<GeneralDeleteRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
@@ -18,6 +22,7 @@ export const DeleteRequestsPage: React.FC = () => {
     try {
       const params: any = {};
       if (statusFilter !== 'ALL') params.status = statusFilter;
+      if (activeCompanyId) params.company_id = activeCompanyId;
       const res = await api.get('/delete-requests', { params });
       const data = res.data?.items ?? (Array.isArray(res.data) ? res.data : []);
       setRequests(data);
@@ -30,7 +35,7 @@ export const DeleteRequestsPage: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
-  }, [statusFilter]);
+  }, [statusFilter, activeCompanyId]);
 
   const handleApprove = async (requestId: string) => {
     setActionLoading(true);
@@ -66,6 +71,9 @@ export const DeleteRequestsPage: React.FC = () => {
   };
 
   const filteredRequests = requests.filter((r) => {
+    if (activeCompanyId && r.company_id && r.company_id !== activeCompanyId) {
+      return false;
+    }
     const term = search.toLowerCase();
     return (
       (r.entity_name || '').toLowerCase().includes(term) ||
@@ -85,8 +93,18 @@ export const DeleteRequestsPage: React.FC = () => {
               <CheckSquare className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-stone-900">Delete Request Governance</h1>
-              <p className="text-xs text-stone-500">Manager & Admin Deletion Request Approval Queue</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-stone-900">Delete Request Governance</h1>
+                {currentCompany?.company_name && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-accent-soft)] text-[var(--color-primary)] border border-[var(--color-border)]">
+                    <Building2 className="w-3 h-3" />
+                    {currentCompany.company_name}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-stone-500">
+                Manager & Admin Deletion Request Approval Queue {currentCompany?.company_name ? `for ${currentCompany.company_name}` : ''}
+              </p>
             </div>
           </div>
         </div>
@@ -159,7 +177,7 @@ export const DeleteRequestsPage: React.FC = () => {
               ) : filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-stone-400">
-                    No delete requests found matching the current filter.
+                    No delete requests found for {currentCompany?.company_name || 'the selected company'} matching the current filter.
                   </td>
                 </tr>
               ) : (
