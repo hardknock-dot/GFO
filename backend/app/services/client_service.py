@@ -11,6 +11,7 @@ from app.models.company import Company
 from app.models.engineer import Engineer
 from app.models.schedule import Schedule
 from app.models.skill import Skill
+from app.models.leave import Leave
 from app.models.ion_skill import IonSkillTool, IonSkillExperience, IonSkillAssessment
 from app.models.user import User
 from app.services.auth_service import get_user_authorized_company_ids, enforce_company_isolation

@@ -62,7 +62,7 @@ export const ClientPortalPage: React.FC = () => {
   // Fetch API queries
   const { data: overviewData } = useClientOverview(selectedCompanyFilter || undefined);
   const { data: companiesData } = useClientCompanies();
-  const { data: workforceData } = useClientWorkforce(selectedCompanyFilter || undefined);
+  const { data: workforceData, isLoading: isLoadingWorkforce } = useClientWorkforce(selectedCompanyFilter || undefined);
   const { data: expertiseData } = useClientExpertise(selectedCompanyFilter || undefined);
   const { data: deploymentsData } = useClientDeployments(selectedCompanyFilter || undefined);
   const { data: geographyData } = useClientGeography(selectedCompanyFilter || undefined);
@@ -266,24 +266,28 @@ export const ClientPortalPage: React.FC = () => {
               </section>
 
               {/* Engineering Workforce - Full Width Section */}
-              {workforceData && (
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-bold text-[#172B4D]">Engineering Workforce</h2>
-                      <p className="text-xs text-[#64748B]">Capacity status and technical tier distribution</p>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab('workforce')}
-                      className="text-xs font-semibold text-[#3B82C4] hover:underline flex items-center space-x-1 cursor-pointer"
-                    >
-                      <span>Details</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-bold text-[#172B4D]">Engineering Workforce</h2>
+                    <p className="text-xs text-[#64748B]">Capacity status and technical tier distribution</p>
                   </div>
+                  <button
+                    onClick={() => setActiveTab('workforce')}
+                    className="text-xs font-semibold text-[#3B82C4] hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>Details</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {isLoadingWorkforce ? (
+                  <div className="p-8 text-center text-xs text-[#64748B] bg-white rounded-2xl border border-[#E2E8F0] shadow-xs animate-pulse">
+                    Loading engineering workforce metrics...
+                  </div>
+                ) : workforceData ? (
                   <ClientWorkforceSection workforce={workforceData} presentationMode={presentationMode} />
-                </section>
-              )}
+                ) : null}
+              </section>
 
               {/* Technology & Tool Expertise - Full Width Section */}
               {expertiseData && (
@@ -370,7 +374,7 @@ export const ClientPortalPage: React.FC = () => {
           )}
 
           {/* TAB: WORKFORCE */}
-          {activeTab === 'workforce' && workforceData && (
+          {activeTab === 'workforce' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-[#172B4D]">Engineering Workforce</h2>
@@ -379,7 +383,17 @@ export const ClientPortalPage: React.FC = () => {
                   technical competency tiers.
                 </p>
               </div>
-              <ClientWorkforceSection workforce={workforceData} presentationMode={presentationMode} />
+              {isLoadingWorkforce ? (
+                <div className="p-12 text-center text-xs text-[#64748B] bg-white rounded-2xl border border-[#E2E8F0] shadow-xs animate-pulse">
+                  Loading engineering workforce data...
+                </div>
+              ) : workforceData ? (
+                <ClientWorkforceSection workforce={workforceData} presentationMode={presentationMode} />
+              ) : (
+                <div className="p-12 text-center text-xs text-[#64748B] bg-white rounded-2xl border border-[#E2E8F0] shadow-xs">
+                  No workforce data found for the selected company.
+                </div>
+              )}
             </div>
           )}
 
