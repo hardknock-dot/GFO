@@ -204,7 +204,7 @@ export const ProfilePage: React.FC = () => {
               <img
                 src={effectiveAvatar}
                 alt={effectiveUser?.name || 'User'}
-                className="w-24 h-24 rounded-2xl object-cover border-4 border-white dark:border-stone-800 shadow-lg ring-2 ring-[var(--color-primary)] mx-auto"
+                className="w-24 h-24 rounded-2xl object-cover border-4 border-[var(--color-card)] shadow-lg ring-2 ring-[var(--color-primary)] mx-auto"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
@@ -217,7 +217,7 @@ export const ProfilePage: React.FC = () => {
 
             {/* Name & Role */}
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-stone-900 dark:text-white">
+              <h2 className="text-base font-bold text-[var(--color-text-primary)]">
                 {formData.fullName || effectiveUser?.name || 'Authenticated User'}
               </h2>
               {formData.goesBy && (
@@ -230,28 +230,28 @@ export const ProfilePage: React.FC = () => {
                   <Shield className="w-3 h-3 mr-1" />
                   {roleDisplay}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                   Active
                 </span>
               </div>
             </div>
 
             {/* Quick Metadata List */}
-            <div className="pt-4 border-t border-[var(--color-border)] text-left space-y-2.5 text-xs text-stone-600 dark:text-stone-300">
+            <div className="pt-4 border-t border-[var(--color-border)] text-left space-y-2.5 text-xs text-[var(--color-text-primary)]">
               <div className="flex items-center space-x-2.5">
-                <Mail className="w-4 h-4 text-stone-400 shrink-0" />
+                <Mail className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
                 <span className="truncate">{effectiveUser?.email || 'N/A'}</span>
               </div>
               <div className="flex items-center space-x-2.5">
-                <Building2 className="w-4 h-4 text-stone-400 shrink-0" />
-                <span className="font-semibold text-stone-800 dark:text-stone-200 truncate">
+                <Building2 className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
+                <span className="font-semibold text-[var(--color-text-primary)] truncate">
                   {effectiveUser?.company_name || currentCompany.name}
                 </span>
               </div>
               {effectiveUser?.last_login && (
                 <div className="flex items-center space-x-2.5">
-                  <Clock className="w-4 h-4 text-stone-400 shrink-0" />
-                  <span className="text-[11px] text-stone-500 truncate">
+                  <Clock className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
+                  <span className="text-[11px] text-[var(--color-text-secondary)] truncate">
                     Last login: {new Date(effectiveUser.last_login).toLocaleString()}
                   </span>
                 </div>
@@ -260,14 +260,14 @@ export const ProfilePage: React.FC = () => {
 
             {/* User ID Copy Chip */}
             <div className="pt-3 border-t border-[var(--color-border)]">
-              <div className="p-2 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
-                <span className="font-mono text-[10px] text-stone-500 truncate max-w-[170px]">
+              <div className="p-2.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
+                <span className="font-mono text-[10px] text-[var(--color-text-secondary)] truncate max-w-[170px]">
                   ID: {effectiveUser?.id}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyUserId}
-                  className="text-stone-400 hover:text-[var(--color-primary)] p-1 rounded-md transition-colors"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-1 rounded-md transition-colors"
                   title="Copy User ID"
                 >
                   {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -283,16 +283,16 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
               <div className="flex items-center space-x-2">
                 <UserIcon className="w-4 h-4 text-[var(--color-primary)]" />
-                <h3 className="text-sm font-bold text-stone-900 dark:text-white">Profile Details & Editable Attributes</h3>
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Profile Details & Editable Attributes</h3>
               </div>
-              <span className="text-[11px] text-stone-400 font-mono">Self-Service Profile</span>
+              <span className="text-[11px] text-[var(--color-text-secondary)] font-mono">Self-Service Profile</span>
             </div>
 
             {/* Editable Attributes */}
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-1">
                     Full Legal Name / Display Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -300,13 +300,13 @@ export const ProfilePage: React.FC = () => {
                     value={formData.fullName}
                     onChange={(e) => handleFieldChange('fullName', e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-white dark:bg-stone-800 text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                   />
-                  <p className="text-[10px] text-stone-400 mt-1">Displayed in audit logs, dashboard, and schedule reports.</p>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">Displayed in audit logs, dashboard, and schedule reports.</p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-1">
                     Goes By / Preferred Name
                   </label>
                   <input
@@ -314,14 +314,14 @@ export const ProfilePage: React.FC = () => {
                     value={formData.goesBy}
                     onChange={(e) => handleFieldChange('goesBy', e.target.value)}
                     placeholder="e.g. Marc, Alex, Vic"
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-white dark:bg-stone-800 text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                   />
-                  <p className="text-[10px] text-stone-400 mt-1">Informal preferred moniker used in collaborative notifications.</p>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">Informal preferred moniker used in collaborative notifications.</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-1">
                   Profile Photo URL
                 </label>
                 <input
@@ -329,57 +329,57 @@ export const ProfilePage: React.FC = () => {
                   value={formData.avatarUrl}
                   onChange={(e) => handleFieldChange('avatarUrl', e.target.value)}
                   placeholder="https://images.example.com/avatar.jpg"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-white dark:bg-stone-800 text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-mono text-[11px]"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-mono text-[11px]"
                 />
-                <p className="text-[10px] text-stone-400 mt-1">Direct web image URL for your authenticated avatar portrait.</p>
+                <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">Direct web image URL for your authenticated avatar portrait.</p>
               </div>
             </div>
 
             {/* Read-Only Security & Organizational Scopes */}
             <div className="pt-4 border-t border-[var(--color-border)] space-y-4">
-              <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center space-x-1.5">
-                <Lock className="w-3.5 h-3.5 text-stone-400" />
+              <h4 className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider flex items-center space-x-1.5">
+                <Lock className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                 <span>Security & Enterprise Scopes (Read-Only)</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Email Address</label>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Email Address</label>
                   <input
                     type="text"
                     readOnly
                     value={effectiveUser?.email || ''}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-stone-100 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 cursor-not-allowed"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/70 text-[var(--color-text-primary)] cursor-not-allowed opacity-90 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Assigned Role</label>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Assigned Role</label>
                   <input
                     type="text"
                     readOnly
                     value={roleDisplay}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-stone-100 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 cursor-not-allowed font-semibold"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/70 text-[var(--color-text-primary)] cursor-not-allowed font-semibold opacity-90"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Current Company</label>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Current Company</label>
                   <input
                     type="text"
                     readOnly
                     value={effectiveUser?.company_name || currentCompany.name}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-stone-100 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 cursor-not-allowed font-semibold"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/70 text-[var(--color-text-primary)] cursor-not-allowed font-semibold opacity-90"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Account State</label>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Account State</label>
                   <input
                     type="text"
                     readOnly
                     value={effectiveUser?.is_active !== false ? 'Active & In Good Standing' : 'Deactivated'}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-stone-100 dark:bg-stone-800/50 text-emerald-700 dark:text-emerald-400 cursor-not-allowed font-semibold"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/70 text-emerald-700 dark:text-emerald-400 cursor-not-allowed font-semibold opacity-90"
                   />
                 </div>
               </div>
@@ -387,15 +387,15 @@ export const ProfilePage: React.FC = () => {
               {/* Accessible Companies List */}
               {effectiveUser?.companies && effectiveUser.companies.length > 0 && (
                 <div className="space-y-1.5 pt-2">
-                  <span className="text-[11px] font-medium text-stone-400 flex items-center space-x-1">
-                    <Layers className="w-3 h-3" />
+                  <span className="text-[11px] font-semibold text-[var(--color-text-secondary)] flex items-center space-x-1">
+                    <Layers className="w-3 h-3 text-[var(--color-primary)]" />
                     <span>Authorized Workspaces:</span>
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {effectiveUser.companies.map((c) => (
                       <span
                         key={c.company_id}
-                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-[var(--color-border)]"
+                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-bg)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
                       >
                         <Building2 className="w-3 h-3 mr-1 text-[var(--color-primary)]" />
                         {c.company_name}
@@ -415,7 +415,7 @@ export const ProfilePage: React.FC = () => {
                   size="sm"
                   onClick={handleReset}
                   disabled={updateMutation.isPending}
-                  icon={<RotateCcw className="w-4 h-4 text-stone-500" />}
+                  icon={<RotateCcw className="w-4 h-4 text-[var(--color-text-secondary)]" />}
                 >
                   Reset
                 </Button>

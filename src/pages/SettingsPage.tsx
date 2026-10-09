@@ -239,7 +239,7 @@ export const SettingsPage: React.FC = () => {
                   size="sm"
                   onClick={handleReset}
                   disabled={updateMutation.isPending}
-                  icon={<RotateCcw className="w-4 h-4 text-stone-500" />}
+                  icon={<RotateCcw className="w-4 h-4 text-[var(--color-text-secondary)]" />}
                 >
                   Reset
                 </Button>
@@ -299,8 +299,8 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {!canModify && (
-        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center space-x-2 text-xs text-amber-800 dark:text-amber-300">
-          <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
+        <div className="p-3.5 bg-[var(--color-accent-soft)]/60 border border-[var(--color-border)] rounded-xl flex items-center space-x-2 text-xs text-[var(--color-text-primary)]">
+          <Info className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />
           <span>You are viewing company settings in read-only mode. Administrator permissions are required to modify configuration.</span>
         </div>
       )}
@@ -322,11 +322,11 @@ export const SettingsPage: React.FC = () => {
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-stone-900 dark:text-white">1. Alert & Notification Rules</h3>
-                  <p className="text-[11px] text-stone-400">Controls backend alert generation and notification bell display</p>
+                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">1. Alert & Notification Rules</h3>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">Controls backend alert generation and notification bell display</p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)]">
                 7 Channels
               </span>
             </div>
@@ -338,12 +338,12 @@ export const SettingsPage: React.FC = () => {
                 return (
                   <div key={item.key} className="pt-3 pb-3 first:pt-0 flex items-center justify-between gap-4">
                     <div className="flex items-start space-x-3">
-                      <div className={`p-1.5 rounded-lg mt-0.5 ${isEnabled ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
+                      <div className={`p-1.5 rounded-lg mt-0.5 ${isEnabled ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)]'}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-stone-900 dark:text-white">{item.title}</p>
-                        <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">{item.description}</p>
+                        <p className="text-xs font-bold text-[var(--color-text-primary)]">{item.title}</p>
+                        <p className="text-[11px] text-[var(--color-text-secondary)] leading-snug">{item.description}</p>
                       </div>
                     </div>
 
@@ -352,7 +352,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       disabled={!canModify}
                       onClick={() => handleToggle(item.key)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isEnabled ? 'bg-[var(--color-primary)]' : 'bg-stone-300 dark:bg-stone-700'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isEnabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
                       role="switch"
                       aria-checked={isEnabled}
                     >
@@ -373,18 +373,18 @@ export const SettingsPage: React.FC = () => {
           {/* SECTION 2: OPERATIONAL THRESHOLDS */}
           <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4">
             <div className="flex items-center space-x-2.5 pb-3 border-b border-[var(--color-border)]">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-white">2. Operational Thresholds</h3>
-                <p className="text-[11px] text-stone-400">Dynamically configure business rules and warning windows</p>
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">2. Operational Thresholds</h3>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">Dynamically configure business rules and warning windows</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-stone-800 dark:text-stone-200 mb-1">
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">
                   Visa Expiration Alert Warning Limit (Days)
                 </label>
                 <div className="flex items-center space-x-3">
@@ -395,18 +395,18 @@ export const SettingsPage: React.FC = () => {
                     disabled={!canModify}
                     value={formState.visa_expiration_days || ''}
                     onChange={(e) => handleDaysChange(e.target.value)}
-                    className="w-32 px-3 py-2 text-xs font-mono font-bold rounded-xl border border-[var(--color-border)] bg-white dark:bg-stone-800 text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-60"
+                    className="w-32 px-3 py-2 text-xs font-mono font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-primary)] shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-60"
                   />
-                  <span className="text-xs text-stone-500">days before expiration</span>
+                  <span className="text-xs text-[var(--color-text-secondary)] font-medium">days before expiration</span>
                 </div>
-                <p className="text-[11px] text-stone-400 mt-1">
+                <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">
                   Alert engineers and admins when a work visa/permit is expiring within this timeframe. Replaces hardcoded values in Dashboard & Visa tracking.
                 </p>
               </div>
 
               {/* Preset buttons */}
               <div className="flex items-center space-x-2 pt-1">
-                <span className="text-[10px] text-stone-400 uppercase font-semibold">Presets:</span>
+                <span className="text-[10px] text-[var(--color-text-secondary)] uppercase font-semibold tracking-wider">Presets:</span>
                 {[30, 60, 90, 120].map((preset) => (
                   <button
                     key={preset}
@@ -417,7 +417,7 @@ export const SettingsPage: React.FC = () => {
                       setHasChanges(true);
                       setSuccessMessage(null);
                     }}
-                    className={`px-2.5 py-1 text-[11px] rounded-lg font-mono font-semibold transition-colors border ${formState.visa_expiration_days === preset ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-[var(--color-border)] hover:bg-stone-200'}`}
+                    className={`px-2.5 py-1 text-[11px] rounded-lg font-mono font-semibold transition-colors border ${formState.visa_expiration_days === preset ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-xs' : 'bg-[var(--color-bg)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-[var(--color-primary)]/10'}`}
                   >
                     {preset}d
                   </button>
@@ -429,20 +429,20 @@ export const SettingsPage: React.FC = () => {
           {/* SECTION 3: DASHBOARD SETTINGS */}
           <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4">
             <div className="flex items-center space-x-2.5 pb-3 border-b border-[var(--color-border)]">
-              <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 <LayoutDashboard className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-white">3. Dashboard Settings</h3>
-                <p className="text-[11px] text-stone-400">Control visual modules and operational review cards</p>
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">3. Dashboard Settings</h3>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">Control visual modules and operational review cards</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between gap-4 p-3.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)]">
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-stone-900 dark:text-white">Pending Operational Remarks Card</p>
-                <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                  Controls the "Pending Operational Remarks" card on the Dashboard based on <code className="font-mono text-[10px] text-[var(--color-primary)]">comment_adressal = FALSE</code>.
+                <p className="text-xs font-bold text-[var(--color-text-primary)]">Pending Operational Remarks Card</p>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  Controls the "Pending Operational Remarks" card on the Dashboard based on <code className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold">comment_adressal = FALSE</code>.
                 </p>
               </div>
 
@@ -450,7 +450,7 @@ export const SettingsPage: React.FC = () => {
                 type="button"
                 disabled={!canModify}
                 onClick={() => handleToggle('operational_remark_alerts_enabled')}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formState.operational_remark_alerts_enabled ? 'bg-[var(--color-primary)]' : 'bg-stone-300 dark:bg-stone-700'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formState.operational_remark_alerts_enabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'} ${!canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
                 role="switch"
                 aria-checked={formState.operational_remark_alerts_enabled}
               >
@@ -465,41 +465,41 @@ export const SettingsPage: React.FC = () => {
           {/* SECTION 4: ACCOUNT / SYSTEM INFORMATION */}
           <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-md shadow-black/20 space-y-4">
             <div className="flex items-center space-x-2.5 pb-3 border-b border-[var(--color-border)]">
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 <Building2 className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-white">4. Account & System Information</h3>
-                <p className="text-[11px] text-stone-400">Enterprise tenant metadata and storage parameters</p>
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">4. Account & System Information</h3>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">Enterprise tenant metadata and storage parameters</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-[var(--color-border)]">
-                <span className="text-[10px] text-stone-400 uppercase font-semibold">Active Tenant</span>
-                <p className="font-bold text-stone-900 dark:text-white mt-0.5">{currentCompany.name}</p>
-                <span className="text-[10px] font-mono text-stone-500">Code: {currentCompany.code || 'N/A'}</span>
+              <div className="p-3.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)]">
+                <span className="text-[10px] text-[var(--color-text-secondary)] uppercase font-semibold tracking-wider">Active Tenant</span>
+                <p className="font-bold text-[var(--color-text-primary)] mt-0.5">{currentCompany.name}</p>
+                <span className="text-[10px] font-mono text-[var(--color-text-secondary)]">Code: {currentCompany.code || 'N/A'}</span>
               </div>
 
-              <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-[var(--color-border)]">
-                <span className="text-[10px] text-stone-400 uppercase font-semibold">Persistence Layer</span>
-                <p className="font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">PostgreSQL Multi-Tenant</p>
-                <span className="text-[10px] font-mono text-stone-500">Table: company_settings</span>
+              <div className="p-3.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)]">
+                <span className="text-[10px] text-[var(--color-text-secondary)] uppercase font-semibold tracking-wider">Persistence Layer</span>
+                <p className="font-bold text-[var(--color-primary)] mt-0.5">PostgreSQL Multi-Tenant</p>
+                <span className="text-[10px] font-mono text-[var(--color-text-secondary)]">Table: company_settings</span>
               </div>
 
-              <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-[var(--color-border)]">
-                <span className="text-[10px] text-stone-400 uppercase font-semibold">Security Isolation</span>
-                <p className="font-bold text-stone-900 dark:text-white mt-0.5 flex items-center space-x-1">
+              <div className="p-3.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)]">
+                <span className="text-[10px] text-[var(--color-text-secondary)] uppercase font-semibold tracking-wider">Security Isolation</span>
+                <p className="font-bold text-[var(--color-text-primary)] mt-0.5 flex items-center space-x-1">
                   <Shield className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                   <span>Company-Scoped FK</span>
                 </p>
-                <span className="text-[10px] font-mono text-stone-500">ID: {currentCompany.company_id || currentCompany.id}</span>
+                <span className="text-[10px] font-mono text-[var(--color-text-secondary)]">ID: {currentCompany.company_id || currentCompany.id}</span>
               </div>
 
-              <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-[var(--color-border)]">
-                <span className="text-[10px] text-stone-400 uppercase font-semibold">Your Effective Role</span>
-                <p className="font-bold text-stone-900 dark:text-white mt-0.5">{user?.role || 'Viewer'}</p>
-                <span className="text-[10px] font-semibold text-stone-500">
+              <div className="p-3.5 bg-[var(--color-bg)]/80 rounded-xl border border-[var(--color-border)]">
+                <span className="text-[10px] text-[var(--color-text-secondary)] uppercase font-semibold tracking-wider">Your Effective Role</span>
+                <p className="font-bold text-[var(--color-text-primary)] mt-0.5">{user?.role || 'Viewer'}</p>
+                <span className="text-[10px] font-semibold text-[var(--color-text-secondary)]">
                   {canModify ? 'Read & Write Permissions' : 'Read-Only Access'}
                 </span>
               </div>

@@ -60,10 +60,10 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
   if (isLoading) {
     return (
       <div className="p-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl animate-pulse space-y-4">
-        <div className="h-6 bg-stone-200 dark:bg-stone-700 rounded w-1/3" />
+        <div className="h-6 bg-[var(--color-border)] rounded w-1/3" />
         <div className="grid grid-cols-2 gap-4">
-          <div className="h-24 bg-stone-200 dark:bg-stone-700 rounded-xl" />
-          <div className="h-24 bg-stone-200 dark:bg-stone-700 rounded-xl" />
+          <div className="h-24 bg-[var(--color-border)] rounded-xl" />
+          <div className="h-24 bg-[var(--color-border)] rounded-xl" />
         </div>
       </div>
     );
@@ -77,8 +77,8 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
             <Palette className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-stone-900 dark:text-white">Company Theme</h3>
-            <p className="text-[11px] text-stone-400">Select a predefined theme palette for your organization</p>
+            <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Company Theme</h3>
+            <p className="text-[11px] text-[var(--color-text-secondary)]">Select a predefined theme palette for your organization</p>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
                 size="sm"
                 onClick={handleReset}
                 disabled={updateMutation.isPending}
-                icon={<RotateCcw className="w-3.5 h-3.5 text-stone-500" />}
+                icon={<RotateCcw className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />}
               >
                 Reset
               </Button>
@@ -116,8 +116,8 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
       )}
 
       {!canModify && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center space-x-2 text-xs text-amber-800 dark:text-amber-300">
-          <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />
+        <div className="p-3.5 bg-[var(--color-accent-soft)]/60 border border-[var(--color-border)] rounded-xl flex items-center space-x-2 text-xs text-[var(--color-text-primary)]">
+          <ShieldAlert className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />
           <span>Only Main Admins can change the company theme. Normal users view in read-only mode.</span>
         </div>
       )}
@@ -130,23 +130,23 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
             <div
               key={preset.key}
               onClick={() => handleSelect(preset.key)}
-              className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${
+              className={`relative p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
                 isSelected
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-sm'
-                  : 'border-[var(--color-border)] hover:border-stone-300 dark:hover:border-stone-600 bg-white dark:bg-stone-800/50'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 shadow-sm'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 bg-[var(--color-bg)]/60'
               } ${!canModify ? 'cursor-not-allowed opacity-80' : ''}`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
                   {preset.name}
                   {preset.key === 'default' && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-700 text-stone-500 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-accent-soft)] text-[var(--color-text-secondary)] border border-[var(--color-border)] font-mono font-normal">
                       Default
                     </span>
                   )}
                 </span>
                 {isSelected && (
-                  <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center shadow-xs">
                     <Check className="w-3 h-3" />
                   </div>
                 )}
@@ -155,27 +155,27 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
               {/* Color Swatches */}
               <div className="flex items-center space-x-1.5">
                 <div
-                  className="w-6 h-6 rounded-full border border-black/10 shadow-2xs"
+                  className="w-5 h-5 rounded-full border border-black/15 shadow-2xs"
                   style={{ backgroundColor: preset.primary }}
                   title={`Primary: ${preset.primary}`}
                 />
                 <div
-                  className="w-6 h-6 rounded-full border border-black/10 shadow-2xs"
+                  className="w-5 h-5 rounded-full border border-black/15 shadow-2xs"
                   style={{ backgroundColor: preset.secondary }}
                   title={`Secondary: ${preset.secondary}`}
                 />
                 <div
-                  className="w-6 h-6 rounded-full border border-black/10 shadow-2xs"
+                  className="w-5 h-5 rounded-full border border-black/15 shadow-2xs"
                   style={{ backgroundColor: preset.accent }}
                   title={`Accent: ${preset.accent}`}
                 />
                 <div
-                  className="w-6 h-6 rounded-full border border-black/10 shadow-2xs"
+                  className="w-5 h-5 rounded-full border border-black/15 shadow-2xs"
                   style={{ backgroundColor: preset.darkNeutral }}
                   title={`Dark Neutral: ${preset.darkNeutral}`}
                 />
                 <div
-                  className="w-6 h-6 rounded-full border border-black/10 shadow-2xs"
+                  className="w-5 h-5 rounded-full border border-black/15 shadow-2xs"
                   style={{ backgroundColor: preset.surface }}
                   title={`Surface: ${preset.surface}`}
                 />
@@ -185,11 +185,11 @@ export const CompanyThemeSection: React.FC<CompanyThemeSectionProps> = ({ compan
         })}
       </div>
 
-      {/* LIVE PREVIEW BOX (Req 13) */}
+      {/* LIVE PREVIEW BOX */}
       <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
-        <span className="text-xs font-bold text-stone-700 dark:text-stone-300">Live Theme Preview</span>
+        <span className="text-xs font-bold text-[var(--color-text-primary)]">Live Theme Preview</span>
         <div
-          className="p-4 rounded-xl border transition-all overflow-hidden"
+          className="p-4 rounded-xl border shadow-inner transition-all overflow-hidden"
           style={{
             backgroundColor: currentPreview.background,
             borderColor: currentPreview.border,
