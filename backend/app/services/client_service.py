@@ -318,8 +318,22 @@ def get_client_overview(
 
     active_eng_ids: Set[UUID] = set()
     for e in engineers:
+        active_s = next(
+            (
+                s for s in schedules 
+                if s.engineer_id == e.engineer_id 
+                and s.start_date <= today 
+                and (s.end_date is None or s.end_date >= today)
+                and (s.schedule_status is None or s.schedule_status != 'Completed')
+            ),
+            None
+        )
         st = (e.status or "").lower()
-        if "active" in st or "deployed" in st:
+        if active_s:
+            stype = (active_s.support_type or '').lower()
+            if not any(k in stype for k in ('pto', 'loa', 'leave', 'time off')):
+                active_eng_ids.add(e.engineer_id)
+        elif "deployed" in st or "active" in st:
             active_eng_ids.add(e.engineer_id)
 
     total_deployments = len(schedules)
@@ -500,10 +514,31 @@ def get_client_workforce(
             elif cleaned_t not in ("dep", "etch", "clean", "dry etch", "line support"):
                 tool_eng_map[raw_t.title()].add(sk.engineer_id)
 
-    # For ION engineers, track Purion Ion Implant capability
+    # From engineer primary tool type
     for eng in engineers:
-        if eng.company_id == ION_COMPANY_ID and eng.primary_tool_type and "purion" in eng.primary_tool_type.lower():
-            tool_eng_map["Axcelis Purion Ion Implantation"].add(eng.engineer_id)
+        if eng.primary_tool_type:
+            raw_t = eng.primary_tool_type.strip().replace("\n", " ")
+            cleaned_t = " ".join(raw_t.split()).lower()
+            tax = TAXONOMY_MAP.get(cleaned_t)
+            if tax and tax.get("family"):
+                tool_eng_map[tax["family"]].add(eng.engineer_id)
+            elif cleaned_t not in ("dep", "etch", "clean", "dry etch", "line support"):
+                tool_eng_map[raw_t.title()].add(eng.engineer_id)
+
+    # From ION skill assessments
+    if eng_ids:
+        ion_assessments = list(db.scalars(
+            select(IonSkillAssessment).where(IonSkillAssessment.engineer_id.in_(eng_ids))
+        ).all())
+        if ion_assessments:
+            ion_tools_dict = {
+                t.tool_id: t.tool_name
+                for t in db.scalars(select(IonSkillTool)).all()
+            }
+            for ass in ion_assessments:
+                t_name = ion_tools_dict.get(ass.tool_id)
+                if t_name:
+                    tool_eng_map[t_name].add(ass.engineer_id)
 
     total = len(engineers)
     active_cnt = 0
@@ -514,13 +549,45 @@ def get_client_workforce(
     comp_actives: Dict[UUID, int] = defaultdict(int)
     levels_count: Dict[str, int] = defaultdict(int)
 
+    today = date.today()
+    schedules = list(db.scalars(
+        select(Schedule).where(Schedule.engineer_id.in_(eng_ids))
+    ).all()) if eng_ids else []
+
+    active_sched_map: Dict[UUID, Schedule] = {}
+    for s in schedules:
+        if s.start_date <= today and (s.end_date is None or s.end_date >= today) and (s.schedule_status is None or s.schedule_status != 'Completed'):
+            active_sched_map[s.engineer_id] = s
+
+    active_leave_eng_ids: Set[UUID] = set()
+    if eng_ids:
+        active_leaves = db.scalars(
+            select(Leave.engineer_id).where(
+                and_(
+                    Leave.engineer_id.in_(eng_ids),
+                    Leave.requested_date == today,
+                    Leave.approval_status.in_(["APPROVED", "CONFIRMED"])
+                )
+            )
+        ).all()
+        active_leave_eng_ids = set(active_leaves)
+
     for e in engineers:
         cid = e.company_id
         comp_engs[cid] += 1
         st = (e.status or "").lower()
 
-        if "leave" in st or "pto" in st:
+        active_s = active_sched_map.get(e.engineer_id)
+
+        if e.engineer_id in active_leave_eng_ids or "leave" in st or "pto" in st:
             on_leave_cnt += 1
+        elif active_s:
+            stype = (active_s.support_type or '').lower()
+            if any(k in stype for k in ('pto', 'loa', 'leave', 'time off')):
+                on_leave_cnt += 1
+            else:
+                active_cnt += 1
+                comp_actives[cid] += 1
         elif "deployed" in st or "active" in st:
             active_cnt += 1
             comp_actives[cid] += 1
@@ -543,10 +610,22 @@ def get_client_workforce(
             primary_color=meta.get("primary_color", "#172B4D"),
         ))
 
-    # Standard order for normalized competency tiers
+    tier_order = [
+        "Level 1 - Field Specialist",
+        "Level 2 - Senior Specialist",
+        "Level 3 - Lead Engineer",
+        "Level 4 - Master Technical Lead",
+        "Level 5 - Principal Specialist",
+    ]
+    def tier_sort_key(item_tuple):
+        lvl = item_tuple[0]
+        if lvl in tier_order:
+            return (0, tier_order.index(lvl))
+        return (1, lvl)
+
     by_levels = [
         CompetencyLevelCount(level=lvl_name, count=cnt)
-        for lvl_name, cnt in sorted(levels_count.items(), key=lambda x: x[0])
+        for lvl_name, cnt in sorted(levels_count.items(), key=tier_sort_key)
     ]
 
     top_tools = [

@@ -28,19 +28,29 @@ import {
   Award,
   ChevronRight,
 } from 'lucide-react';
+import { useCompany } from '../context/CompanyContext';
 
 type TabKey = 'overview' | 'companies' | 'workforce' | 'expertise' | 'deployments' | 'geography';
 
 export const ClientPortalPage: React.FC = () => {
+  const { currentCompany, setCompany } = useCompany();
+  const activeCompanyId = currentCompany?.company_id || currentCompany?.id || '';
+
   const { companyId: routeCompanyId } = useParams<{ companyId?: string }>();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [presentationMode, setPresentationMode] = useState<boolean>(false);
-  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('');
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>(activeCompanyId || '');
   const [detailModalCompanyId, setDetailModalCompanyId] = useState<string | null>(
     routeCompanyId || null
   );
+
+  useEffect(() => {
+    if (activeCompanyId && !selectedCompanyFilter) {
+      setSelectedCompanyFilter(activeCompanyId);
+    }
+  }, [activeCompanyId]);
 
   // If route has companyId, open detail modal
   useEffect(() => {
@@ -119,7 +129,10 @@ export const ClientPortalPage: React.FC = () => {
         onTogglePresentationMode={() => setPresentationMode(!presentationMode)}
         authorizedCompanies={authorizedCompanies}
         selectedCompanyId={selectedCompanyFilter}
-        onSelectCompany={(id) => setSelectedCompanyFilter(id)}
+        onSelectCompany={(id) => {
+          setSelectedCompanyFilter(id);
+          if (id) setCompany(id);
+        }}
       />
 
       {/* Main Content Area */}
