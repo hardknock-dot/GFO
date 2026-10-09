@@ -77,6 +77,14 @@ def resolve_entity_company_id(db: Session, entity_type: str, entity_id: UUID) ->
             sch = db.get(Schedule, ms.schedule_id)
             eng = db.get(Engineer, sch.engineer_id) if sch else None
             return eng.company_id if eng else None
+    elif entity_type in ("IonSkillExperience", "IonExperience", "IonSkill"):
+        from app.models.ion_skill import IonSkillExperience
+        exp = db.get(IonSkillExperience, entity_id)
+        return exp.company_id if exp else None
+    elif entity_type in ("IonSkillAssessment", "IonAssessment"):
+        from app.models.ion_skill import IonSkillAssessment
+        ass = db.get(IonSkillAssessment, entity_id)
+        return ass.company_id if ass else None
     return None
 
 def create_delete_request(
@@ -192,6 +200,21 @@ def get_delete_requests_paginated(
             sk = db.get(Skill, r.entity_id)
             if sk:
                 entity_name = f"{sk.tool_type or 'Skill'} ({sk.role or ''})"
+        elif r.entity_type in ("IonSkillExperience", "IonExperience", "IonSkill"):
+            from app.models.ion_skill import IonSkillExperience
+            from app.models.engineer import Engineer
+            exp = db.get(IonSkillExperience, r.entity_id)
+            if exp:
+                eng = db.get(Engineer, exp.engineer_id)
+                eng_name = eng.engineer_name if eng else "Engineer"
+                entity_name = f"ION Experience: {exp.where_location} ({eng_name})"
+        elif r.entity_type in ("IonSkillAssessment", "IonAssessment"):
+            from app.models.ion_skill import IonSkillAssessment, IonSkillTool
+            ass = db.get(IonSkillAssessment, r.entity_id)
+            if ass:
+                t = db.get(IonSkillTool, ass.tool_id)
+                tool_name = t.tool_name if t else "Tool"
+                entity_name = f"ION Assessment: {tool_name} Level {ass.skill_level}"
 
         items.append({
             "request_id": r.request_id,
@@ -295,6 +318,18 @@ def approve_delete_request(db: Session, request_id: UUID, reviewer: User) -> dic
         if ms:
             old_data = object_to_dict(ms)
             db.delete(ms)
+    elif req.entity_type in ("IonSkillExperience", "IonExperience", "IonSkill"):
+        from app.models.ion_skill import IonSkillExperience
+        exp = db.get(IonSkillExperience, req.entity_id)
+        if exp:
+            old_data = object_to_dict(exp)
+            db.delete(exp)
+    elif req.entity_type in ("IonSkillAssessment", "IonAssessment"):
+        from app.models.ion_skill import IonSkillAssessment
+        ass = db.get(IonSkillAssessment, req.entity_id)
+        if ass:
+            old_data = object_to_dict(ass)
+            db.delete(ass)
 
     req.status = "APPROVED"
     req.reviewed_by = reviewer.user_id

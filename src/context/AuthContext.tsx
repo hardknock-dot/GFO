@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email?: string, password?: string) => Promise<User>;
   logout: () => void;
   selectCompany: (companyId: string) => void;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +20,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { setCompany } = useCompany();
 
   const canEdit = !!user && ['Main Admin', 'Global Admin', 'Manager', 'Company Admin', 'Ops Executive', 'Resource Manager'].includes(user.role);
+
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+      return currentUser;
+    } catch (_err) {
+      return null;
+    }
+  };
 
   // Load user from service (which checks localStorage first) on mount
   useEffect(() => {
@@ -89,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         selectCompany,
+        refreshUser,
       }}
     >
       {children}

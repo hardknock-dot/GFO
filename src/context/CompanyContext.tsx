@@ -150,6 +150,7 @@ interface CompanyContextType {
   setSelectedCompanyIds: (ids: string[]) => void;
   setCompany: (companyId: string) => void;
   updateCompanyThemeState: (companyId: string, themeKey: string) => void;
+  reloadCompanies: () => Promise<void>;
 }
 
 export const applyCustomThemeVars = (themeKey?: string | null) => {
@@ -200,48 +201,101 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        const list = await getCompanies();
-        if (list && list.length > 0) {
-          const allDataPreset = PRESET_COMPANIES.find((c) => c.id === 'all-data');
-          const hasAllData = list.some((c) => c.id === 'all-data' || c.company_id === 'all-data');
-          const combined = !hasAllData && allDataPreset ? [...list, allDataPreset] : list;
-          setCompanies(combined);
+  const loadCompanies = async () => {
+    try {
+      const list = await getCompanies().catch(() => []);
+      
+      // Build a unified map of companies preserving all presets and authorized user companies
+      const companyMap = new Map<string, Company>();
 
-          const activeId = localStorage.getItem('ormp_active_company');
-          const found = combined.find(
-            (c) =>
-              c.company_id === activeId ||
-              c.id === activeId ||
-              c.code?.toLowerCase() === activeId?.toLowerCase() ||
-              c.name?.toLowerCase() === activeId?.toLowerCase()
-          );
-          if (found) {
-            setCurrentCompany(found);
-            applyCompanyTheme(found);
-          } else {
-            setCurrentCompany(combined[0]);
-            applyCompanyTheme(combined[0]);
-          }
+      // 1. Seed with PRESET_COMPANIES
+      PRESET_COMPANIES.forEach((c) => {
+        const key = (c.company_id || c.id).toLowerCase();
+        companyMap.set(key, c);
+      });
 
-          const savedSelected = localStorage.getItem('ormp_selected_company_ids');
-          if (savedSelected) {
-            try {
-              const parsed = JSON.parse(savedSelected);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setSelectedCompanyIdsState(parsed);
-              }
-            } catch (_e) {
-              // Ignore invalid JSON
-            }
+      // 2. Overlay companies from backend API
+      if (Array.isArray(list)) {
+        list.forEach((c) => {
+          const key = (c.company_id || c.id || '').toLowerCase();
+          if (key) {
+            const existing = companyMap.get(key);
+            companyMap.set(key, existing ? { ...existing, ...c } : c);
           }
-        }
-      } catch (err) {
-        console.error('Failed to load companies in provider:', err);
+        });
       }
-    };
+
+      // 3. Ensure all companies from stored user's multi-tenant authorizations exist
+      const storedUserStr = localStorage.getItem('ormp_user');
+      if (storedUserStr) {
+        try {
+          const storedUser = JSON.parse(storedUserStr);
+          if (Array.isArray(storedUser.companies)) {
+            storedUser.companies.forEach((compSummary: any) => {
+              const key = (compSummary.company_id || compSummary.id || '').toLowerCase();
+              if (key && !companyMap.has(key)) {
+                const matchingPreset = PRESET_COMPANIES.find(
+                  (p) => (p.company_id || p.id).toLowerCase() === key
+                );
+                if (matchingPreset) {
+                  companyMap.set(key, matchingPreset);
+                } else {
+                  companyMap.set(key, {
+                    ...PRESET_COMPANIES[0],
+                    id: compSummary.company_id,
+                    company_id: compSummary.company_id,
+                    name: compSummary.company_name,
+                    company_name: compSummary.company_name,
+                    code: compSummary.short_name || 'TENANT',
+                    short_name: compSummary.short_name || 'TENANT',
+                  });
+                }
+              }
+            });
+          }
+        } catch (_e) {
+          // Ignore JSON parse error
+        }
+      }
+
+      const combined = Array.from(companyMap.values());
+      setCompanies(combined);
+
+      const activeId = localStorage.getItem('ormp_active_company');
+      const found = combined.find(
+        (c) =>
+          c.company_id === activeId ||
+          c.id === activeId ||
+          c.code?.toLowerCase() === activeId?.toLowerCase() ||
+          c.short_name?.toLowerCase() === activeId?.toLowerCase() ||
+          c.name?.toLowerCase() === activeId?.toLowerCase() ||
+          c.company_name?.toLowerCase() === activeId?.toLowerCase()
+      );
+      if (found) {
+        setCurrentCompany(found);
+        applyCompanyTheme(found);
+      } else if (combined.length > 0) {
+        setCurrentCompany(combined[0]);
+        applyCompanyTheme(combined[0]);
+      }
+
+      const savedSelected = localStorage.getItem('ormp_selected_company_ids');
+      if (savedSelected) {
+        try {
+          const parsed = JSON.parse(savedSelected);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSelectedCompanyIdsState(parsed);
+          }
+        } catch (_e) {
+          // Ignore invalid JSON
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load companies in provider:', err);
+    }
+  };
+
+  useEffect(() => {
     loadCompanies();
   }, []);
 
@@ -251,12 +305,15 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const setCompany = (companyId: string) => {
+    const targetKey = (companyId || '').toLowerCase();
     const found = companies.find(
       (c) =>
-        c.id === companyId ||
-        c.company_id === companyId ||
-        c.code.toLowerCase() === companyId.toLowerCase() ||
-        c.name.toLowerCase() === companyId.toLowerCase()
+        (c.id && c.id.toLowerCase() === targetKey) ||
+        (c.company_id && c.company_id.toLowerCase() === targetKey) ||
+        (c.code && c.code.toLowerCase() === targetKey) ||
+        (c.short_name && c.short_name.toLowerCase() === targetKey) ||
+        (c.name && c.name.toLowerCase() === targetKey) ||
+        (c.company_name && c.company_name.toLowerCase() === targetKey)
     );
     if (found) {
       setCurrentCompany(found);
@@ -274,6 +331,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSelectedCompanyIds,
         setCompany,
         updateCompanyThemeState,
+        reloadCompanies: loadCompanies,
       }}
     >
       {children}

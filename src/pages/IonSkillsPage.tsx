@@ -33,9 +33,11 @@ import { IonExperienceDetailDrawer } from '../components/ionSkills/IonExperience
 import { IonAddEditExperienceModal } from '../components/ionSkills/IonAddEditExperienceModal';
 import { IonEngineerHistoryDrawer } from '../components/ionSkills/IonEngineerHistoryDrawer';
 import { IonCurrentSkillsSummaryView } from '../components/ionSkills/IonCurrentSkillsSummaryView';
+import { DeleteRequestModal } from '../components/common/DeleteRequestModal';
 
 export const IonSkillsPage: React.FC = () => {
-  const { canEdit } = useAuth();
+  const { canEdit, user } = useAuth();
+  const isOpsExecutive = user?.role === 'Ops Executive';
   const { currentCompany } = useCompany();
 
   // Tenant Verification Check
@@ -468,8 +470,21 @@ export const IonSkillsPage: React.FC = () => {
         tools={tools}
       />
 
-      {/* Delete Confirmation Modal */}
-      {deletingExperience && (
+      {/* Delete Confirmation Modal / Deletion Request Modal */}
+      {deletingExperience && isOpsExecutive ? (
+        <DeleteRequestModal
+          isOpen={!!deletingExperience}
+          onClose={() => setDeletingExperience(null)}
+          entityType="IonSkillExperience"
+          entityId={deletingExperience.experience_id}
+          entityName={`ION Experience: ${deletingExperience.where_location}${deletingExperience.engineer_name ? ` (${deletingExperience.engineer_name})` : ''}`}
+          onSuccess={() => {
+            setDeletingExperience(null);
+            setIsDetailDrawerOpen(false);
+            refetchExperiences();
+          }}
+        />
+      ) : deletingExperience && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">

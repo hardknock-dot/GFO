@@ -23,7 +23,9 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import { switchCompanyTenant } from '../../services/company';
 import type { OperationalAlert } from '../../services/operational';
+import type { Company } from '../../types';
 
 interface HeaderProps {
   collapsed?: boolean;
@@ -31,8 +33,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobileSidebar }) => {
-  const { currentCompany, companies, setCompany } = useCompany();
-  const { user, logout, selectCompany } = useAuth();
+  const { currentCompany, companies, setCompany, reloadCompanies } = useCompany();
+  const { user, logout, selectCompany, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -43,6 +45,41 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const companyMenuRef = useRef<HTMLDivElement>(null);
+
+  const isCompanyAccessible = (comp: Company): boolean => {
+    if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
+    const compId = (comp.company_id || comp.id || '').toLowerCase();
+    const compCode = (comp.code || comp.short_name || '').toLowerCase();
+    const compName = (comp.name || comp.company_name || '').toLowerCase();
+
+    // all-data is reserved for global admins
+    if (compId === 'all-data' || compCode === 'all') return false;
+
+    const accessibleList = [
+      ...(user?.accessibleCompanies || []),
+      ...(user?.companies?.map((c: any) => c.company_id || c.id) || []),
+      ...((user as any)?.accessible_company_ids || []),
+      user?.currentCompanyId,
+      (user as any)?.company_id,
+    ]
+      .filter(Boolean)
+      .map((id: string) => String(id).toLowerCase());
+
+    if (accessibleList.length === 0) {
+      const currentId = (user?.currentCompanyId || (user as any)?.company_id || '').toLowerCase();
+      return compId === currentId || compCode === currentId;
+    }
+
+    return accessibleList.includes(compId) || accessibleList.includes(compCode) || accessibleList.includes(compName);
+  };
+
+  const handleToggleCompanyMenu = () => {
+    if (!companyMenuOpen) {
+      if (refreshUser) refreshUser();
+      if (reloadCompanies) reloadCompanies();
+    }
+    setCompanyMenuOpen(!companyMenuOpen);
+  };
 
   // Fetch company-aware operational alerts derived from backend rule engine
   const activeCompanyId = currentCompany.id === 'all-data' ? undefined : (currentCompany.company_id || currentCompany.id);
@@ -119,8 +156,8 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
         {/* Quick Tenant Switcher Dropdown */}
         <div className="relative" ref={companyMenuRef}>
           <button
-            onClick={() => setCompanyMenuOpen(!companyMenuOpen)}
-            className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-card)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-black/5 transition-colors shadow-2xs max-w-[150px] sm:max-w-none"
+            onClick={handleToggleCompanyMenu}
+            className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-card)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-black/5 transition-colors shadow-2xs max-w-[150px] sm:max-w-none cursor-pointer"
           >
             <Building2 className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
             <span className="font-semibold hidden sm:inline truncate">{currentCompany.name}</span>
@@ -135,25 +172,13 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                 <span>Select Company Workspace</span>
               </div>
               {companies
-                .filter((comp) => {
-                  if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
-                  if (user?.accessibleCompanies && user.accessibleCompanies.length > 0) {
-                    return (
-                      user.accessibleCompanies.includes(comp.id) ||
-                      user.accessibleCompanies.includes(comp.company_id)
-                    );
-                  }
-                  return (
-                    comp.id !== 'all-data' &&
-                    comp.company_id !== 'all-data' &&
-                    (comp.id === user?.currentCompanyId || comp.company_id === user?.currentCompanyId)
-                  );
-                })
+                .filter(isCompanyAccessible)
                 .map((comp) => (
                   <button
                     key={comp.id}
-                    onClick={() => {
+                    onClick={async () => {
                       const targetId = comp.company_id || comp.id;
+                      await switchCompanyTenant(targetId);
                       setCompany(targetId);
                       selectCompany(targetId);
                       setCompanyMenuOpen(false);
@@ -167,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggleMobil
                         navigate('/dashboard');
                       }
                     }}
-                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${currentCompany.id === comp.id || currentCompany.company_id === comp.company_id
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${currentCompany.id === comp.id || currentCompany.company_id === comp.company_id
                         ? 'bg-[var(--color-card)] font-bold text-[var(--color-primary)]'
                         : 'text-stone-700 hover:bg-black/5'
                       }`}

@@ -33,6 +33,7 @@ import { IonAddEditExperienceModal } from './IonAddEditExperienceModal';
 import { IonEngineerHistoryDrawer } from './IonEngineerHistoryDrawer';
 import { Button } from '../forms/Button';
 import { useAuth } from '../../context/AuthContext';
+import { DeleteRequestModal } from '../common/DeleteRequestModal';
 
 interface EngineerIonSkillMatrixTabProps {
   engineer: Engineer;
@@ -51,6 +52,7 @@ const formatDateShort = (dateStr?: string | null): string => {
 
 export const EngineerIonSkillMatrixTab: React.FC<EngineerIonSkillMatrixTabProps> = ({ engineer }) => {
   const { canEdit, user } = useAuth();
+  const isOpsExecutive = user?.role === 'Ops Executive';
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
   const canModify = canEdit || (isEngineerUser && user?.engineer_id === engineer.id);
 
@@ -522,8 +524,20 @@ export const EngineerIonSkillMatrixTab: React.FC<EngineerIonSkillMatrixTabProps>
         initialToolId={selectedToolForHistory}
       />
 
-      {/* Delete Confirmation Modal */}
-      {deletingExperience && (
+      {/* Delete Confirmation Modal / Deletion Request Modal */}
+      {deletingExperience && isOpsExecutive ? (
+        <DeleteRequestModal
+          isOpen={!!deletingExperience}
+          onClose={() => setDeletingExperience(null)}
+          entityType="IonSkillExperience"
+          entityId={deletingExperience.experience_id}
+          entityName={`ION Experience: ${deletingExperience.where_location} (${engineer.name})`}
+          onSuccess={() => {
+            setDeletingExperience(null);
+            setIsDetailDrawerOpen(false);
+          }}
+        />
+      ) : deletingExperience && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">

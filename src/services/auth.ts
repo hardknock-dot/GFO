@@ -1,12 +1,42 @@
 import api from './axios';
 import type { User, UserRole } from '../types';
 
+export const normalizeUser = (userData: any): User => {
+  if (!userData) return userData;
+  const accessibleSet = new Set<string>();
+
+  if (Array.isArray(userData.accessibleCompanies)) {
+    userData.accessibleCompanies.forEach((id: any) => id && accessibleSet.add(String(id).toLowerCase()));
+  }
+  if (Array.isArray(userData.accessible_company_ids)) {
+    userData.accessible_company_ids.forEach((id: any) => id && accessibleSet.add(String(id).toLowerCase()));
+  }
+  if (Array.isArray(userData.companies)) {
+    userData.companies.forEach((c: any) => {
+      if (c.company_id) accessibleSet.add(String(c.company_id).toLowerCase());
+      if (c.id) accessibleSet.add(String(c.id).toLowerCase());
+    });
+  }
+  if (userData.currentCompanyId) {
+    accessibleSet.add(String(userData.currentCompanyId).toLowerCase());
+  }
+  if (userData.company_id) {
+    accessibleSet.add(String(userData.company_id).toLowerCase());
+  }
+
+  return {
+    ...userData,
+    accessibleCompanies: Array.from(accessibleSet),
+  };
+};
+
 export const login = async (email?: string, password?: string): Promise<{ token: string; user: User }> => {
   const res = await api.post('/auth/login', { email, password });
   if (res.data && res.data.token) {
+    const user = normalizeUser(res.data.user);
     localStorage.setItem('ormp_auth_token', res.data.token);
-    localStorage.setItem('ormp_user', JSON.stringify(res.data.user));
-    return res.data;
+    localStorage.setItem('ormp_user', JSON.stringify(user));
+    return { ...res.data, user };
   }
   throw new Error('Authentication failed. No token received.');
 };
@@ -36,8 +66,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const res = await api.get('/auth/me');
     if (res.data) {
-      localStorage.setItem('ormp_user', JSON.stringify(res.data));
-      return res.data;
+      const user = normalizeUser(res.data);
+      localStorage.setItem('ormp_user', JSON.stringify(user));
+      return user;
     }
   } catch (err: any) {
     if (err.status === 401) {
@@ -51,7 +82,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
   const stored = localStorage.getItem('ormp_user');
   if (stored) {
     try {
-      return JSON.parse(stored) as User;
+      return normalizeUser(JSON.parse(stored));
     } catch (_e) {
       return null;
     }

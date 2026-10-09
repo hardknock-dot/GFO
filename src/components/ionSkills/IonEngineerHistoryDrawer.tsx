@@ -7,6 +7,7 @@ import { IonSkillLevelBadge } from './IonSkillLevelBadge';
 import { getIonSkillLevelConfig } from '../../config/ionSkillLevels';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../forms/Button';
+import { DeleteRequestModal } from '../common/DeleteRequestModal';
 
 interface IonEngineerHistoryDrawerProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const IonEngineerHistoryDrawer: React.FC<IonEngineerHistoryDrawerProps> =
   initialToolId,
 }) => {
   const { canEdit, user } = useAuth();
+  const isOpsExecutive = user?.role === 'Ops Executive';
   const isEngineerUser = user?.role === 'Field Engineer' || user?.role === 'Engineer';
   const canDeleteRow = canEdit && !isEngineerUser;
 
@@ -228,8 +230,19 @@ export const IonEngineerHistoryDrawer: React.FC<IonEngineerHistoryDrawerProps> =
         </div>
       </div>
 
-      {/* Delete Single Assessment Confirmation Modal */}
-      {assessmentToDelete && (
+      {/* Delete Single Assessment Confirmation Modal / Delete Request Modal */}
+      {assessmentToDelete && isOpsExecutive ? (
+        <DeleteRequestModal
+          isOpen={!!assessmentToDelete}
+          onClose={() => setAssessmentToDelete(null)}
+          entityType="IonSkillAssessment"
+          entityId={assessmentToDelete.assessment_id}
+          entityName={`ION Assessment: ${assessmentToDelete.tool_name} (Level ${assessmentToDelete.skill_level}) - ${assessmentToDelete.where_location}`}
+          onSuccess={() => {
+            setAssessmentToDelete(null);
+          }}
+        />
+      ) : assessmentToDelete && (
         <div className="fixed inset-0 z-60 overflow-hidden flex items-center justify-center p-4">
           <div
             className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs transition-opacity"

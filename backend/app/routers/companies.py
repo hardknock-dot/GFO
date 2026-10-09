@@ -5,7 +5,7 @@ from typing import List
 from app.database import get_db
 from app.schemas.company import CompanyResponse
 from app.services import company_service
-from app.services.auth_service import get_current_user, is_main_admin
+from app.services.auth_service import get_current_user, is_main_admin, get_user_authorized_company_ids
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,8 @@ def read_companies(include_inactive: bool = False, db: Session = Depends(get_db)
         if is_main_admin(current_user):
             return companies
         
-        accessible_ids = set()
-        if getattr(current_user, 'accessible_company_ids', None):
-            for cid in current_user.accessible_company_ids.split(','):
-                cid_str = cid.strip()
-                if cid_str:
-                    accessible_ids.add(cid_str)
+        cids = get_user_authorized_company_ids(db, current_user)
+        accessible_ids = set(str(c) for c in cids)
         if current_user.company_id:
             accessible_ids.add(str(current_user.company_id))
 

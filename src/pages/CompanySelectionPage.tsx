@@ -1,16 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { switchCompanyTenant } from '../services/company';
 import { Building2, ArrowRight, CheckCircle2, Shield, Sparkles } from 'lucide-react';
 import { Button } from '../components/forms/Button';
+import type { Company } from '../types';
 
 export const CompanySelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { companies, setCompany, currentCompany } = useCompany();
-  const { user, selectCompany } = useAuth();
+  const { user, selectCompany, refreshUser } = useAuth();
   const [selectedId, setSelectedId] = useState<string>(currentCompany.id);
+
+  useEffect(() => {
+    if (refreshUser) {
+      refreshUser();
+    }
+  }, []);
+
+  const isCompanyAccessible = (comp: Company): boolean => {
+    if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
+    const compId = (comp.company_id || comp.id || '').toLowerCase();
+    const compCode = (comp.code || comp.short_name || '').toLowerCase();
+    const compName = (comp.name || comp.company_name || '').toLowerCase();
+
+    // all-data is reserved for global admins
+    if (compId === 'all-data' || compCode === 'all') return false;
+
+    const accessibleList = [
+      ...(user?.accessibleCompanies || []),
+      ...(user?.companies?.map((c: any) => c.company_id || c.id) || []),
+      ...((user as any)?.accessible_company_ids || []),
+      user?.currentCompanyId,
+      (user as any)?.company_id,
+    ]
+      .filter(Boolean)
+      .map((id: string) => String(id).toLowerCase());
+
+    if (accessibleList.length === 0) {
+      const currentId = (user?.currentCompanyId || (user as any)?.company_id || '').toLowerCase();
+      return compId === currentId || compCode === currentId;
+    }
+
+    return accessibleList.includes(compId) || accessibleList.includes(compCode) || accessibleList.includes(compName);
+  };
 
   const handleConfirmSelection = async (companyId: string) => {
     setSelectedId(companyId);
@@ -45,21 +79,7 @@ export const CompanySelectionPage: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
           {companies
-            .filter((comp) => {
-              if (user?.role === 'Main Admin' || user?.role === 'Global Admin') return true;
-              if (user?.accessibleCompanies && user.accessibleCompanies.length > 0) {
-                return (
-                  comp.id !== 'all-data' &&
-                  comp.company_id !== 'all-data' &&
-                  (user.accessibleCompanies.includes(comp.id) || user.accessibleCompanies.includes(comp.company_id))
-                );
-              }
-              return (
-                comp.id !== 'all-data' &&
-                comp.company_id !== 'all-data' &&
-                (comp.id === user?.currentCompanyId || comp.company_id === user?.currentCompanyId)
-              );
-            })
+            .filter(isCompanyAccessible)
             .map((comp) => {
               const isSelected = selectedId === comp.id || selectedId === comp.company_id;
               return (
